@@ -6,23 +6,28 @@
     <title>RunCar - Puzzle de Carreteras</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        * { box-sizing: border-box; }
         body {
-            touch-action: none;
+            touch-action: manipulation;
             font-family: 'Segoe UI', sans-serif;
             background: linear-gradient(135deg, #0f172a, #1e293b);
             color: white;
             overflow: hidden;
             user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
         }
         canvas {
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+            border-radius: 10px;
             background-color: #1e293b;
-            border: 3px solid #334155;
+            border: 2px solid #334155;
             cursor: pointer;
+            touch-action: manipulation;
         }
         .btn-game {
-            transition: all 0.15s;
+            transition: all 0.1s;
+            -webkit-tap-highlight-color: transparent;
         }
         .btn-game:active {
             transform: scale(0.95);
@@ -33,12 +38,10 @@
         @keyframes shake {
             10%, 90% { transform: translate3d(-2px, 0, 0); }
             20%, 80% { transform: translate3d(4px, 0, 0); }
-            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
-            40%, 60% { transform: translate3d(6px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-5px, 0, 0); }
+            40%, 60% { transform: translate3d(5px, 0, 0); }
         }
-        .pulse {
-            animation: pulse 0.5s infinite;
-        }
+        .pulse { animation: pulse 0.5s infinite; }
         @keyframes pulse {
             0%, 100% { opacity: 1; transform: scale(1); }
             50% { opacity: 0.7; transform: scale(1.05); }
@@ -49,81 +52,127 @@
         }
         @keyframes timerPulse {
             0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+            50% { opacity: 0.4; }
         }
-        .progress-bar {
-            transition: width 1s linear;
+        .progress-bar { transition: width 1s linear; }
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
         }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        input[type="text"] {
+            background: #1e293b;
+            border: 2px solid #475569;
+            color: white;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 18px;
+            width: 100%;
+            max-width: 280px;
+            text-align: center;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #10b981;
+        }
+        input[type="text"]::placeholder {
+            color: #64748b;
+        }
+        /* Scrollbar oculto */
+        ::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="h-screen w-screen flex flex-col items-center justify-center">
+<body class="h-screen w-screen flex flex-col items-center justify-center overflow-hidden">
+
+    <!-- PANTALLA DE INICIO -->
+    <div id="startScreen" class="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center z-50 p-4">
+        <div class="text-center fade-in">
+            <div class="text-6xl mb-4">🚗</div>
+            <h1 class="text-4xl font-bold text-emerald-400 mb-2">RunCar</h1>
+            <p class="text-slate-400 mb-8">Puzzle de Carreteras</p>
+            
+            <div class="mb-6">
+                <label class="block text-slate-300 mb-2 text-sm">Nombre del conductor:</label>
+                <input type="text" id="driverName" placeholder="Tu nombre" maxlength="15" autocomplete="off">
+            </div>
+            
+            <button onclick="startGame()" class="btn-game bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 px-12 rounded-xl text-xl shadow-lg border-b-4 border-emerald-800">
+                🏁 JUGAR
+            </button>
+            
+            <div class="mt-8 text-slate-500 text-xs max-w-xs">
+                <p>Gira las fichas para conectar el camino antes de que se acabe el tiempo</p>
+            </div>
+        </div>
+    </div>
 
     <!-- Header -->
-    <div class="absolute top-0 w-full p-3 flex justify-between items-center pointer-events-none z-10">
-        <div class="bg-slate-800/90 px-4 py-2 rounded-lg border border-slate-600 shadow-lg">
-            <h1 class="text-emerald-400 font-bold text-lg">🚗 NIVEL <span id="levelDisplay">1</span>/20</h1>
+    <div class="absolute top-0 w-full p-2 flex justify-between items-center pointer-events-none z-10">
+        <div class="bg-slate-800/95 px-3 py-1.5 rounded-lg border border-slate-600 shadow-lg">
+            <p class="text-emerald-400 font-bold text-sm">🚗 <span id="driverDisplay">Conductor</span></p>
+            <p class="text-xs text-slate-400">Nivel <span id="levelDisplay">1</span>/40</p>
         </div>
-        <div class="bg-slate-800/90 px-4 py-2 rounded-lg border border-slate-600 shadow-lg flex flex-col items-center">
-            <span id="statusText" class="text-yellow-400 font-bold text-sm">GIRA LAS FICHAS</span>
-            <div class="w-32 h-2 bg-slate-700 rounded-full mt-1 overflow-hidden">
+        <div class="bg-slate-800/95 px-3 py-1.5 rounded-lg border border-slate-600 shadow-lg flex flex-col items-center">
+            <span id="statusText" class="text-yellow-400 font-bold text-xs">GIRA LAS FICHAS</span>
+            <div class="w-24 h-1.5 bg-slate-700 rounded-full mt-1 overflow-hidden">
                 <div id="progressBar" class="progress-bar h-full bg-emerald-500 rounded-full" style="width: 100%"></div>
             </div>
         </div>
-        <div class="bg-slate-800/90 px-4 py-2 rounded-lg border border-slate-600 shadow-lg">
-            <span id="timerDisplay" class="text-blue-400 font-bold text-xl">⏱️ 30s</span>
+        <div class="bg-slate-800/95 px-3 py-1.5 rounded-lg border border-slate-600 shadow-lg">
+            <span id="timerDisplay" class="text-blue-400 font-bold text-lg">⏱️ 30</span>
         </div>
     </div>
 
     <!-- Game Area -->
-    <div class="relative p-2" id="gameContainer">
+    <div class="relative p-1" id="gameContainer">
         <canvas id="gameCanvas"></canvas>
         
         <!-- Overlay -->
-        <div id="overlay" class="hidden absolute inset-0 bg-black/85 flex flex-col items-center justify-center z-20 backdrop-blur-sm rounded-xl">
-            <div class="text-7xl mb-4 animate-bounce" id="overlayIcon">🏆</div>
-            <h2 class="text-3xl font-bold mb-2 text-white" id="overlayTitle">¡Bien hecho!</h2>
-            <p class="text-slate-300 mb-2" id="overlaySubtitle"></p>
-            <p class="text-yellow-400 text-sm mb-4" id="overlayBonus"></p>
-            <button id="overlayBtn" class="mt-4 bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-3 px-10 rounded-full shadow-lg btn-game text-lg">
+        <div id="overlay" class="hidden absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-20 backdrop-blur-sm rounded-xl p-4">
+            <div class="text-6xl mb-3 animate-bounce" id="overlayIcon">🏆</div>
+            <h2 class="text-2xl font-bold mb-1 text-white text-center" id="overlayTitle">¡Bien hecho!</h2>
+            <p class="text-slate-300 text-sm mb-1 text-center" id="overlaySubtitle"></p>
+            <p class="text-yellow-400 text-xs mb-4" id="overlayBonus"></p>
+            <button id="overlayBtn" class="bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-3 px-8 rounded-full shadow-lg btn-game">
                 Siguiente
             </button>
         </div>
-
-        <!-- Level Complete Animation -->
-        <div id="confetti" class="hidden absolute inset-0 pointer-events-none z-30"></div>
     </div>
 
     <!-- Level Info -->
-    <div class="text-center text-slate-400 text-xs mt-2 px-4">
+    <div class="text-center text-slate-400 text-xs mt-1 px-4">
         <p id="levelHint">Haz clic en las fichas para girarlas 🛣️</p>
     </div>
 
     <!-- Controls -->
-    <div class="absolute bottom-4 w-full flex justify-center gap-3 px-4 pointer-events-auto z-10">
-        <button onclick="resetLevel()" class="btn-game bg-slate-600 hover:bg-slate-500 text-white p-3 rounded-xl shadow-lg border-b-4 border-slate-800" title="Reiniciar nivel">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+    <div class="absolute bottom-3 w-full flex justify-center gap-2 px-3 pointer-events-auto z-10">
+        <button onclick="resetLevel()" class="btn-game bg-slate-600 hover:bg-slate-500 text-white p-3 rounded-xl shadow-lg border-b-4 border-slate-800" title="Reiniciar">
+            🔄
         </button>
-        <button onclick="startCar()" id="btnStart" class="btn-game bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-10 rounded-xl text-lg shadow-lg border-b-4 border-emerald-800 flex items-center gap-2">
-            <span>🚗 ARRANCAR</span>
+        <button onclick="startCar()" id="btnStart" class="btn-game bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded-xl text-base shadow-lg border-b-4 border-emerald-800">
+            🚗 ARRANCAR
         </button>
-        <button onclick="toggleSound()" id="btnSound" class="btn-game bg-blue-600 hover:bg-blue-500 text-white p-3 rounded-xl shadow-lg border-b-4 border-blue-800" title="Sonido">
+        <button onclick="toggleSound()" id="btnSound" class="btn-game bg-blue-600 hover:bg-blue-500 text-white p-3 rounded-xl shadow-lg border-b-4 border-blue-800">
             <span id="soundIcon">🔊</span>
         </button>
-        <button onclick="newGame()" class="btn-game bg-purple-600 hover:bg-purple-500 text-white p-3 rounded-xl shadow-lg border-b-4 border-purple-800" title="Nuevo juego">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h16v16H4z"></path></svg>
+        <button onclick="showMenu()" class="btn-game bg-purple-600 hover:bg-purple-500 text-white p-3 rounded-xl shadow-lg border-b-4 border-purple-800">
+            ☰
         </button>
     </div>
 
 <script>
 /**
  * RUNCAR - PUZZLE DE CARRETERAS
- * 20 Niveles con dificultad progresiva
+ * 40 Niveles con dificultad progresiva
+ * Optimizado para móviles
  */
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// --- AUDIO CONTEXT ---
+// --- AUDIO ---
 let audioCtx = null;
 let soundEnabled = true;
 
@@ -135,76 +184,63 @@ function initAudio() {
 
 function playSound(type) {
     if (!soundEnabled || !audioCtx) return;
-    
-    const oscillator = audioCtx.createOscillator();
-    const gainNode = audioCtx.createGain();
-    oscillator.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
-    
-    switch(type) {
-        case 'rotate':
-            oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
-            oscillator.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.1);
-            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-            oscillator.start();
-            oscillator.stop(audioCtx.currentTime + 0.1);
-            break;
-        case 'engine':
-            oscillator.type = 'sawtooth';
-            oscillator.frequency.setValueAtTime(80, audioCtx.currentTime);
-            oscillator.frequency.setValueAtTime(120, audioCtx.currentTime + 0.1);
-            oscillator.frequency.setValueAtTime(80, audioCtx.currentTime + 0.2);
-            gainNode.gain.setValueAtTime(0.08, audioCtx.currentTime);
-            oscillator.start();
-            oscillator.stop(audioCtx.currentTime + 0.3);
-            break;
-        case 'crash':
-            oscillator.type = 'square';
-            oscillator.frequency.setValueAtTime(200, audioCtx.currentTime);
-            oscillator.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.3);
-            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-            oscillator.start();
-            oscillator.stop(audioCtx.currentTime + 0.3);
-            break;
-        case 'win':
-            const notes = [523, 659, 784, 1047];
-            notes.forEach((freq, i) => {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.frequency.setValueAtTime(freq, audioCtx.currentTime + i * 0.15);
-                gain.gain.setValueAtTime(0.15, audioCtx.currentTime + i * 0.15);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + i * 0.15 + 0.3);
-                osc.start(audioCtx.currentTime + i * 0.15);
-                osc.stop(audioCtx.currentTime + i * 0.15 + 0.3);
-            });
-            break;
-        case 'tick':
-            oscillator.frequency.setValueAtTime(1000, audioCtx.currentTime);
-            gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
-            oscillator.start();
-            oscillator.stop(audioCtx.currentTime + 0.05);
-            break;
-        case 'warning':
-            oscillator.frequency.setValueAtTime(600, audioCtx.currentTime);
-            oscillator.frequency.setValueAtTime(400, audioCtx.currentTime + 0.1);
-            gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-            oscillator.start();
-            oscillator.stop(audioCtx.currentTime + 0.2);
-            break;
-        case 'semaphore':
-            oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
-            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
-            oscillator.start();
-            oscillator.stop(audioCtx.currentTime + 0.5);
-            break;
-    }
+    try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        
+        const t = audioCtx.currentTime;
+        switch(type) {
+            case 'rotate':
+                osc.frequency.setValueAtTime(600, t);
+                osc.frequency.exponentialRampToValueAtTime(300, t + 0.08);
+                gain.gain.setValueAtTime(0.08, t);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.08);
+                osc.start(t); osc.stop(t + 0.08);
+                break;
+            case 'engine':
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(70 + Math.random() * 30, t);
+                gain.gain.setValueAtTime(0.05, t);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
+                osc.start(t); osc.stop(t + 0.15);
+                break;
+            case 'crash':
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150, t);
+                osc.frequency.exponentialRampToValueAtTime(40, t + 0.25);
+                gain.gain.setValueAtTime(0.2, t);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.25);
+                osc.start(t); osc.stop(t + 0.25);
+                break;
+            case 'win':
+                [523, 659, 784, 1047].forEach((f, i) => {
+                    const o = audioCtx.createOscillator();
+                    const g = audioCtx.createGain();
+                    o.connect(g); g.connect(audioCtx.destination);
+                    o.frequency.setValueAtTime(f, t + i * 0.12);
+                    g.gain.setValueAtTime(0.12, t + i * 0.12);
+                    g.gain.exponentialRampToValueAtTime(0.01, t + i * 0.12 + 0.2);
+                    o.start(t + i * 0.12); o.stop(t + i * 0.12 + 0.2);
+                });
+                break;
+            case 'warning':
+                osc.frequency.setValueAtTime(500, t);
+                osc.frequency.setValueAtTime(350, t + 0.08);
+                gain.gain.setValueAtTime(0.1, t);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
+                osc.start(t); osc.stop(t + 0.15);
+                break;
+            case 'blocked':
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(200, t);
+                gain.gain.setValueAtTime(0.1, t);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+                osc.start(t); osc.stop(t + 0.1);
+                break;
+        }
+    } catch(e) {}
 }
 
 function toggleSound() {
@@ -212,73 +248,86 @@ function toggleSound() {
     document.getElementById('soundIcon').textContent = soundEnabled ? '🔊' : '🔇';
 }
 
-// --- CONFIGURACIÓN DE NIVELES ---
-const LEVEL_CONFIG = [
-    // Nivel 1-5: Tutorial
-    { cols: 4, rows: 5, time: 45, speed: 2.5, hint: "¡Gira las fichas para conectar el camino!", features: [] },
-    { cols: 4, rows: 5, time: 40, speed: 2.8, hint: "Las fichas verdes están conectadas", features: [] },
-    { cols: 4, rows: 6, time: 40, speed: 3, hint: "¡Más rápido!", features: [] },
-    { cols: 5, rows: 5, time: 38, speed: 3.2, hint: "El tablero crece...", features: [] },
-    { cols: 5, rows: 6, time: 35, speed: 3.5, hint: "¡Prepárate para los semáforos!", features: [] },
-    // Nivel 6-10: Semáforos
-    { cols: 5, rows: 6, time: 35, speed: 3.5, hint: "🚦 ¡Semáforo! Espera el verde", features: ['semaphore'] },
-    { cols: 5, rows: 7, time: 33, speed: 3.8, hint: "Más semáforos aparecen", features: ['semaphore'] },
-    { cols: 5, rows: 7, time: 30, speed: 4, hint: "¡El tiempo se reduce!", features: ['semaphore'] },
-    { cols: 6, rows: 6, time: 30, speed: 4, hint: "Tablero más ancho", features: ['semaphore'] },
-    { cols: 6, rows: 7, time: 28, speed: 4.2, hint: "¡Prepárate para los charcos!", features: ['semaphore'] },
-    // Nivel 11-15: Charcos (ralentizan)
-    { cols: 6, rows: 7, time: 28, speed: 4.2, hint: "💧 ¡Charcos! Te ralentizan", features: ['semaphore', 'puddle'] },
-    { cols: 6, rows: 7, time: 26, speed: 4.5, hint: "Más obstáculos", features: ['semaphore', 'puddle'] },
-    { cols: 6, rows: 8, time: 26, speed: 4.5, hint: "Tablero gigante", features: ['semaphore', 'puddle'] },
-    { cols: 6, rows: 8, time: 24, speed: 4.8, hint: "¡Casi llegas al final!", features: ['semaphore', 'puddle'] },
-    { cols: 6, rows: 8, time: 22, speed: 5, hint: "¡Prepárate para el boost!", features: ['semaphore', 'puddle'] },
-    // Nivel 16-20: Boost (aceleran)
-    { cols: 6, rows: 8, time: 22, speed: 5, hint: "⚡ ¡Boost! Te acelera", features: ['semaphore', 'puddle', 'boost'] },
-    { cols: 6, rows: 8, time: 20, speed: 5.2, hint: "¡Todos los elementos!", features: ['semaphore', 'puddle', 'boost'] },
-    { cols: 6, rows: 8, time: 18, speed: 5.5, hint: "¡Modo experto!", features: ['semaphore', 'puddle', 'boost'] },
-    { cols: 6, rows: 8, time: 16, speed: 5.8, hint: "¡Penúltimo nivel!", features: ['semaphore', 'puddle', 'boost'] },
-    { cols: 6, rows: 8, time: 15, speed: 6, hint: "🏆 ¡NIVEL FINAL!", features: ['semaphore', 'puddle', 'boost'] },
-];
+// --- CONFIGURACIÓN DE 40 NIVELES ---
+const LEVEL_CONFIG = [];
 
-// --- CONFIGURACIÓN ---
-let TILE_SIZE = 70;
+// Generar 40 niveles progresivos
+for (let i = 1; i <= 40; i++) {
+    let cols = Math.min(4 + Math.floor(i / 8), 7);
+    let rows = Math.min(5 + Math.floor(i / 6), 9);
+    let time = Math.max(20, 50 + Math.floor(i / 3) * 2 - Math.floor(i / 10) * 5);
+    let speed = 2.5 + (i * 0.12);
+    
+    let features = [];
+    let hint = "";
+    let obstacles = 0;
+    let bridges = 0;
+    
+    if (i >= 3) { obstacles = Math.min(Math.floor((i - 2) / 4), 4); }
+    if (i >= 6) { features.push('semaphore'); }
+    if (i >= 12) { features.push('puddle'); }
+    if (i >= 18) { features.push('boost'); }
+    if (i >= 15) { bridges = Math.min(Math.floor((i - 14) / 5), 3); }
+    if (i >= 25) { features.push('tree'); }
+    if (i >= 30) { features.push('construction'); }
+    
+    // Hints según nivel
+    if (i <= 2) hint = "¡Gira las fichas para conectar!";
+    else if (i <= 5) hint = "🚧 ¡Cuidado! Hay vías bloqueadas";
+    else if (i <= 10) hint = "🚦 Semáforos: espera el verde";
+    else if (i <= 15) hint = "💧 Charcos te ralentizan";
+    else if (i <= 20) hint = "🌉 Puentes cruzan sobre otras vías";
+    else if (i <= 25) hint = "⚡ Boost te acelera";
+    else if (i <= 30) hint = "🌳 Árboles caídos bloquean el paso";
+    else if (i <= 35) hint = "🚧 Obras en la vía";
+    else hint = "🏆 ¡Niveles de experto!";
+    
+    // Más tiempo en niveles difíciles con más obstáculos
+    if (obstacles > 2) time += 10;
+    if (bridges > 1) time += 5;
+    if (i > 30) time += 15;
+    
+    LEVEL_CONFIG.push({
+        cols, rows, time, speed, hint, features, obstacles, bridges
+    });
+}
+
+// --- VARIABLES GLOBALES ---
+let TILE_SIZE = 60;
 let COLS = 5;
 let ROWS = 6;
-const ROAD_WIDTH_RATIO = 0.5;
+const ROAD_WIDTH_RATIO = 0.48;
 
-// Direcciones
 const DIR = { N: 1, E: 2, S: 4, W: 8 };
-const DIR_DELTA = {
-    1: { dc: 0, dr: -1 },
-    2: { dc: 1, dr: 0 },
-    4: { dc: 0, dr: 1 },
-    8: { dc: -1, dr: 0 }
-};
+const DIR_DELTA = { 1: {dc:0,dr:-1}, 2: {dc:1,dr:0}, 4: {dc:0,dr:1}, 8: {dc:-1,dr:0} };
 const OPPOSITE = { 1: 4, 2: 8, 4: 1, 8: 2 };
 
-// Tipos de ficha
 const TILE_TYPES = {
     STRAIGHT: { id: 1, base: DIR.N | DIR.S, name: 'recta' },
     CURVE: { id: 2, base: DIR.N | DIR.E, name: 'curva' },
     START: { id: 3, base: DIR.E, name: 'inicio', locked: true },
-    END: { id: 4, base: DIR.W, name: 'meta', locked: true }
+    END: { id: 4, base: DIR.W, name: 'meta', locked: true },
+    BLOCKED: { id: 5, base: 0, name: 'bloqueado', locked: true },
+    BRIDGE: { id: 6, base: DIR.N | DIR.S, name: 'puente' }
 };
 
-// Estado del juego
 let grid = [];
-let specialTiles = []; // Semáforos, charcos, boosts
+let specialTiles = [];
+let blockedCells = [];
 let correctPath = [];
 let car = null;
 let level = 1;
-let gameState = 'EDITING';
+let driverName = "Conductor";
+let gameState = 'START';
 let animationId = null;
 let countdownTimer = null;
 let timeLeft = 30;
 let maxTime = 30;
 let engineSoundInterval = null;
 
-// Elementos DOM
+// DOM
 const levelDisplay = document.getElementById('levelDisplay');
+const driverDisplay = document.getElementById('driverDisplay');
 const statusText = document.getElementById('statusText');
 const timerDisplay = document.getElementById('timerDisplay');
 const progressBar = document.getElementById('progressBar');
@@ -286,6 +335,7 @@ const btnStart = document.getElementById('btnStart');
 const overlay = document.getElementById('overlay');
 const gameContainer = document.getElementById('gameContainer');
 const levelHint = document.getElementById('levelHint');
+const startScreen = document.getElementById('startScreen');
 
 // --- CLASE TILE ---
 class Tile {
@@ -297,11 +347,13 @@ class Tile {
         this.locked = type.locked || false;
         this.powered = false;
         this.onPath = false;
-        this.special = null; // 'semaphore', 'puddle', 'boost'
-        this.semaphoreState = 'red'; // 'red', 'yellow', 'green'
+        this.special = null;
+        this.semaphoreState = 'red';
+        this.isBridge = type === TILE_TYPES.BRIDGE;
     }
 
     getConnections() {
+        if (this.type === TILE_TYPES.BLOCKED) return 0;
         let conn = this.type.base;
         for (let i = 0; i < this.rotation; i++) {
             conn = this.rotateConnections(conn);
@@ -310,32 +362,61 @@ class Tile {
     }
 
     rotateConnections(conn) {
-        let newConn = 0;
-        if (conn & DIR.N) newConn |= DIR.E;
-        if (conn & DIR.E) newConn |= DIR.S;
-        if (conn & DIR.S) newConn |= DIR.W;
-        if (conn & DIR.W) newConn |= DIR.N;
-        return newConn;
+        let n = 0;
+        if (conn & DIR.N) n |= DIR.E;
+        if (conn & DIR.E) n |= DIR.S;
+        if (conn & DIR.S) n |= DIR.W;
+        if (conn & DIR.W) n |= DIR.N;
+        return n;
+    }
+}
+
+// --- INICIO DEL JUEGO ---
+function startGame() {
+    initAudio();
+    const nameInput = document.getElementById('driverName').value.trim();
+    driverName = nameInput || "Conductor";
+    driverDisplay.textContent = driverName;
+    startScreen.classList.add('hidden');
+    level = 1;
+    levelDisplay.textContent = level;
+    generateLevel();
+}
+
+function showMenu() {
+    if (confirm('¿Volver al menú principal?')) {
+        if (animationId) cancelAnimationFrame(animationId);
+        if (countdownTimer) clearInterval(countdownTimer);
+        if (engineSoundInterval) clearInterval(engineSoundInterval);
+        startScreen.classList.remove('hidden');
+        gameState = 'START';
     }
 }
 
 // --- INICIALIZACIÓN ---
 function init() {
     resize();
-    newGame();
     
     window.addEventListener('resize', () => {
-        resize();
-        draw();
+        if (gameState !== 'START') {
+            resize();
+            draw();
+        }
     });
     
     canvas.addEventListener('pointerdown', handleClick);
+    
+    // Prevenir zoom en móviles
+    document.addEventListener('gesturestart', e => e.preventDefault());
+    document.addEventListener('touchmove', e => {
+        if (e.touches.length > 1) e.preventDefault();
+    }, { passive: false });
 }
 
 function resize() {
     const config = LEVEL_CONFIG[Math.min(level - 1, LEVEL_CONFIG.length - 1)];
-    const maxW = window.innerWidth - 40;
-    const maxH = window.innerHeight - 200;
+    const maxW = window.innerWidth - 20;
+    const maxH = window.innerHeight - 160;
     
     COLS = config.cols;
     ROWS = config.rows;
@@ -343,7 +424,7 @@ function resize() {
     TILE_SIZE = Math.min(
         Math.floor(maxW / COLS),
         Math.floor(maxH / ROWS),
-        75
+        70
     );
     
     canvas.width = COLS * TILE_SIZE;
@@ -355,18 +436,20 @@ function handleClick(e) {
     if (gameState !== 'EDITING') return;
     
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const x = (e.clientX || e.touches?.[0]?.clientX) - rect.left;
+    const y = (e.clientY || e.touches?.[0]?.clientY) - rect.top;
     const col = Math.floor(x / TILE_SIZE);
     const row = Math.floor(y / TILE_SIZE);
     
     if (col >= 0 && col < COLS && row >= 0 && row < ROWS) {
         const tile = getTile(col, row);
-        if (tile && !tile.locked) {
+        if (tile && !tile.locked && tile.type !== TILE_TYPES.BLOCKED) {
             tile.rotation = (tile.rotation + 1) % 4;
             playSound('rotate');
             checkConnections();
             draw();
+        } else if (tile && (tile.locked || tile.type === TILE_TYPES.BLOCKED)) {
+            playSound('blocked');
         }
     }
 }
@@ -392,41 +475,103 @@ function generateLevel() {
     overlay.classList.add('hidden');
     btnStart.classList.remove('opacity-50', 'pointer-events-none');
     
-    // Configurar tiempo
     maxTime = config.time;
     timeLeft = maxTime;
-    timerDisplay.textContent = `⏱️ ${timeLeft}s`;
+    timerDisplay.textContent = `⏱️ ${timeLeft}`;
     timerDisplay.classList.remove('timer-warning');
     progressBar.style.width = '100%';
     progressBar.classList.remove('bg-red-500', 'bg-yellow-500');
     progressBar.classList.add('bg-emerald-500');
     
     statusText.textContent = 'GIRA LAS FICHAS';
-    statusText.className = 'text-yellow-400 font-bold text-sm';
+    statusText.className = 'text-yellow-400 font-bold text-xs';
     levelHint.textContent = config.hint;
     
-    // Resize para nuevo nivel
     resize();
     
-    // Limpiar
     grid = new Array(COLS * ROWS).fill(null);
     specialTiles = [];
+    blockedCells = [];
     correctPath = [];
     
-    // Generar camino
+    // Primero agregar obstáculos
+    addBlockedCells(config.obstacles);
+    
+    // Generar camino evitando obstáculos
     generateGuaranteedPath();
+    
+    // Agregar puentes
+    addBridges(config.bridges);
+    
     fillEmptySpaces();
     randomizeRotations();
-    
-    // Agregar elementos especiales
     addSpecialElements(config.features);
     
     resetCar();
     checkConnections();
     draw();
-    
-    // Iniciar countdown
     startCountdown();
+}
+
+function addBlockedCells(count) {
+    if (count <= 0) return;
+    
+    let attempts = 0;
+    while (blockedCells.length < count && attempts < 100) {
+        attempts++;
+        const col = 1 + Math.floor(Math.random() * (COLS - 2));
+        const row = 1 + Math.floor(Math.random() * (ROWS - 2));
+        
+        // No bloquear esquinas ni cerca del inicio/fin
+        if ((col === 0 && row === 0) || (col === COLS-1 && row === ROWS-1)) continue;
+        if (col <= 1 && row <= 1) continue;
+        if (col >= COLS-2 && row >= ROWS-2) continue;
+        
+        const key = `${col},${row}`;
+        if (!blockedCells.includes(key)) {
+            blockedCells.push(key);
+            
+            // Determinar tipo de obstáculo
+            const obstacleType = Math.random();
+            const tile = new Tile(col, row, TILE_TYPES.BLOCKED);
+            tile.locked = true;
+            
+            if (obstacleType < 0.4) {
+                tile.special = 'broken'; // Calle rota
+            } else if (obstacleType < 0.7) {
+                tile.special = 'tree'; // Árbol caído
+            } else {
+                tile.special = 'construction'; // Obras
+            }
+            
+            setTile(col, row, tile);
+        }
+    }
+}
+
+function addBridges(count) {
+    if (count <= 0) return;
+    
+    // Buscar lugares donde el camino pueda tener un puente
+    const eligibleTiles = correctPath.filter((p, i) => {
+        if (i === 0 || i === correctPath.length - 1) return false;
+        const prev = correctPath[i - 1];
+        const next = correctPath[i + 1];
+        // Solo en líneas rectas
+        return (prev.col === p.col && next.col === p.col) || (prev.row === p.row && next.row === p.row);
+    });
+    
+    let added = 0;
+    for (let i = 0; i < eligibleTiles.length && added < count; i++) {
+        if (Math.random() > 0.5) {
+            const pos = eligibleTiles[i];
+            const tile = getTile(pos.col, pos.row);
+            if (tile && tile.type === TILE_TYPES.STRAIGHT) {
+                tile.isBridge = true;
+                added++;
+            }
+        }
+    }
 }
 
 function startCountdown() {
@@ -439,13 +584,11 @@ function startCountdown() {
         }
         
         timeLeft--;
-        timerDisplay.textContent = `⏱️ ${timeLeft}s`;
+        timerDisplay.textContent = `⏱️ ${timeLeft}`;
         
-        // Actualizar barra de progreso
         const percent = (timeLeft / maxTime) * 100;
         progressBar.style.width = `${percent}%`;
         
-        // Cambiar colores según tiempo
         if (timeLeft <= 5) {
             progressBar.classList.remove('bg-emerald-500', 'bg-yellow-500');
             progressBar.classList.add('bg-red-500');
@@ -454,64 +597,81 @@ function startCountdown() {
         } else if (timeLeft <= 10) {
             progressBar.classList.remove('bg-emerald-500', 'bg-red-500');
             progressBar.classList.add('bg-yellow-500');
-            playSound('tick');
         }
         
         if (timeLeft <= 0) {
             clearInterval(countdownTimer);
-            // Auto-arrancar
-            statusText.textContent = '¡TIEMPO! ARRANCANDO...';
-            statusText.className = 'text-red-400 font-bold text-sm pulse';
-            setTimeout(() => startCar(), 500);
+            statusText.textContent = '¡TIEMPO!';
+            statusText.className = 'text-red-400 font-bold text-xs pulse';
+            setTimeout(() => startCar(), 400);
         }
     }, 1000);
 }
 
 function generateGuaranteedPath() {
-    const startCol = 0;
-    const startRow = 0;
-    const endCol = COLS - 1;
-    const endRow = ROWS - 1;
+    const startCol = 0, startRow = 0;
+    const endCol = COLS - 1, endRow = ROWS - 1;
     
-    let path = [{ col: startCol, row: startRow }];
-    let current = { col: startCol, row: startRow };
+    // BFS para encontrar camino evitando obstáculos
+    const queue = [[{ col: startCol, row: startRow }]];
+    const visited = new Set();
+    visited.add(`${startCol},${startRow}`);
     
-    while (current.col !== endCol || current.row !== endRow) {
-        let possibleMoves = [];
+    while (queue.length > 0) {
+        const path = queue.shift();
+        const current = path[path.length - 1];
         
-        if (current.col < endCol) possibleMoves.push({ col: current.col + 1, row: current.row });
-        if (current.row < endRow) possibleMoves.push({ col: current.col, row: current.row + 1 });
-        
-        if (current.col > 0 && Math.random() > 0.8 && level > 3) {
-            possibleMoves.push({ col: current.col - 1, row: current.row });
-        }
-        if (current.row > 0 && Math.random() > 0.85 && level > 5) {
-            possibleMoves.push({ col: current.col, row: current.row - 1 });
+        if (current.col === endCol && current.row === endRow) {
+            correctPath = path;
+            break;
         }
         
-        possibleMoves = possibleMoves.filter(m => 
-            !path.some(p => p.col === m.col && p.row === m.row)
-        );
+        // Movimientos posibles (priorizar hacia la meta)
+        const moves = [];
+        if (current.col < endCol) moves.push({ col: current.col + 1, row: current.row });
+        if (current.row < endRow) moves.push({ col: current.col, row: current.row + 1 });
+        if (current.col > 0) moves.push({ col: current.col - 1, row: current.row });
+        if (current.row > 0) moves.push({ col: current.col, row: current.row - 1 });
         
-        if (possibleMoves.length === 0) {
-            path = [{ col: startCol, row: startRow }];
-            current = { col: startCol, row: startRow };
-            continue;
+        // Mezclar para variedad
+        moves.sort(() => Math.random() - 0.3);
+        
+        for (const move of moves) {
+            const key = `${move.col},${move.row}`;
+            if (!visited.has(key) && !blockedCells.includes(key)) {
+                visited.add(key);
+                queue.push([...path, move]);
+            }
         }
-        
-        const move = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
-        path.push(move);
-        current = move;
     }
     
-    correctPath = path;
-    
-    for (let i = 0; i < path.length; i++) {
-        const { col, row } = path[i];
-        const prev = i > 0 ? path[i - 1] : null;
-        const next = i < path.length - 1 ? path[i + 1] : null;
+    // Si no hay camino, limpiar obstáculos y regenerar
+    if (correctPath.length === 0) {
+        blockedCells = [];
+        grid = new Array(COLS * ROWS).fill(null);
+        correctPath = [{ col: startCol, row: startRow }];
+        let current = { col: startCol, row: startRow };
         
-        const tile = createPathTile(col, row, prev, next, i === 0, i === path.length - 1);
+        while (current.col !== endCol || current.row !== endRow) {
+            let moves = [];
+            if (current.col < endCol) moves.push({ col: current.col + 1, row: current.row });
+            if (current.row < endRow) moves.push({ col: current.col, row: current.row + 1 });
+            
+            const move = moves[Math.floor(Math.random() * moves.length)];
+            correctPath.push(move);
+            current = move;
+        }
+    }
+    
+    // Colocar tiles del camino
+    for (let i = 0; i < correctPath.length; i++) {
+        const { col, row } = correctPath[i];
+        if (getTile(col, row)) continue; // Ya hay un tile (obstáculo)
+        
+        const prev = i > 0 ? correctPath[i - 1] : null;
+        const next = i < correctPath.length - 1 ? correctPath[i + 1] : null;
+        
+        const tile = createPathTile(col, row, prev, next, i === 0, i === correctPath.length - 1);
         tile.onPath = true;
         setTile(col, row, tile);
     }
@@ -589,7 +749,7 @@ function fillEmptySpaces() {
 
 function randomizeRotations() {
     grid.forEach(tile => {
-        if (tile && !tile.locked) {
+        if (tile && !tile.locked && tile.type !== TILE_TYPES.BLOCKED) {
             tile.rotation = Math.floor(Math.random() * 4);
         }
     });
@@ -598,26 +758,30 @@ function randomizeRotations() {
 function addSpecialElements(features) {
     if (!features || features.length === 0) return;
     
-    // Solo agregar en tiles del camino (excepto inicio y fin)
-    const eligibleTiles = correctPath.slice(1, -1);
+    const eligibleTiles = correctPath.slice(1, -1).filter(p => {
+        const t = getTile(p.col, p.row);
+        return t && !t.special && !t.isBridge && t.type !== TILE_TYPES.BLOCKED;
+    });
     
     features.forEach(feature => {
-        const numElements = Math.min(Math.floor(level / 4) + 1, 3);
+        if (feature === 'tree' || feature === 'construction') return; // Ya manejados como obstáculos
+        
+        const numElements = Math.min(Math.floor(level / 5) + 1, 3);
         
         for (let i = 0; i < numElements && eligibleTiles.length > 0; i++) {
-            const randomIndex = Math.floor(Math.random() * eligibleTiles.length);
-            const pos = eligibleTiles.splice(randomIndex, 1)[0];
+            const idx = Math.floor(Math.random() * eligibleTiles.length);
+            const pos = eligibleTiles.splice(idx, 1)[0];
             const tile = getTile(pos.col, pos.row);
             
             if (tile && !tile.special) {
-                if (feature === 'semaphore' && Math.random() > 0.5) {
+                if (feature === 'semaphore' && Math.random() > 0.4) {
                     tile.special = 'semaphore';
                     tile.semaphoreState = 'red';
                     specialTiles.push(tile);
-                } else if (feature === 'puddle' && Math.random() > 0.6) {
+                } else if (feature === 'puddle' && Math.random() > 0.5) {
                     tile.special = 'puddle';
                     specialTiles.push(tile);
-                } else if (feature === 'boost' && Math.random() > 0.7) {
+                } else if (feature === 'boost' && Math.random() > 0.6) {
                     tile.special = 'boost';
                     specialTiles.push(tile);
                 }
@@ -626,7 +790,7 @@ function addSpecialElements(features) {
     });
 }
 
-// --- UTILIDADES DE GRID ---
+// --- UTILIDADES ---
 function getTile(col, row) {
     if (col < 0 || col >= COLS || row < 0 || row >= ROWS) return null;
     return grid[row * COLS + col];
@@ -636,7 +800,6 @@ function setTile(col, row, tile) {
     grid[row * COLS + col] = tile;
 }
 
-// --- VERIFICACIÓN DE CONEXIONES ---
 function checkConnections() {
     grid.forEach(t => { if (t) t.powered = false; });
     
@@ -655,9 +818,9 @@ function checkConnections() {
                 const delta = DIR_DELTA[dir];
                 const neighbor = getTile(current.col + delta.dc, current.row + delta.dr);
                 
-                if (neighbor && !neighbor.powered) {
-                    const oppositeDir = OPPOSITE[dir];
-                    if (neighbor.getConnections() & oppositeDir) {
+                if (neighbor && !neighbor.powered && neighbor.type !== TILE_TYPES.BLOCKED) {
+                    const opp = OPPOSITE[dir];
+                    if (neighbor.getConnections() & opp) {
                         neighbor.powered = true;
                         queue.push(neighbor);
                     }
@@ -674,10 +837,9 @@ function resetCar() {
     
     const connections = start.getConnections();
     let dir = DIR.E;
-    if (connections & DIR.E) dir = DIR.E;
-    else if (connections & DIR.S) dir = DIR.S;
-    else if (connections & DIR.W) dir = DIR.W;
-    else if (connections & DIR.N) dir = DIR.N;
+    [DIR.E, DIR.S, DIR.W, DIR.N].forEach(d => {
+        if (connections & d) dir = d;
+    });
     
     const config = LEVEL_CONFIG[Math.min(level - 1, LEVEL_CONFIG.length - 1)];
     
@@ -690,13 +852,12 @@ function resetCar() {
         angle: getAngleFromDir(dir),
         speed: config.speed,
         baseSpeed: config.speed,
-        waiting: false,
-        waitTime: 0
+        waiting: false
     };
     
     const delta = DIR_DELTA[dir];
-    car.x -= delta.dc * 15;
-    car.y -= delta.dr * 15;
+    car.x -= delta.dc * 12;
+    car.y -= delta.dr * 12;
     
     gameState = 'EDITING';
     draw();
@@ -710,7 +871,7 @@ function getAngleFromDir(dir) {
     return 0;
 }
 
-// --- CONTROL DEL JUEGO ---
+// --- CONTROL ---
 function startCar() {
     initAudio();
     if (gameState !== 'EDITING') return;
@@ -720,17 +881,13 @@ function startCar() {
     gameState = 'RUNNING';
     btnStart.classList.add('opacity-50', 'pointer-events-none');
     statusText.textContent = '¡EN MARCHA!';
-    statusText.className = 'text-emerald-400 font-bold text-sm';
+    statusText.className = 'text-emerald-400 font-bold text-xs';
     
-    // Iniciar semáforos
     startSemaphores();
     
-    // Sonido de motor
     engineSoundInterval = setInterval(() => {
-        if (gameState === 'RUNNING' && !car.waiting) {
-            playSound('engine');
-        }
-    }, 300);
+        if (gameState === 'RUNNING' && !car.waiting) playSound('engine');
+    }, 250);
     
     gameLoop();
 }
@@ -739,29 +896,24 @@ function startSemaphores() {
     specialTiles.forEach(tile => {
         if (tile.special === 'semaphore') {
             tile.semaphoreState = 'red';
-            // Ciclo de semáforo
             const cycle = () => {
                 if (gameState !== 'RUNNING') return;
-                
                 setTimeout(() => {
                     if (gameState !== 'RUNNING') return;
                     tile.semaphoreState = 'yellow';
-                    playSound('semaphore');
                     draw();
-                    
                     setTimeout(() => {
                         if (gameState !== 'RUNNING') return;
                         tile.semaphoreState = 'green';
                         draw();
-                        
                         setTimeout(() => {
                             if (gameState !== 'RUNNING') return;
                             tile.semaphoreState = 'red';
                             draw();
                             cycle();
-                        }, 3000);
-                    }, 1000);
-                }, 2000 + Math.random() * 2000);
+                        }, 2500);
+                    }, 800);
+                }, 1500 + Math.random() * 1500);
             };
             cycle();
         }
@@ -771,10 +923,9 @@ function startSemaphores() {
 function gameLoop() {
     if (gameState !== 'RUNNING') return;
     
-    // Si está esperando en semáforo
     if (car.waiting) {
-        const currentTile = getTile(car.col, car.row);
-        if (currentTile.special === 'semaphore' && currentTile.semaphoreState === 'green') {
+        const tile = getTile(car.col, car.row);
+        if (tile?.special === 'semaphore' && tile.semaphoreState === 'green') {
             car.waiting = false;
         } else {
             draw();
@@ -784,50 +935,41 @@ function gameLoop() {
     }
     
     const ts = TILE_SIZE;
-    const centerX = car.col * ts + ts / 2;
-    const centerY = car.row * ts + ts / 2;
+    const cx = car.col * ts + ts / 2;
+    const cy = car.row * ts + ts / 2;
+    const dist = Math.sqrt((cx - car.x) ** 2 + (cy - car.y) ** 2);
     
-    const dx = centerX - car.x;
-    const dy = centerY - car.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    
-    if (dist < 5) {
-        car.x = centerX;
-        car.y = centerY;
+    if (dist < 4) {
+        car.x = cx;
+        car.y = cy;
         
-        const currentTile = getTile(car.col, car.row);
+        const tile = getTile(car.col, car.row);
         
-        // Verificar elementos especiales
-        if (currentTile.special === 'semaphore' && currentTile.semaphoreState !== 'green') {
+        if (tile?.special === 'semaphore' && tile.semaphoreState !== 'green') {
             car.waiting = true;
             draw();
             animationId = requestAnimationFrame(gameLoop);
             return;
         }
         
-        if (currentTile.special === 'puddle') {
-            car.speed = car.baseSpeed * 0.5;
-        } else if (currentTile.special === 'boost') {
-            car.speed = car.baseSpeed * 1.8;
-        } else {
-            car.speed = car.baseSpeed;
-        }
+        if (tile?.special === 'puddle') car.speed = car.baseSpeed * 0.5;
+        else if (tile?.special === 'boost') car.speed = car.baseSpeed * 1.7;
+        else car.speed = car.baseSpeed;
         
-        if (currentTile.type === TILE_TYPES.END) {
+        if (tile?.type === TILE_TYPES.END) {
             win();
             return;
         }
         
-        const connections = currentTile.getConnections();
+        const connections = tile?.getConnections() || 0;
         const entryDir = OPPOSITE[car.dir];
         
-        if (currentTile.type !== TILE_TYPES.START && !(connections & entryDir)) {
+        if (tile?.type !== TILE_TYPES.START && !(connections & entryDir)) {
             crash('¡Camino bloqueado!');
             return;
         }
         
         const exitDir = findExitDir(connections, entryDir);
-        
         if (exitDir === 0) {
             crash('¡Sin salida!');
             return;
@@ -838,15 +980,19 @@ function gameLoop() {
         const nextRow = car.row + delta.dr;
         
         if (nextCol < 0 || nextCol >= COLS || nextRow < 0 || nextRow >= ROWS) {
-            animateCrashOutOfBounds(exitDir);
+            animateCrash(exitDir, '¡Fuera del mapa!');
             return;
         }
         
         const nextTile = getTile(nextCol, nextRow);
-        const requiredEntry = OPPOSITE[exitDir];
+        if (!nextTile || nextTile.type === TILE_TYPES.BLOCKED) {
+            animateCrash(exitDir, '¡Vía bloqueada!');
+            return;
+        }
         
-        if (!(nextTile.getConnections() & requiredEntry)) {
-            animateCrashIntoWall(exitDir);
+        const reqEntry = OPPOSITE[exitDir];
+        if (!(nextTile.getConnections() & reqEntry)) {
+            animateCrash(exitDir, '¡Choque!');
             return;
         }
         
@@ -866,60 +1012,36 @@ function gameLoop() {
 
 function findExitDir(connections, entryDir) {
     const exits = connections & ~entryDir;
-    
     if (exits & car.dir) return car.dir;
-    if (exits & DIR.N) return DIR.N;
-    if (exits & DIR.E) return DIR.E;
-    if (exits & DIR.S) return DIR.S;
-    if (exits & DIR.W) return DIR.W;
-    
+    for (const d of [DIR.N, DIR.E, DIR.S, DIR.W]) {
+        if (exits & d) return d;
+    }
     return 0;
 }
 
-function animateCrashIntoWall(dir) {
-    let frames = 12;
+function animateCrash(dir, msg) {
+    let frames = 10;
     const delta = DIR_DELTA[dir];
-    
-    function crashAnim() {
+    const anim = () => {
         if (frames-- > 0) {
             car.x += delta.dc * 2;
             car.y += delta.dr * 2;
             draw();
-            requestAnimationFrame(crashAnim);
+            requestAnimationFrame(anim);
         } else {
-            crash('¡Choque!');
+            crash(msg);
         }
-    }
-    crashAnim();
-}
-
-function animateCrashOutOfBounds(dir) {
-    let frames = 15;
-    const delta = DIR_DELTA[dir];
-    
-    function crashAnim() {
-        if (frames-- > 0) {
-            car.x += delta.dc * 3;
-            car.y += delta.dr * 3;
-            draw();
-            requestAnimationFrame(crashAnim);
-        } else {
-            crash('¡Fuera del mapa!');
-        }
-    }
-    crashAnim();
+    };
+    anim();
 }
 
 function crash(message) {
     gameState = 'CRASHED';
     if (countdownTimer) clearInterval(countdownTimer);
     if (engineSoundInterval) clearInterval(engineSoundInterval);
-    
     playSound('crash');
-    
     gameContainer.classList.add('shake');
     setTimeout(() => gameContainer.classList.remove('shake'), 500);
-    
     showOverlay('💥', '¡CHOQUE!', message, '', resetLevel, 'Reintentar');
 }
 
@@ -927,24 +1049,22 @@ function win() {
     gameState = 'WON';
     if (countdownTimer) clearInterval(countdownTimer);
     if (engineSoundInterval) clearInterval(engineSoundInterval);
-    
     playSound('win');
     
-    const timeBonus = timeLeft * 10;
-    const levelBonus = level * 50;
+    const bonus = timeLeft * 10 + level * 25;
     
-    if (level >= 20) {
-        showOverlay('🎉', '¡JUEGO COMPLETADO!', 'Has terminado los 20 niveles', `Bonus: ${timeBonus + levelBonus} pts`, () => {
+    if (level >= 40) {
+        showOverlay('🎉', '¡COMPLETADO!', `${driverName}, ¡terminaste los 40 niveles!`, `Puntos: ${bonus}`, () => {
             level = 1;
             levelDisplay.textContent = level;
             generateLevel();
         }, 'Jugar de nuevo');
     } else {
-        showOverlay('🏆', '¡NIVEL COMPLETADO!', `Tiempo restante: ${timeLeft}s`, `Bonus: +${timeBonus} pts`, () => {
+        showOverlay('🏆', '¡NIVEL COMPLETADO!', `Tiempo: ${timeLeft}s`, `+${bonus} pts`, () => {
             level++;
             levelDisplay.textContent = level;
             generateLevel();
-        }, 'Siguiente Nivel');
+        }, 'Siguiente');
     }
 }
 
@@ -953,11 +1073,9 @@ function showOverlay(icon, title, subtitle, bonus, action, btnText) {
     document.getElementById('overlayTitle').textContent = title;
     document.getElementById('overlaySubtitle').textContent = subtitle;
     document.getElementById('overlayBonus').textContent = bonus;
-    
     const btn = document.getElementById('overlayBtn');
     btn.textContent = btnText;
     btn.onclick = action;
-    
     overlay.classList.remove('hidden');
 }
 
@@ -966,10 +1084,7 @@ function draw() {
     ctx.fillStyle = '#1e293b';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    grid.forEach(tile => {
-        if (tile) drawTile(tile);
-    });
-    
+    grid.forEach(tile => { if (tile) drawTile(tile); });
     if (car) drawCar();
 }
 
@@ -978,89 +1093,116 @@ function drawTile(tile) {
     const y = tile.row * TILE_SIZE;
     const cx = x + TILE_SIZE / 2;
     const cy = y + TILE_SIZE / 2;
-    const roadWidth = TILE_SIZE * ROAD_WIDTH_RATIO;
+    const rw = TILE_SIZE * ROAD_WIDTH_RATIO;
     
     ctx.save();
     
+    // Fondo
     ctx.fillStyle = '#334155';
     ctx.fillRect(x + 1, y + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+    
+    // Tile bloqueado
+    if (tile.type === TILE_TYPES.BLOCKED) {
+        drawBlockedTile(tile, x, y, cx, cy);
+        ctx.restore();
+        return;
+    }
     
     ctx.translate(cx, cy);
     ctx.rotate(tile.rotation * Math.PI / 2);
     
-    let roadColor = tile.powered ? '#4ade80' : '#64748b';
-    if (tile.type === TILE_TYPES.START) roadColor = '#10b981';
-    if (tile.type === TILE_TYPES.END) roadColor = tile.powered ? '#22c55e' : '#ef4444';
+    let color = tile.powered ? '#4ade80' : '#64748b';
+    if (tile.type === TILE_TYPES.START) color = '#10b981';
+    if (tile.type === TILE_TYPES.END) color = tile.powered ? '#22c55e' : '#ef4444';
+    if (tile.isBridge) color = tile.powered ? '#60a5fa' : '#3b82f6';
     
-    ctx.fillStyle = roadColor;
+    ctx.fillStyle = color;
     
-    if (tile.type === TILE_TYPES.START) {
-        drawStartTile(roadWidth);
-    } else if (tile.type === TILE_TYPES.END) {
-        drawEndTile(roadWidth);
-    } else if (tile.type === TILE_TYPES.STRAIGHT) {
-        drawStraightTile(roadWidth);
-    } else if (tile.type === TILE_TYPES.CURVE) {
-        drawCurveTile(roadWidth);
-    }
+    if (tile.type === TILE_TYPES.START) drawStartTile(rw);
+    else if (tile.type === TILE_TYPES.END) drawEndTile(rw);
+    else if (tile.type === TILE_TYPES.STRAIGHT) drawStraightTile(rw, tile.isBridge);
+    else if (tile.type === TILE_TYPES.CURVE) drawCurveTile(rw);
     
     ctx.restore();
     
-    // Dibujar elementos especiales (sin rotación)
-    if (tile.special) {
+    if (tile.special && tile.type !== TILE_TYPES.BLOCKED) {
         drawSpecialElement(tile, x, y);
+    }
+}
+
+function drawBlockedTile(tile, x, y, cx, cy) {
+    const s = TILE_SIZE;
+    
+    if (tile.special === 'broken') {
+        // Calle rota
+        ctx.fillStyle = '#4b5563';
+        ctx.fillRect(x + 5, y + 5, s - 10, s - 10);
+        ctx.strokeStyle = '#1f2937';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x + 10, y + 10);
+        ctx.lineTo(x + s - 15, y + s / 2);
+        ctx.lineTo(x + 8, y + s - 12);
+        ctx.stroke();
+        ctx.fillStyle = '#fbbf24';
+        ctx.font = `${s * 0.35}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('⚠️', cx, cy);
+    } else if (tile.special === 'tree') {
+        // Árbol caído
+        ctx.fillStyle = '#166534';
+        ctx.fillRect(x + 5, y + 5, s - 10, s - 10);
+        ctx.fillStyle = '#14532d';
+        ctx.font = `${s * 0.5}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🌳', cx, cy);
+    } else {
+        // Obras
+        ctx.fillStyle = '#f97316';
+        ctx.fillRect(x + 5, y + 5, s - 10, s - 10);
+        ctx.fillStyle = '#1f2937';
+        for (let i = 0; i < 3; i++) {
+            ctx.fillRect(x + 8 + i * 12, y + s / 2 - 3, 8, 6);
+        }
+        ctx.fillStyle = 'white';
+        ctx.font = `${s * 0.35}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🚧', cx, cy);
     }
 }
 
 function drawSpecialElement(tile, x, y) {
     const cx = x + TILE_SIZE / 2;
     const cy = y + TILE_SIZE / 2;
+    const s = TILE_SIZE;
     
     ctx.save();
     
     if (tile.special === 'semaphore') {
-        // Semáforo
         ctx.fillStyle = '#1f2937';
-        ctx.fillRect(cx - 8, cy - 20, 16, 40);
-        
-        // Luces
-        const colors = {
-            red: tile.semaphoreState === 'red' ? '#ef4444' : '#4b1515',
-            yellow: tile.semaphoreState === 'yellow' ? '#fbbf24' : '#4b4215',
-            green: tile.semaphoreState === 'green' ? '#22c55e' : '#154b25'
+        ctx.fillRect(cx - 6, cy - 15, 12, 30);
+        const cols = {
+            red: tile.semaphoreState === 'red' ? '#ef4444' : '#3f1515',
+            yellow: tile.semaphoreState === 'yellow' ? '#fbbf24' : '#3f3515',
+            green: tile.semaphoreState === 'green' ? '#22c55e' : '#153f25'
         };
-        
-        ctx.beginPath();
-        ctx.arc(cx, cy - 12, 5, 0, Math.PI * 2);
-        ctx.fillStyle = colors.red;
-        ctx.fill();
-        
-        ctx.beginPath();
-        ctx.arc(cx, cy, 5, 0, Math.PI * 2);
-        ctx.fillStyle = colors.yellow;
-        ctx.fill();
-        
-        ctx.beginPath();
-        ctx.arc(cx, cy + 12, 5, 0, Math.PI * 2);
-        ctx.fillStyle = colors.green;
-        ctx.fill();
-        
+        ctx.beginPath(); ctx.arc(cx, cy - 9, 4, 0, Math.PI * 2);
+        ctx.fillStyle = cols.red; ctx.fill();
+        ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+        ctx.fillStyle = cols.yellow; ctx.fill();
+        ctx.beginPath(); ctx.arc(cx, cy + 9, 4, 0, Math.PI * 2);
+        ctx.fillStyle = cols.green; ctx.fill();
     } else if (tile.special === 'puddle') {
-        // Charco
-        ctx.fillStyle = 'rgba(59, 130, 246, 0.6)';
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.5)';
         ctx.beginPath();
-        ctx.ellipse(cx, cy, 15, 10, 0, 0, Math.PI * 2);
+        ctx.ellipse(cx, cy, s * 0.2, s * 0.12, 0, 0, Math.PI * 2);
         ctx.fill();
-        
-        ctx.fillStyle = 'rgba(147, 197, 253, 0.5)';
-        ctx.beginPath();
-        ctx.ellipse(cx - 3, cy - 2, 5, 3, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
     } else if (tile.special === 'boost') {
-        // Boost
         ctx.fillStyle = '#fbbf24';
-        ctx.font = 'bold 20px sans-serif';
+        ctx.font = `${s * 0.3}px sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('⚡', cx, cy);
@@ -1069,65 +1211,66 @@ function drawSpecialElement(tile, x, y) {
     ctx.restore();
 }
 
-function drawStartTile(roadWidth) {
-    const size = TILE_SIZE;
-    const half = roadWidth / 2;
-    
-    ctx.fillRect(-size * 0.35, -size * 0.35, size * 0.7, size * 0.7);
-    ctx.fillRect(0, -half, size / 2, roadWidth);
-    
+function drawStartTile(rw) {
+    const s = TILE_SIZE;
+    const h = rw / 2;
+    ctx.fillRect(-s * 0.32, -s * 0.32, s * 0.64, s * 0.64);
+    ctx.fillRect(0, -h, s / 2, rw);
     ctx.fillStyle = 'white';
-    ctx.font = 'bold 12px sans-serif';
+    ctx.font = 'bold 10px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('GO', -5, 0);
+    ctx.fillText('GO', -4, 0);
 }
 
-function drawEndTile(roadWidth) {
-    const size = TILE_SIZE;
-    const half = roadWidth / 2;
-    
-    ctx.fillRect(-size * 0.35, -size * 0.35, size * 0.7, size * 0.7);
-    ctx.fillRect(-size / 2, -half, size / 2, roadWidth);
-    
-    ctx.font = '24px sans-serif';
+function drawEndTile(rw) {
+    const s = TILE_SIZE;
+    const h = rw / 2;
+    ctx.fillRect(-s * 0.32, -s * 0.32, s * 0.64, s * 0.64);
+    ctx.fillRect(-s / 2, -h, s / 2, rw);
+    ctx.font = `${s * 0.35}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('🏁', 5, 0);
+    ctx.fillText('🏁', 4, 0);
 }
 
-function drawStraightTile(roadWidth) {
-    const size = TILE_SIZE;
-    const half = roadWidth / 2;
+function drawStraightTile(rw, isBridge) {
+    const s = TILE_SIZE;
+    const h = rw / 2;
     
-    ctx.fillRect(-half, -size / 2, roadWidth, size);
+    if (isBridge) {
+        // Puente
+        ctx.fillRect(-h - 4, -s / 2, rw + 8, s);
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(-h - 6, -s / 2 + 5, 4, s - 10);
+        ctx.fillRect(h + 2, -s / 2 + 5, 4, s - 10);
+    } else {
+        ctx.fillRect(-h, -s / 2, rw, s);
+    }
     
     ctx.strokeStyle = '#fbbf24';
     ctx.lineWidth = 2;
-    ctx.setLineDash([6, 4]);
+    ctx.setLineDash([5, 3]);
     ctx.beginPath();
-    ctx.moveTo(0, -size / 2);
-    ctx.lineTo(0, size / 2);
+    ctx.moveTo(0, -s / 2);
+    ctx.lineTo(0, s / 2);
     ctx.stroke();
     ctx.setLineDash([]);
 }
 
-function drawCurveTile(roadWidth) {
-    const size = TILE_SIZE;
-    const half = roadWidth / 2;
-    
-    ctx.fillRect(-half, -size / 2, roadWidth, size / 2 + half);
-    ctx.fillRect(-half, -half, size / 2 + half, roadWidth);
-    
+function drawCurveTile(rw) {
+    const s = TILE_SIZE;
+    const h = rw / 2;
+    ctx.fillRect(-h, -s / 2, rw, s / 2 + h);
+    ctx.fillRect(-h, -h, s / 2 + h, rw);
     ctx.beginPath();
-    ctx.arc(0, 0, half, 0, Math.PI * 2);
+    ctx.arc(0, 0, h, 0, Math.PI * 2);
     ctx.fill();
-    
     ctx.strokeStyle = '#fbbf24';
     ctx.lineWidth = 2;
     ctx.setLineDash([4, 3]);
     ctx.beginPath();
-    ctx.arc(size / 2, -size / 2, size / 2, Math.PI / 2, Math.PI);
+    ctx.arc(s / 2, -s / 2, s / 2, Math.PI / 2, Math.PI);
     ctx.stroke();
     ctx.setLineDash([]);
 }
@@ -1137,44 +1280,39 @@ function drawCar() {
     ctx.translate(car.x, car.y);
     ctx.rotate(car.angle);
     
-    ctx.shadowColor = 'rgba(0,0,0,0.5)';
-    ctx.shadowBlur = 8;
-    ctx.shadowOffsetY = 3;
+    ctx.shadowColor = 'rgba(0,0,0,0.4)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetY = 2;
     
-    // Cuerpo
-    ctx.fillStyle = car.waiting ? '#94a3b8' : '#f472b6';
+    const w = car.waiting;
+    ctx.fillStyle = w ? '#94a3b8' : '#f472b6';
     ctx.beginPath();
-    ctx.roundRect(-14, -9, 28, 18, 4);
+    ctx.roundRect(-12, -8, 24, 16, 3);
     ctx.fill();
     
-    // Techo
-    ctx.fillStyle = car.waiting ? '#64748b' : '#ec4899';
+    ctx.fillStyle = w ? '#64748b' : '#ec4899';
     ctx.beginPath();
-    ctx.roundRect(-8, -7, 12, 14, 2);
+    ctx.roundRect(-7, -6, 10, 12, 2);
     ctx.fill();
     
-    // Ventana
     ctx.fillStyle = '#1e293b';
-    ctx.fillRect(-5, -5, 8, 10);
+    ctx.fillRect(-4, -4, 6, 8);
     
-    // Luces
-    ctx.fillStyle = car.waiting ? '#94a3b8' : '#fef08a';
-    ctx.fillRect(12, -6, 3, 4);
-    ctx.fillRect(12, 2, 3, 4);
+    ctx.fillStyle = w ? '#94a3b8' : '#fef08a';
+    ctx.fillRect(10, -5, 2, 3);
+    ctx.fillRect(10, 2, 2, 3);
     
-    // Luces traseras (rojas si espera)
-    if (car.waiting) {
+    if (w) {
         ctx.fillStyle = '#ef4444';
-        ctx.fillRect(-15, -5, 2, 4);
-        ctx.fillRect(-15, 1, 2, 4);
+        ctx.fillRect(-13, -4, 2, 3);
+        ctx.fillRect(-13, 1, 2, 3);
     }
     
-    // Ruedas
     ctx.fillStyle = '#1e293b';
-    ctx.fillRect(-10, -11, 6, 3);
-    ctx.fillRect(-10, 8, 6, 3);
-    ctx.fillRect(4, -11, 6, 3);
-    ctx.fillRect(4, 8, 6, 3);
+    ctx.fillRect(-9, -10, 5, 2);
+    ctx.fillRect(-9, 8, 5, 2);
+    ctx.fillRect(4, -10, 5, 2);
+    ctx.fillRect(4, 8, 5, 2);
     
     ctx.restore();
 }
