@@ -63,7 +63,7 @@
             <div class="mt-8 text-slate-500 text-xs max-w-xs">
                 <p>Gira las fichas para armar el camino.<br>
                 👆 Toca el carro para elegir dirección.<br>
-                🏁 ¡Todas las metas son válidas!</p>
+                ⚠️ ¡Cuidado con las calles sin señales!</p>
             </div>
         </div>
     </div>
@@ -159,8 +159,11 @@ const TILE_TYPES = {
     T_JUNCTION: { id: 3, base: DIR.N | DIR.E | DIR.S },
     CROSS: { id: 4, base: DIR.N | DIR.E | DIR.S | DIR.W },
     START: { id: 5, base: DIR.N | DIR.E | DIR.S | DIR.W, locked: true },
-    END: { id: 6, base: DIR.N | DIR.E | DIR.S | DIR.W, locked: true }, // Meta válida
-    BLOCKED: { id: 7, base: 0, locked: true }
+    END: { id: 6, base: DIR.N | DIR.E | DIR.S | DIR.W, locked: true }, // Una sola meta con múltiples entradas
+    BLOCKED: { id: 7, base: 0, locked: true },
+    // Calles trampa - transitables pero SIN flechas (confunden)
+    DEAD_STRAIGHT: { id: 8, base: DIR.N | DIR.S, noArrows: true },
+    DEAD_CURVE: { id: 9, base: DIR.N | DIR.E, noArrows: true }
 };
 
 let grid = [], specialTiles = [], car = null, level = 1, driverName = "Conductor";
@@ -175,6 +178,7 @@ class Tile {
         this.rotation = rotation; this.locked = type.locked || false;
         this.powered = false; this.special = null; this.semaphoreState = 'red';
         this.isRealEnd = false; this.isFakeEnd = false;
+        this.isDeadEnd = false; // Nueva propiedad para calles trampa
     }
     getConnections() {
         if (this.type === TILE_TYPES.BLOCKED) return 0;
@@ -299,8 +303,9 @@ function generateLevel() {
     $('statusText').textContent = 'GIRA LAS FICHAS';
     $('statusText').className = 'text-yellow-400 font-bold text-xs';
     
-    const totalEnds = config.numFakeEnds + 1;
-    $('levelHint').textContent = `🏁 ${totalEnds} metas válidas | 👆 Toca el carro para girar`;
+    // Calcular cantidad de calles trampa según nivel
+    const deadEndCount = Math.min(2 + Math.floor(level / 4), 8);
+    $('levelHint').textContent = `🏁 1 meta | ⚠️ ${deadEndCount} calles sin señales | 👆 Toca el carro`;
     
     resize();
     grid = new Array(COLS * ROWS).fill(null);
@@ -309,14 +314,14 @@ function generateLevel() {
     // 1. Colocar inicio
     placeStart();
     
-    // 2. Colocar TODAS las metas (todas válidas)
-    placeEnds(config.numFakeEnds + 1);
+    // 2. Colocar UNA SOLA meta (con múltiples entradas)
+    placeSingleEnd();
     
     // 3. Colocar obstáculos
     placeObstacles(config.obstacles);
     
-    // 4. Rellenar espacios vacíos
-    fillEmpty();
+    // 4. Rellenar espacios vacíos (incluyendo calles trampa)
+    fillEmpty(deadEndCount);
     
     // 5. Aleatorizar rotaciones
     randomizeRotations();
@@ -330,52 +335,32 @@ function generateLevel() {
     startCountdown();
 }
 
-function placeStart() {
-    // Inicio en esquina superior izquierda o posición variable
-    const startPositions = [
-        { col: 0, row: 0 },
-        { col: 0, row: Math.floor(ROWS / 2) },
-        { col: Math.floor(COLS / 2), row: 0 }
-    ];
-    const pos = startPositions[level % startPositions.length];
-    
-    const tile = new Tile(pos.col, pos.row, TILE_TYPES.START);
-    tile.locked = true;
-    grid[pos.row * COLS + pos.col] = tile;
-}
-
-function placeEnds(count) {
+// Nueva función para colocar UNA sola meta
+function placeSingleEnd() {
     const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
     
-    // Posiciones en los bordes del mapa
-    const edgePositions = [];
-    for (let c = 0; c < COLS; c++) {
-        edgePositions.push({ col: c, row: 0 });
-        edgePositions.push({ col: c, row: ROWS - 1 });
-    }
-    for (let r = 1; r < ROWS - 1; r++) {
-        edgePositions.push({ col: 0, row: r });
-        edgePositions.push({ col: COLS - 1, row: r });
-    }
-    
-    // Filtrar posiciones ocupadas
-    const available = edgePositions.filter(p => {
-        if (p.col === startTile.col && p.row === startTile.row) return false;
-        if (grid[p.row * COLS + p.col]) return false;
-        return true;
+    // Posiciones posibles para la meta (lejos del inicio)
+    const possiblePositions = [
+        { col: COLS - 1, row: ROWS - 1 },  // Esquina inferior derecha
+        { col: COLS - 1, row: 0 },          // Esquina superior derecha
+        { col: 0, row: ROWS - 1 },          // Esquina inferior izquierda
+        { col: COLS - 1, row: Math.floor(ROWS / 2) }, // Mitad derecha
+        { col: Math.floor(COLS / 2), row: ROWS - 1 }  // Mitad inferior
+    ].filter(p => {
+        // Filtrar posiciones muy cercanas al inicio
+        const dist = Math.abs(p.col - startTile.col) + Math.abs(p.row - startTile.row);
+        return dist >= Math.floor((COLS + ROWS) / 3);
     });
     
-    // Mezclar y seleccionar
-    available.sort(() => Math.random() - 0.5);
+    // Seleccionar posición aleatoria
+    const pos = possiblePositions[Math.floor(Math.random() * possiblePositions.length)] || 
+                { col: COLS - 1, row: ROWS - 1 };
     
-    for (let i = 0; i < count && i < available.length; i++) {
-        const pos = available[i];
-        const tile = new Tile(pos.col, pos.row, TILE_TYPES.END);
-        tile.locked = true;
-        tile.isEnd = true; // Todas son metas válidas
-        grid[pos.row * COLS + pos.col] = tile;
-        endPositions.push(pos);
-    }
+    const tile = new Tile(pos.col, pos.row, TILE_TYPES.END);
+    tile.locked = true;
+    tile.isEnd = true;
+    grid[pos.row * COLS + pos.col] = tile;
+    endPositions = [pos]; // Solo una meta
 }
 
 function placeObstacles(count) {
@@ -400,9 +385,9 @@ function placeObstacles(count) {
 }
 
 function canReachAnyEnd() {
-    // Verificar que al menos UNA meta sea alcanzable
     const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
-    if (!startTile || endPositions.length === 0) return true;
+    const endTile = grid.find(t => t && t.type === TILE_TYPES.END);
+    if (!startTile || !endTile) return true;
     
     const visited = new Set();
     const queue = [{ col: startTile.col, row: startTile.row }];
@@ -411,8 +396,7 @@ function canReachAnyEnd() {
     while (queue.length > 0) {
         const curr = queue.shift();
         
-        // Verificar si llegamos a alguna meta
-        if (endPositions.some(e => e.col === curr.col && e.row === curr.row)) {
+        if (curr.col === endTile.col && curr.row === endTile.row) {
             return true;
         }
         
@@ -508,51 +492,56 @@ function ensurePathExists() {
     }
 }
 
-function fillEmpty() {
+function fillEmpty(deadEndCount) {
+    const emptyPositions = [];
+    
+    // Recolectar posiciones vacías
     for (let i = 0; i < COLS * ROWS; i++) {
         if (!grid[i]) {
-            const col = i % COLS, row = Math.floor(i / COLS);
-            const rand = Math.random();
-            let type;
-            if (rand < 0.35) type = TILE_TYPES.STRAIGHT;
-            else if (rand < 0.7) type = TILE_TYPES.CURVE;
-            else if (rand < 0.88) type = TILE_TYPES.T_JUNCTION;
-            else type = TILE_TYPES.CROSS;
-            grid[i] = new Tile(col, row, type);
+            emptyPositions.push(i);
         }
     }
-}
-
-function randomizeRotations() {
-    grid.forEach(tile => {
-        if (tile && !tile.locked && tile.type !== TILE_TYPES.BLOCKED) {
-            tile.rotation = Math.floor(Math.random() * 4);
-        }
-    });
-}
-
-function addSpecials(features) {
-    if (!features.length) return;
     
-    // Agregar en tiles aleatorios que no sean especiales
-    const eligible = [];
-    grid.forEach((t, i) => {
-        if (t && !t.locked && !t.special && t.type !== TILE_TYPES.BLOCKED) {
-            eligible.push(i);
-        }
-    });
+    // Mezclar posiciones
+    emptyPositions.sort(() => Math.random() - 0.5);
     
-    eligible.sort(() => Math.random() - 0.5);
-    
-    let idx = 0;
-    features.forEach(f => {
-        for (let i = 0; i < 2 && idx < eligible.length; i++, idx++) {
-            const tile = grid[eligible[idx]];
-            if (f === 'semaphore') { tile.special = 'semaphore'; tile.semaphoreState = 'red'; specialTiles.push(tile); }
-            else if (f === 'puddle') tile.special = 'puddle';
-            else if (f === 'boost') tile.special = 'boost';
+    // Colocar calles trampa (sin flechas) primero
+    let deadPlaced = 0;
+    for (let i = 0; i < emptyPositions.length && deadPlaced < deadEndCount; i++) {
+        const idx = emptyPositions[i];
+        const col = idx % COLS, row = Math.floor(idx / COLS);
+        
+        // No poner calles trampa muy cerca del inicio o la meta
+        const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
+        const endTile = grid.find(t => t && t.type === TILE_TYPES.END);
+        
+        const distToStart = startTile ? Math.abs(col - startTile.col) + Math.abs(row - startTile.row) : 999;
+        const distToEnd = endTile ? Math.abs(col - endTile.col) + Math.abs(row - endTile.row) : 999;
+        
+        if (distToStart >= 2 && distToEnd >= 2) {
+            // Elegir tipo de calle trampa
+            const deadType = Math.random() > 0.5 ? TILE_TYPES.DEAD_STRAIGHT : TILE_TYPES.DEAD_CURVE;
+            grid[idx] = new Tile(col, row, deadType);
+            grid[idx].isDeadEnd = true; // Marcar como calle trampa
+            deadPlaced++;
+            emptyPositions.splice(i, 1);
+            i--;
         }
-    });
+    }
+    
+    // Rellenar el resto con calles normales (con flechas)
+    for (const idx of emptyPositions) {
+        if (grid[idx]) continue;
+        
+        const col = idx % COLS, row = Math.floor(idx / COLS);
+        const rand = Math.random();
+        let type;
+        if (rand < 0.35) type = TILE_TYPES.STRAIGHT;
+        else if (rand < 0.7) type = TILE_TYPES.CURVE;
+        else if (rand < 0.88) type = TILE_TYPES.T_JUNCTION;
+        else type = TILE_TYPES.CROSS;
+        grid[idx] = new Tile(col, row, type);
+    }
 }
 
 function checkConnections() {
@@ -810,10 +799,18 @@ function drawTile(tile) {
     ctx.translate(cx, cy);
     ctx.rotate(tile.rotation * Math.PI / 2);
     
-    // Color según estado
-    let color = tile.powered ? '#4ade80' : '#64748b';
-    if (tile.type === TILE_TYPES.START) color = '#10b981';
-    else if (tile.isEnd) color = tile.powered ? '#4ade80' : '#64748b';
+    // Color según estado - calles trampa tienen color más oscuro/diferente
+    let color;
+    if (tile.isDeadEnd) {
+        // Calles trampa: color más apagado
+        color = tile.powered ? '#65a30d' : '#525252'; // Verde oliva si conectada, gris oscuro si no
+    } else if (tile.type === TILE_TYPES.START) {
+        color = '#10b981';
+    } else if (tile.isEnd) {
+        color = tile.powered ? '#4ade80' : '#64748b';
+    } else {
+        color = tile.powered ? '#4ade80' : '#64748b';
+    }
     
     ctx.fillStyle = color;
     
@@ -829,14 +826,18 @@ function drawTile(tile) {
     // Centro
     ctx.beginPath(); ctx.arc(0, 0, h, 0, Math.PI * 2); ctx.fill();
     
-    // Líneas amarillas centrales
-    ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 2]);
-    if ((conn & DIR.N) && (conn & DIR.S)) { ctx.beginPath(); ctx.moveTo(0, -s/2); ctx.lineTo(0, s/2); ctx.stroke(); }
-    if ((conn & DIR.E) && (conn & DIR.W)) { ctx.beginPath(); ctx.moveTo(-s/2, 0); ctx.lineTo(s/2, 0); ctx.stroke(); }
-    ctx.setLineDash([]);
+    // Líneas amarillas centrales (solo si NO es calle trampa)
+    if (!tile.isDeadEnd && !tile.type.noArrows) {
+        ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 2]);
+        if ((conn & DIR.N) && (conn & DIR.S)) { ctx.beginPath(); ctx.moveTo(0, -s/2); ctx.lineTo(0, s/2); ctx.stroke(); }
+        if ((conn & DIR.E) && (conn & DIR.W)) { ctx.beginPath(); ctx.moveTo(-s/2, 0); ctx.lineTo(s/2, 0); ctx.stroke(); }
+        ctx.setLineDash([]);
+    }
     
-    // *** DIBUJAR FLECHAS DIRECCIONALES ***
-    drawDirectionArrows(conn, s, h, tile.powered);
+    // *** DIBUJAR FLECHAS SOLO SI NO ES CALLE TRAMPA ***
+    if (!tile.isDeadEnd && !tile.type.noArrows) {
+        drawDirectionArrows(conn, s, h, tile.powered);
+    }
     
     // Texto GO en inicio
     if (tile.type === TILE_TYPES.START) {
@@ -847,11 +848,19 @@ function drawTile(tile) {
     
     ctx.restore();
     
-    // Metas - bandera
+    // Meta - bandera (solo hay una)
     if (tile.isEnd) {
         ctx.font = `${TILE_SIZE * 0.35}px sans-serif`;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText('🏁', cx, cy);
+    }
+    
+    // Icono de advertencia en calles trampa (sutil)
+    if (tile.isDeadEnd) {
+        ctx.fillStyle = 'rgba(255, 200, 0, 0.3)';
+        ctx.font = `${TILE_SIZE * 0.2}px sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('?', cx, cy);
     }
     
     // Especiales
