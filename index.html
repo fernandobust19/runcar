@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RunCar - Puzzle de Carreteras</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: white;
+        }
+        h1 {
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        .game-info {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+        }
+        .timer {
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+        .timer.warning {
+            animation: pulse 0.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .level {
+            color: #4ecdc4;
+        }
+        .game-container {
+            position: relative;
+            background: #2d3436;
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(5, 80px);
+            grid-template-rows: repeat(5, 80px);
+            gap: 2px;
+            background: #636e72;
+        }
+        .cell {
+            width: 80px;
+            height: 80px;
+            background: #dfe6e9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            position: relative;
+        }
+        .cell:hover {
+            filter: brightness(1.1);
+        }
+        .cell.start {
+            background: #55efc4;
+        }
+        .cell.end {
+            background: #fd79a8;
+        }
+        .road {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        /* Tipos de carretera */
+        .road-straight {
+            background: #74b9ff;
+        }
+        .road-straight::before {
+            content: '';
+            position: absolute;
+            background: #ffeaa7;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 4px;
+            transform: translateY(-50%);
+        }
+        .road-curve {
+            background: #74b9ff;
+        }
+        .road-curve::before {
+            content: '';
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #ffeaa7;
+            border-radius: 0 0 100% 0;
+            border-top: none;
+            border-left: none;
+            bottom: 50%;
+            right: 50%;
+        }
+        .car {
+            position: absolute;
+            width: 40px;
+            height: 25px;
+            background: #e74c3c;
+            border-radius: 5px 15px 5px 5px;
+            z-index: 10;
+            transition: all 0.5s ease;
+        }
+        .car::before {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 15px;
+            background: #c0392b;
+            top: -10px;
+            left: 10px;
+            border-radius: 5px 5px 0 0;
+        }
+        .car.explode {
+            animation: explode 0.5s forwards;
+        }
+        @keyframes explode {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.5); background: #f39c12; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+        .flag {
+            font-size: 30px;
+        }
+        .btn {
+            margin-top: 20px;
+            padding: 15px 30px;
+            font-size: 1.1em;
+            background: #6c5ce7;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn:hover {
+            background: #a29bfe;
+            transform: scale(1.05);
+        }
+        .message {
+            margin-top: 15px;
+            font-size: 1.3em;
+            font-weight: bold;
+            min-height: 30px;
+        }
+        .message.win { color: #55efc4; }
+        .message.lose { color: #ff6b6b; }
+        .instructions {
+            margin-top: 20px;
+            text-align: center;
+            opacity: 0.8;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚗 RunCar - Puzzle de Carreteras</h1>
+    
+    <div class="game-info">
+        <span class="timer">⏱️ Tiempo: <span id="time">30</span>s</span>
+        <span class="level">🏆 Nivel: <span id="level">1</span></span>
+    </div>
+    
+    <div class="game-container">
+        <div class="grid" id="grid"></div>
+        <div class="car" id="car"></div>
+    </div>
+    
+    <div class="message" id="message"></div>
+    
+    <button class="btn" id="restartBtn">🔄 Reiniciar Juego</button>
+    
+    <div class="instructions">
+        <p>Haz clic en las piezas de carretera para girarlas.</p>
+        <p>¡Conecta el camino antes de que se acabe el tiempo!</p>
+    </div>
+
+    <script>
+        const GRID_SIZE = 5;
+        const INITIAL_TIME = 30;
+        
+        // Direcciones: 0=arriba, 1=derecha, 2=abajo, 3=izquierda
+        // Conexiones de cada tipo de pieza según su rotación
+        const ROAD_TYPES = {
+            straight: {
+                0: [0, 2], // vertical
+                1: [1, 3], // horizontal
+                2: [0, 2],
+                3: [1, 3]
+            },
+            curve: {
+                0: [1, 2], // conecta derecha-abajo
+                1: [2, 3], // conecta abajo-izquierda
+                2: [3, 0], // conecta izquierda-arriba
+                3: [0, 1]  // conecta arriba-derecha
+            }
+        };
+        
+        let grid = [];
+        let currentLevel = 1;
+        let timeLeft = INITIAL_TIME;
+        let timerInterval = null;
+        let gameRunning = false;
+        let carMoving = false;
+        
+        const gridElement = document.getElementById('grid');
+        const carElement = document.getElementById('car');
+        const timeElement = document.getElementById('time');
+        const levelElement = document.getElementById('level');
+        const messageElement = document.getElementById('message');
+        const restartBtn = document.getElementById('restartBtn');
+        
+        // Generar camino correcto y desordenar
+        function generateLevel() {
+            grid = [];
+            
+            // Crear grid vacío
+            for (let y = 0; y < GRID_SIZE; y++) {
+                grid[y] = [];
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    grid[y][x] = null;
+                }
+            }
+            
+            // Generar camino válido desde (0,0) hasta (4,4)
+            const path = generatePath();
+            
+            // Colocar piezas en el camino
+            for (let i = 0; i < path.length; i++) {
+                const { x, y } = path[i];
+                const prev = i > 0 ? path[i - 1] : null;
+                const next = i < path.length - 1 ? path[i + 1] : null;
+                
+                const piece = determinePiece(x, y, prev, next);
+                grid[y][x] = {
+                    type: piece.type,
+                    correctRotation: piece.rotation,
+                    currentRotation: (piece.rotation + Math.floor(Math.random() * 3) + 1) % 4
+                };
+            }
+            
+            renderGrid();
+        }
+        
+        function generatePath() {
+            const path = [{ x: 0, y: 0 }];
+            let x = 0, y = 0;
+            
+            while (x !== GRID_SIZE - 1 || y !== GRID_SIZE - 1) {
+                const moves = [];
+                if (x < GRID_SIZE - 1) moves.push({ x: x + 1, y });
+                if (y < GRID_SIZE - 1) moves.push({ x, y: y + 1 });
+                
+                // Preferir moverse hacia la meta
+                const move = moves[Math.floor(Math.random() * moves.length)];
+                x = move.x;
+                y = move.y;
+                path.push({ x, y });
+            }
+            
+            return path;
+        }
+        
+        function determinePiece(x, y, prev, next) {
+            let fromDir = null, toDir = null;
+            
+            if (prev) {
+                if (prev.x < x) fromDir = 3; // viene de izquierda
+                else if (prev.x > x) fromDir = 1; // viene de derecha
+                else if (prev.y < y) fromDir = 0; // viene de arriba
+                else if (prev.y > y) fromDir = 2; // viene de abajo
+            }
+            
+            if (next) {
+                if (next.x > x) toDir = 1; // va a derecha
+                else if (next.x < x) toDir = 3; // va a izquierda
+                else if (next.y > y) toDir = 2; // va a abajo
+                else if (next.y < y) toDir = 0; // va a arriba
+            }
+            
+            // Inicio
+            if (!prev) fromDir = 3;
+            // Final
+            if (!next) toDir = 1;
+            
+            // Determinar tipo y rotación
+            const dirs = [fromDir, toDir].sort((a, b) => a - b);
+            
+            // Recta: 0-2 (vertical) o 1-3 (horizontal)
+            if ((dirs[0] === 0 && dirs[1] === 2) || (dirs[0] === 1 && dirs[1] === 3)) {
+                return {
+                    type: 'straight',
+                    rotation: dirs[0] === 0 ? 0 : 1
+                };
+            }
+            
+            // Curva
+            if (dirs[0] === 0 && dirs[1] === 1) return { type: 'curve', rotation: 3 };
+            if (dirs[0] === 1 && dirs[1] === 2) return { type: 'curve', rotation: 0 };
+            if (dirs[0] === 2 && dirs[1] === 3) return { type: 'curve', rotation: 1 };
+            if (dirs[0] === 0 && dirs[1] === 3) return { type: 'curve', rotation: 2 };
+            
+            return { type: 'straight', rotation: 1 };
+        }
+        
+        function renderGrid() {
+            gridElement.innerHTML = '';
+            
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    
+                    if (x === 0 && y === 0) {
+                        cell.classList.add('start');
+                    } else if (x === GRID_SIZE - 1 && y === GRID_SIZE - 1) {
+                        cell.classList.add('end');
+                        cell.innerHTML = '<span class="flag">🏁</span>';
+                    }
+                    
+                    if (grid[y][x]) {
+                        const road = document.createElement('div');
+                        road.className = `road road-${grid[y][x].type}`;
+                        road.style.transform = `rotate(${grid[y][x].currentRotation * 90}deg)`;
+                        road.dataset.x = x;
+                        road.dataset.y = y;
+                        road.addEventListener('click', () => rotatePiece(x, y));
+                        cell.appendChild(road);
+                    }
+                    
+                    gridElement.appendChild(cell);
+                }
+            }
+            
+            // Posicionar carro al inicio
+            carElement.style.left = '20px';
+            carElement.style.top = '27px';
+            carElement.classList.remove('explode');
+            carElement.style.display = 'block';
+        }
+        
+        function rotatePiece(x, y) {
+            if (carMoving || !gameRunning) return;
+            
+            grid[y][x].currentRotation = (grid[y][x].currentRotation + 1) % 4;
+            const road = document.querySelector(`[data-x="${x}"][data-y="${y}"]`);
+            road.style.transform = `rotate(${grid[y][x].currentRotation * 90}deg)`;
+        }
+        
+        function checkPath() {
+            // Verificar si el camino está completo desde (0,0) hasta (4,4)
+            let x = 0, y = 0;
+            let fromDir = 3; // Entramos desde la izquierda
+            const visited = new Set();
+            const path = [{ x: 0, y: 0 }];
+            
+            while (true) {
+                const key = `${x},${y}`;
+                if (visited.has(key)) return { valid: false, path };
+                visited.add(key);
+                
+                const piece = grid[y][x];
+                if (!piece) return { valid: false, path };
+                
+                const connections = ROAD_TYPES[piece.type][piece.currentRotation];
+                const entryDir = (fromDir + 2) % 4; // Dirección de entrada
+                
+                if (!connections.includes(entryDir)) {
+                    return { valid: false, path };
+                }
+                
+                // Encontrar salida
+                const exitDir = connections.find(d => d !== entryDir);
+                
+                // Calcular siguiente posición
+                let nextX = x, nextY = y;
+                if (exitDir === 0) nextY--;
+                else if (exitDir === 1) nextX++;
+                else if (exitDir === 2) nextY++;
+                else if (exitDir === 3) nextX--;
+                
+                // Llegamos al final
+                if (x === GRID_SIZE - 1 && y === GRID_SIZE - 1 && exitDir === 1) {
+                    return { valid: true, path };
+                }
+                
+                // Fuera del grid
+                if (nextX < 0 || nextX >= GRID_SIZE || nextY < 0 || nextY >= GRID_SIZE) {
+                    return { valid: false, path };
+                }
+                
+                x = nextX;
+                y = nextY;
+                fromDir = exitDir;
+                path.push({ x, y });
+            }
+        }
+        
+        async function moveCar() {
+            carMoving = true;
+            const result = checkPath();
+            const path = result.path;
+            
+            for (let i = 0; i < path.length; i++) {
+                const { x, y } = path[i];
+                const cellSize = 82;
+                
+                carElement.style.left = `${x * cellSize + 20}px`;
+                carElement.style.top = `${y * cellSize + 27}px`;
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                if (i === path.length - 1 && !result.valid) {
+                    // Explotar
+                    carElement.classList.add('explode');
+                    messageElement.textContent = '💥 ¡El carro explotó! Camino incorrecto';
+                    messageElement.className = 'message lose';
+                    gameRunning = false;
+                    return;
+                }
+            }
+            
+            if (result.valid) {
+                // Mover a la meta final
+                const cellSize = 82;
+                carElement.style.left = `${(GRID_SIZE - 1) * cellSize + 50}px`;
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                messageElement.textContent = '🎉 ¡Nivel completado!';
+                messageElement.className = 'message win';
+                currentLevel++;
+                levelElement.textContent = currentLevel;
+                
+                setTimeout(() => {
+                    startGame();
+                }, 2000);
+            }
+        }
+        
+        function startTimer() {
+            timeLeft = INITIAL_TIME;
+            timeElement.textContent = timeLeft;
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timeElement.textContent = timeLeft;
+                
+                if (timeLeft <= 10) {
+                    document.querySelector('.timer').classList.add('warning');
+                }
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    document.querySelector('.timer').classList.remove('warning');
+                    moveCar();
+                }
+            }, 1000);
+        }
+        
+        function startGame() {
+            if (timerInterval) clearInterval(timerInterval);
+            
+            gameRunning = true;
+            carMoving = false;
+            messageElement.textContent = '';
+            messageElement.className = 'message';
+            document.querySelector('.timer').classList.remove('warning');
+            
+            generateLevel();
+            startTimer();
+        }
+        
+        function resetGame() {
+            currentLevel = 1;
+            levelElement.textContent = currentLevel;
+            startGame();
+        }
+        
+        restartBtn.addEventListener('click', resetGame);
+        
+        // Iniciar juego
+        startGame();
+    </script>
+</body>
+</html>
