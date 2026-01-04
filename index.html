@@ -63,7 +63,7 @@
             <div class="mt-8 text-slate-500 text-xs max-w-xs">
                 <p>Gira las fichas para armar el camino.<br>
                 👆 Toca el carro para elegir dirección.<br>
-                ¡El carro sigue la ruta que armes!</p>
+                🏁 ¡Todas las metas son válidas!</p>
             </div>
         </div>
     </div>
@@ -152,21 +152,20 @@ const DIR = { N: 1, E: 2, S: 4, W: 8 };
 const DIR_DELTA = { 1: {dc:0,dr:-1}, 2: {dc:1,dr:0}, 4: {dc:0,dr:1}, 8: {dc:-1,dr:0} };
 const OPPOSITE = { 1: 4, 2: 8, 4: 1, 8: 2 };
 
-// Tipos de tiles - Las metas tienen MÚLTIPLES entradas posibles
+// Tipos de tiles - TODAS las metas son válidas
 const TILE_TYPES = {
     STRAIGHT: { id: 1, base: DIR.N | DIR.S },
     CURVE: { id: 2, base: DIR.N | DIR.E },
     T_JUNCTION: { id: 3, base: DIR.N | DIR.E | DIR.S },
     CROSS: { id: 4, base: DIR.N | DIR.E | DIR.S | DIR.W },
-    START: { id: 5, base: DIR.N | DIR.E | DIR.S | DIR.W, locked: true }, // Todas las direcciones
-    END_REAL: { id: 6, base: DIR.N | DIR.E | DIR.S | DIR.W, locked: true }, // Múltiples entradas
-    END_FAKE: { id: 7, base: DIR.N | DIR.E | DIR.S | DIR.W, locked: true }, // Múltiples entradas
-    BLOCKED: { id: 8, base: 0, locked: true }
+    START: { id: 5, base: DIR.N | DIR.E | DIR.S | DIR.W, locked: true },
+    END: { id: 6, base: DIR.N | DIR.E | DIR.S | DIR.W, locked: true }, // Meta válida
+    BLOCKED: { id: 7, base: 0, locked: true }
 };
 
 let grid = [], specialTiles = [], car = null, level = 1, driverName = "Conductor";
 let gameState = 'START', animationId, countdownTimer, timeLeft, maxTime, engineSoundInterval;
-let realEndPos = null, fakeEndPositions = [];
+let endPositions = []; // Todas las metas son válidas
 
 const $ = id => document.getElementById(id);
 
@@ -301,34 +300,28 @@ function generateLevel() {
     $('statusText').className = 'text-yellow-400 font-bold text-xs';
     
     const totalEnds = config.numFakeEnds + 1;
-    $('levelHint').textContent = `🏁 ${totalEnds} metas | 👆 Toca el carro para girar`;
+    $('levelHint').textContent = `🏁 ${totalEnds} metas válidas | 👆 Toca el carro para girar`;
     
     resize();
     grid = new Array(COLS * ROWS).fill(null);
-    specialTiles = []; fakeEndPositions = []; realEndPos = null;
+    specialTiles = []; endPositions = [];
     
-    // 1. Colocar inicio en posición estratégica
+    // 1. Colocar inicio
     placeStart();
     
-    // 2. Colocar meta real
-    placeRealEnd();
+    // 2. Colocar TODAS las metas (todas válidas)
+    placeEnds(config.numFakeEnds + 1);
     
-    // 3. Colocar metas falsas
-    placeFakeEnds(config.numFakeEnds);
-    
-    // 4. Colocar obstáculos evitando bloquear caminos
+    // 3. Colocar obstáculos
     placeObstacles(config.obstacles);
     
-    // 5. Generar camino garantizado hacia meta real
-    ensurePathExists();
-    
-    // 6. Rellenar espacios vacíos
+    // 4. Rellenar espacios vacíos
     fillEmpty();
     
-    // 7. Aleatorizar rotaciones
+    // 5. Aleatorizar rotaciones
     randomizeRotations();
     
-    // 8. Agregar elementos especiales
+    // 6. Agregar elementos especiales
     addSpecials(config.features);
     
     resetCar();
@@ -351,28 +344,10 @@ function placeStart() {
     grid[pos.row * COLS + pos.col] = tile;
 }
 
-function placeRealEnd() {
-    // Meta real en esquina opuesta al inicio o posición variable
-    const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
-    const possiblePositions = [
-        { col: COLS - 1, row: ROWS - 1 },
-        { col: COLS - 1, row: Math.floor(ROWS / 2) },
-        { col: Math.floor(COLS / 2), row: ROWS - 1 },
-        { col: COLS - 1, row: 0 }
-    ].filter(p => !(p.col === startTile.col && p.row === startTile.row));
-    
-    realEndPos = possiblePositions[Math.floor(Math.random() * possiblePositions.length)];
-    
-    const tile = new Tile(realEndPos.col, realEndPos.row, TILE_TYPES.END_REAL);
-    tile.locked = true;
-    tile.isRealEnd = true;
-    grid[realEndPos.row * COLS + realEndPos.col] = tile;
-}
-
-function placeFakeEnds(count) {
+function placeEnds(count) {
     const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
     
-    // Posiciones posibles para metas falsas (bordes del mapa)
+    // Posiciones en los bordes del mapa
     const edgePositions = [];
     for (let c = 0; c < COLS; c++) {
         edgePositions.push({ col: c, row: 0 });
@@ -386,7 +361,6 @@ function placeFakeEnds(count) {
     // Filtrar posiciones ocupadas
     const available = edgePositions.filter(p => {
         if (p.col === startTile.col && p.row === startTile.row) return false;
-        if (p.col === realEndPos.col && p.row === realEndPos.row) return false;
         if (grid[p.row * COLS + p.col]) return false;
         return true;
     });
@@ -396,11 +370,11 @@ function placeFakeEnds(count) {
     
     for (let i = 0; i < count && i < available.length; i++) {
         const pos = available[i];
-        const tile = new Tile(pos.col, pos.row, TILE_TYPES.END_FAKE);
+        const tile = new Tile(pos.col, pos.row, TILE_TYPES.END);
         tile.locked = true;
-        tile.isFakeEnd = true;
+        tile.isEnd = true; // Todas son metas válidas
         grid[pos.row * COLS + pos.col] = tile;
-        fakeEndPositions.push(pos);
+        endPositions.push(pos);
     }
 }
 
@@ -413,9 +387,9 @@ function placeObstacles(count) {
         
         if (grid[row * COLS + col]) continue;
         
-        // Verificar que no bloquea el camino
+        // Verificar que no bloquea TODAS las rutas a TODAS las metas
         grid[row * COLS + col] = new Tile(col, row, TILE_TYPES.BLOCKED);
-        if (!canReachEnd()) {
+        if (!canReachAnyEnd()) {
             grid[row * COLS + col] = null;
             continue;
         }
@@ -425,9 +399,10 @@ function placeObstacles(count) {
     }
 }
 
-function canReachEnd() {
+function canReachAnyEnd() {
+    // Verificar que al menos UNA meta sea alcanzable
     const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
-    if (!startTile || !realEndPos) return true;
+    if (!startTile || endPositions.length === 0) return true;
     
     const visited = new Set();
     const queue = [{ col: startTile.col, row: startTile.row }];
@@ -435,7 +410,11 @@ function canReachEnd() {
     
     while (queue.length > 0) {
         const curr = queue.shift();
-        if (curr.col === realEndPos.col && curr.row === realEndPos.row) return true;
+        
+        // Verificar si llegamos a alguna meta
+        if (endPositions.some(e => e.col === curr.col && e.row === curr.row)) {
+            return true;
+        }
         
         [{dc:0,dr:-1}, {dc:1,dr:0}, {dc:0,dr:1}, {dc:-1,dr:0}].forEach(d => {
             const nc = curr.col + d.dc, nr = curr.row + d.dr;
@@ -740,9 +719,8 @@ function gameLoop() {
         else if (tile?.special === 'boost') car.speed = car.baseSpeed * 1.8;
         else car.speed = car.baseSpeed;
         
-        // Verificar metas
-        if (tile?.isRealEnd) { win(); return; }
-        if (tile?.isFakeEnd) { crash('¡Meta incorrecta! 🚫'); return; }
+        // CUALQUIER meta es válida - ¡GANAS!
+        if (tile?.isEnd) { win(); return; }
         
         const conn = tile?.getConnections() || 0;
         const entry = OPPOSITE[car.dir];
@@ -752,7 +730,6 @@ function gameLoop() {
         const exits = conn & ~entry;
         let exitDir = 0;
         
-        // Preferir seguir recto, luego buscar otras salidas
         if (exits & car.dir) exitDir = car.dir;
         else [DIR.N, DIR.E, DIR.S, DIR.W].forEach(d => { if (!exitDir && (exits & d)) exitDir = d; });
         
@@ -761,196 +738,55 @@ function gameLoop() {
         const d = DIR_DELTA[exitDir];
         const nc = car.col + d.dc, nr = car.row + d.dr;
         
-        if (nc < 0 || nc >= COLS || nr < 0 || nr >= ROWS) { animateCrash(exitDir, '¡Fuera del mapa!'); return; }
+        if (grid[nr * COLS + nc]?.type === TILE_TYPES.BLOCKED) {
+            crash('¡Choque con obstáculo!');
+            return;
+        }
         
-        const next = grid[nr * COLS + nc];
-        if (!next || next.type === TILE_TYPES.BLOCKED) { animateCrash(exitDir, '¡Bloqueado!'); return; }
-        if (!(next.getConnections() & OPPOSITE[exitDir])) { animateCrash(exitDir, '¡Choque!'); return; }
-        
-        car.dir = exitDir; car.col = nc; car.row = nr;
+        car.col = nc; car.row = nr;
         car.angle = exitDir === DIR.N ? -Math.PI/2 : exitDir === DIR.E ? 0 : exitDir === DIR.S ? Math.PI/2 : Math.PI;
+        
+        draw();
+    } else {
+        const d = DIR_DELTA[car.dir];
+        car.x += d.dc * car.speed;
+        car.y += d.dr * car.speed;
+        draw();
     }
     
-    const d = DIR_DELTA[car.dir];
-    car.x += d.dc * car.speed; car.y += d.dr * car.speed;
-    
-    draw();
     animationId = requestAnimationFrame(gameLoop);
 }
 
-function animateCrash(dir, msg) {
-    let frames = 10;
-    const d = DIR_DELTA[dir];
-    const anim = () => {
-        if (frames-- > 0) { car.x += d.dc * 2; car.y += d.dr * 2; draw(); requestAnimationFrame(anim); }
-        else crash(msg);
-    };
-    anim();
-}
-
-function crash(msg) {
-    gameState = 'CRASHED';
-    clearInterval(countdownTimer); clearInterval(engineSoundInterval);
-    playSound('crash');
-    $('gameContainer').classList.add('shake');
-    setTimeout(() => $('gameContainer').classList.remove('shake'), 500);
-    showOverlay('💥', '¡CHOQUE!', msg, '', resetLevel, 'Reintentar');
-}
-
 function win() {
-    gameState = 'WON';
-    clearInterval(countdownTimer); clearInterval(engineSoundInterval);
-    playSound('win');
-    const bonus = timeLeft * 10 + level * 25;
-    
-    if (level >= 40) {
-        showOverlay('🎉', '¡COMPLETADO!', `${driverName}, ¡terminaste!`, `${bonus} pts`, () => { level = 1; $('levelDisplay').textContent = level; generateLevel(); }, 'Reiniciar');
-    } else {
-        showOverlay('🏆', '¡NIVEL ' + level + '!', `Tiempo: ${timeLeft}s`, `+${bonus} pts`, () => { level++; $('levelDisplay').textContent = level; generateLevel(); }, 'Siguiente');
-    }
-}
-
-function showOverlay(icon, title, sub, bonus, action, btn) {
-    $('overlayIcon').textContent = icon;
-    $('overlayTitle').textContent = title;
-    $('overlaySubtitle').textContent = sub;
-    $('overlayBonus').textContent = bonus;
-    $('overlayBtn').textContent = btn;
-    $('overlayBtn').onclick = action;
+    cancelAnimationFrame(animationId);
+    clearInterval(countdownTimer);
+    gameState = 'WIN';
+    $('overlayTitle').textContent = '¡Felicidades!';
+    $('overlaySubtitle').textContent = 'Has completado el nivel.';
+    $('overlayBonus').textContent = `+${Math.floor(maxTime - timeLeft)} segundos de bonus`;
     $('overlay').classList.remove('hidden');
+    
+    // Sumar bonus por tiempo restante
+    const bonus = Math.floor(maxTime - timeLeft);
+    level += 1;
+    setTimeout(() => {
+        $('levelDisplay').textContent = level;
+        generateLevel();
+    }, 3000);
 }
 
-function draw() {
-    ctx.fillStyle = '#1e293b';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    grid.forEach(t => { if (t) drawTile(t); });
-    if (car) drawCar();
+function crash(reason) {
+    cancelAnimationFrame(animationId);
+    clearInterval(countdownTimer);
+    gameState = 'CRASH';
+    $('overlayTitle').textContent = '¡Juego Terminado!';
+    $('overlaySubtitle').textContent = reason;
+    $('overlayBonus').textContent = '';
+    $('overlay').classList.remove('hidden');
+    
+    setTimeout(() => { location.reload(); }, 5000);
 }
-
-function drawTile(tile) {
-    const x = tile.col * TILE_SIZE, y = tile.row * TILE_SIZE;
-    const cx = x + TILE_SIZE / 2, cy = y + TILE_SIZE / 2;
-    const rw = TILE_SIZE * 0.45, h = rw / 2;
-    
-    ctx.save();
-    ctx.fillStyle = '#334155';
-    ctx.fillRect(x + 1, y + 1, TILE_SIZE - 2, TILE_SIZE - 2);
-    
-    if (tile.type === TILE_TYPES.BLOCKED) {
-        ctx.fillStyle = tile.special === 'tree' ? '#166534' : tile.special === 'broken' ? '#4b5563' : '#ea580c';
-        ctx.fillRect(x + 4, y + 4, TILE_SIZE - 8, TILE_SIZE - 8);
-        ctx.font = `${TILE_SIZE * 0.4}px sans-serif`;
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(tile.special === 'tree' ? '🌳' : tile.special === 'broken' ? '⚠️' : '🚧', cx, cy);
-        ctx.restore(); return;
-    }
-    
-    ctx.translate(cx, cy);
-    ctx.rotate(tile.rotation * Math.PI / 2);
-    
-    // Color según estado
-    let color = tile.powered ? '#4ade80' : '#64748b';
-    if (tile.type === TILE_TYPES.START) color = '#10b981';
-    else if (tile.isRealEnd || tile.isFakeEnd) color = tile.powered ? '#4ade80' : '#64748b';
-    
-    ctx.fillStyle = color;
-    
-    const conn = tile.type.base;
-    const s = TILE_SIZE;
-    
-    // Dibujar brazos
-    if (conn & DIR.N) ctx.fillRect(-h, -s/2, rw, s/2 + h);
-    if (conn & DIR.S) ctx.fillRect(-h, -h, rw, s/2 + h);
-    if (conn & DIR.E) ctx.fillRect(-h, -h, s/2 + h, rw);
-    if (conn & DIR.W) ctx.fillRect(-s/2, -h, s/2 + h, rw);
-    
-    // Centro
-    ctx.beginPath(); ctx.arc(0, 0, h, 0, Math.PI * 2); ctx.fill();
-    
-    // Líneas
-    ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 2]);
-    if ((conn & DIR.N) && (conn & DIR.S)) { ctx.beginPath(); ctx.moveTo(0, -s/2); ctx.lineTo(0, s/2); ctx.stroke(); }
-    if ((conn & DIR.E) && (conn & DIR.W)) { ctx.beginPath(); ctx.moveTo(-s/2, 0); ctx.lineTo(s/2, 0); ctx.stroke(); }
-    ctx.setLineDash([]);
-    
-    // Texto
-    if (tile.type === TILE_TYPES.START) {
-        ctx.fillStyle = 'white'; ctx.font = 'bold 9px sans-serif';
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('GO', 0, 0);
-    }
-    
-    ctx.restore();
-    
-    // Metas - SIN recuadro rojo, solo bandera
-    if (tile.isRealEnd || tile.isFakeEnd) {
-        ctx.font = `${TILE_SIZE * 0.35}px sans-serif`;
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('🏁', cx, cy);
-    }
-    
-    // Especiales
-    if (tile.special === 'semaphore') {
-        ctx.fillStyle = '#1f2937';
-        ctx.fillRect(cx - 4, cy - 10, 8, 20);
-        const cols = { red: tile.semaphoreState === 'red' ? '#ef4444' : '#3f1515', yellow: tile.semaphoreState === 'yellow' ? '#fbbf24' : '#3f3515', green: tile.semaphoreState === 'green' ? '#22c55e' : '#153f25' };
-        ctx.beginPath(); ctx.arc(cx, cy - 6, 2.5, 0, Math.PI * 2); ctx.fillStyle = cols.red; ctx.fill();
-        ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, Math.PI * 2); ctx.fillStyle = cols.yellow; ctx.fill();
-        ctx.beginPath(); ctx.arc(cx, cy + 6, 2.5, 0, Math.PI * 2); ctx.fillStyle = cols.green; ctx.fill();
-    } else if (tile.special === 'puddle') {
-        ctx.fillStyle = 'rgba(59, 130, 246, 0.5)';
-        ctx.beginPath(); ctx.ellipse(cx, cy, TILE_SIZE * 0.12, TILE_SIZE * 0.08, 0, 0, Math.PI * 2); ctx.fill();
-    } else if (tile.special === 'boost') {
-        ctx.font = `${TILE_SIZE * 0.22}px sans-serif`;
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('⚡', cx, cy);
-    }
-}
-
-function drawCar() {
-    ctx.save();
-    ctx.translate(car.x, car.y);
-    ctx.rotate(car.angle);
-    ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 4;
-    
-    // Indicador de dirección (flecha sutil)
-    if (gameState === 'EDITING') {
-        ctx.fillStyle = 'rgba(74, 222, 128, 0.4)';
-        ctx.beginPath();
-        ctx.moveTo(14, 0);
-        ctx.lineTo(8, -4);
-        ctx.lineTo(8, 4);
-        ctx.closePath();
-        ctx.fill();
-    }
-    
-    ctx.fillStyle = car.waiting ? '#94a3b8' : '#f472b6';
-    ctx.beginPath(); ctx.roundRect(-9, -6, 18, 12, 2); ctx.fill();
-    ctx.fillStyle = car.waiting ? '#64748b' : '#ec4899';
-    ctx.beginPath(); ctx.roundRect(-5, -4, 7, 8, 1); ctx.fill();
-    ctx.fillStyle = '#1e293b'; ctx.fillRect(-3, -3, 4, 6);
-    ctx.fillStyle = car.waiting ? '#94a3b8' : '#fef08a';
-    ctx.fillRect(7, -3, 2, 2); ctx.fillRect(7, 1, 2, 2);
-    ctx.fillStyle = '#1e293b';
-    ctx.fillRect(-6, -8, 3, 2); ctx.fillRect(-6, 6, 3, 2);
-    ctx.fillRect(3, -8, 3, 2); ctx.fillRect(3, 6, 3, 2);
-    
-    // Círculo indicador de clic (solo en modo edición)
-    if (gameState === 'EDITING') {
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-        ctx.lineWidth = 1;
-        ctx.setLineDash([2, 2]);
-        ctx.beginPath();
-        ctx.arc(0, 0, 12, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.setLineDash([]);
-    }
-    
-    ctx.restore();
-}
-
-// --- INICIO ---
-window.onload = init;
 </script>
+
 </body>
 </html>
