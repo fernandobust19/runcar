@@ -134,17 +134,15 @@ function toggleSound() { soundEnabled = !soundEnabled; document.getElementById('
 // Configuración de niveles - MAPAS MÁS GRANDES
 const LEVEL_CONFIG = [];
 for (let i = 1; i <= 40; i++) {
-    const cols = Math.min(5 + Math.floor(i / 4), 9);
-    const rows = Math.min(6 + Math.floor(i / 3), 11);
-    const time = 45 + i * 3;
-    const speed = 2.0 + i * 0.08;
-    const numFakeEnds = Math.min(1 + Math.floor(i / 6), 4);
-    const obstacles = Math.min(Math.floor(i / 5), 5);
-    let features = [];
-    if (i >= 10) features.push('semaphore');
-    if (i >= 18) features.push('puddle');
-    if (i >= 26) features.push('boost');
-    LEVEL_CONFIG.push({ cols, rows, time, speed, numFakeEnds, obstacles, features });
+    LEVEL_CONFIG.push({
+        cols: Math.min(5 + Math.floor(i / 4), 9),
+        rows: Math.min(6 + Math.floor(i / 3), 11),
+        time: 45 + i * 3,
+        speed: 2.0 + i * 0.08,
+        obstacles: Math.min(Math.floor(i / 5), 5),
+        deadEnds: Math.min(2 + Math.floor(i / 4), 8),
+        features: i >= 10 ? (i >= 18 ? (i >= 26 ? ['semaphore','puddle','boost'] : ['semaphore','puddle']) : ['semaphore']) : []
+    });
 }
 
 let TILE_SIZE = 55, COLS = 6, ROWS = 7;
@@ -168,7 +166,6 @@ const TILE_TYPES = {
 
 let grid = [], specialTiles = [], car = null, level = 1, driverName = "Conductor";
 let gameState = 'START', animationId, countdownTimer, timeLeft, maxTime, engineSoundInterval;
-let endPositions = []; // Todas las metas son válidas
 
 const $ = id => document.getElementById(id);
 
@@ -177,8 +174,7 @@ class Tile {
         this.col = col; this.row = row; this.type = type;
         this.rotation = rotation; this.locked = type.locked || false;
         this.powered = false; this.special = null; this.semaphoreState = 'red';
-        this.isRealEnd = false; this.isFakeEnd = false;
-        this.isDeadEnd = false; // Nueva propiedad para calles trampa
+        this.isEnd = false; this.isDeadEnd = false;
     }
     getConnections() {
         if (this.type === TILE_TYPES.BLOCKED) return 0;
@@ -232,20 +228,14 @@ function handleClick(e) {
     initAudio();
     if (gameState !== 'EDITING') return;
     const rect = canvas.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
-    const col = Math.floor(clickX / TILE_SIZE);
-    const row = Math.floor(clickY / TILE_SIZE);
+    const clickX = e.clientX - rect.left, clickY = e.clientY - rect.top;
     
-    // Verificar si se hizo clic en el carro
     if (car) {
         const carDist = Math.sqrt((clickX - car.x) ** 2 + (clickY - car.y) ** 2);
-        if (carDist < TILE_SIZE * 0.4) {
-            rotateCar();
-            return;
-        }
+        if (carDist < TILE_SIZE * 0.4) { rotateCar(); return; }
     }
     
+    const col = Math.floor(clickX / TILE_SIZE), row = Math.floor(clickY / TILE_SIZE);
     if (col >= 0 && col < COLS && row >= 0 && row < ROWS) {
         const tile = grid[row * COLS + col];
         if (tile && !tile.locked && tile.type !== TILE_TYPES.BLOCKED) {
@@ -257,27 +247,16 @@ function handleClick(e) {
     }
 }
 
-// Nueva función para rotar el carro
 function rotateCar() {
     if (!car || gameState !== 'EDITING') return;
-    
     const start = grid[car.row * COLS + car.col];
     if (!start) return;
-    
     const conn = start.getConnections();
-    const directions = [DIR.N, DIR.E, DIR.S, DIR.W];
-    const availableDirs = directions.filter(d => conn & d);
-    
-    if (availableDirs.length <= 1) return;
-    
-    // Encontrar siguiente dirección disponible
-    const currentIndex = availableDirs.indexOf(car.dir);
-    const nextIndex = (currentIndex + 1) % availableDirs.length;
-    car.dir = availableDirs[nextIndex];
-    
-    // Actualizar ángulo
+    const dirs = [DIR.N, DIR.E, DIR.S, DIR.W].filter(d => conn & d);
+    if (dirs.length <= 1) return;
+    const idx = dirs.indexOf(car.dir);
+    car.dir = dirs[(idx + 1) % dirs.length];
     car.angle = car.dir === DIR.N ? -Math.PI/2 : car.dir === DIR.E ? 0 : car.dir === DIR.S ? Math.PI/2 : Math.PI;
-    
     playSound('rotate');
     draw();
 }
@@ -302,26 +281,23 @@ function generateLevel() {
     $('progressBar').className = 'progress-bar h-full bg-emerald-500 rounded-full';
     $('statusText').textContent = 'GIRA LAS FICHAS';
     $('statusText').className = 'text-yellow-400 font-bold text-xs';
-    
-    // Calcular cantidad de calles trampa según nivel
-    const deadEndCount = Math.min(2 + Math.floor(level / 4), 8);
-    $('levelHint').textContent = `🏁 1 meta | ⚠️ ${deadEndCount} calles sin señales | 👆 Toca el carro`;
+    $('levelHint').textContent = `🏁 1 meta | ⚠️ ${config.deadEnds} calles trampa | 👆 Toca el carro`;
     
     resize();
     grid = new Array(COLS * ROWS).fill(null);
-    specialTiles = []; endPositions = [];
+    specialTiles = [];
     
     // 1. Colocar inicio
     placeStart();
     
     // 2. Colocar UNA SOLA meta (con múltiples entradas)
-    placeSingleEnd();
+    placeEnd();
     
     // 3. Colocar obstáculos
     placeObstacles(config.obstacles);
     
     // 4. Rellenar espacios vacíos (incluyendo calles trampa)
-    fillEmpty(deadEndCount);
+    fillEmpty(config.deadEnds);
     
     // 5. Aleatorizar rotaciones
     randomizeRotations();
@@ -335,32 +311,33 @@ function generateLevel() {
     startCountdown();
 }
 
+function placeStart() {
+    const positions = [
+        { col: 0, row: 0 },
+        { col: 0, row: Math.floor(ROWS / 2) },
+        { col: Math.floor(COLS / 2), row: 0 }
+    ];
+    const pos = positions[level % positions.length];
+    const tile = new Tile(pos.col, pos.row, TILE_TYPES.START);
+    tile.locked = true;
+    grid[pos.row * COLS + pos.col] = tile;
+}
+
 // Nueva función para colocar UNA sola meta
-function placeSingleEnd() {
+function placeEnd() {
     const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
+    const positions = [
+        { col: COLS - 1, row: ROWS - 1 },
+        { col: COLS - 1, row: 0 },
+        { col: 0, row: ROWS - 1 },
+        { col: COLS - 1, row: Math.floor(ROWS / 2) }
+    ].filter(p => Math.abs(p.col - startTile.col) + Math.abs(p.row - startTile.row) >= 3);
     
-    // Posiciones posibles para la meta (lejos del inicio)
-    const possiblePositions = [
-        { col: COLS - 1, row: ROWS - 1 },  // Esquina inferior derecha
-        { col: COLS - 1, row: 0 },          // Esquina superior derecha
-        { col: 0, row: ROWS - 1 },          // Esquina inferior izquierda
-        { col: COLS - 1, row: Math.floor(ROWS / 2) }, // Mitad derecha
-        { col: Math.floor(COLS / 2), row: ROWS - 1 }  // Mitad inferior
-    ].filter(p => {
-        // Filtrar posiciones muy cercanas al inicio
-        const dist = Math.abs(p.col - startTile.col) + Math.abs(p.row - startTile.row);
-        return dist >= Math.floor((COLS + ROWS) / 3);
-    });
-    
-    // Seleccionar posición aleatoria
-    const pos = possiblePositions[Math.floor(Math.random() * possiblePositions.length)] || 
-                { col: COLS - 1, row: ROWS - 1 };
-    
+    const pos = positions[Math.floor(Math.random() * positions.length)] || { col: COLS - 1, row: ROWS - 1 };
     const tile = new Tile(pos.col, pos.row, TILE_TYPES.END);
     tile.locked = true;
     tile.isEnd = true;
     grid[pos.row * COLS + pos.col] = tile;
-    endPositions = [pos]; // Solo una meta
 }
 
 function placeObstacles(count) {
@@ -369,36 +346,27 @@ function placeObstacles(count) {
         attempts++;
         const col = 1 + Math.floor(Math.random() * (COLS - 2));
         const row = 1 + Math.floor(Math.random() * (ROWS - 2));
-        
         if (grid[row * COLS + col]) continue;
         
-        // Verificar que no bloquea TODAS las rutas a TODAS las metas
         grid[row * COLS + col] = new Tile(col, row, TILE_TYPES.BLOCKED);
-        if (!canReachAnyEnd()) {
-            grid[row * COLS + col] = null;
-            continue;
-        }
+        if (!canReachEnd()) { grid[row * COLS + col] = null; continue; }
         
         grid[row * COLS + col].special = ['broken', 'tree', 'construction'][Math.floor(Math.random() * 3)];
         placed++;
     }
 }
 
-function canReachAnyEnd() {
+function canReachEnd() {
     const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
     const endTile = grid.find(t => t && t.type === TILE_TYPES.END);
     if (!startTile || !endTile) return true;
     
-    const visited = new Set();
+    const visited = new Set([`${startTile.col},${startTile.row}`]);
     const queue = [{ col: startTile.col, row: startTile.row }];
-    visited.add(`${startTile.col},${startTile.row}`);
     
     while (queue.length > 0) {
         const curr = queue.shift();
-        
-        if (curr.col === endTile.col && curr.row === endTile.row) {
-            return true;
-        }
+        if (curr.col === endTile.col && curr.row === endTile.row) return true;
         
         [{dc:0,dr:-1}, {dc:1,dr:0}, {dc:0,dr:1}, {dc:-1,dr:0}].forEach(d => {
             const nc = curr.col + d.dc, nr = curr.row + d.dr;
@@ -415,133 +383,60 @@ function canReachAnyEnd() {
     return false;
 }
 
-function ensurePathExists() {
-    // Generar camino usando BFS y colocar tiles correctos
+function fillEmpty(deadEndCount) {
+    const empty = [];
+    for (let i = 0; i < COLS * ROWS; i++) if (!grid[i]) empty.push(i);
+    empty.sort(() => Math.random() - 0.5);
+    
+    let deadPlaced = 0;
     const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
-    if (!startTile || !realEndPos) return;
+    const endTile = grid.find(t => t && t.type === TILE_TYPES.END);
     
-    const blocked = new Set();
-    grid.forEach((t, i) => {
-        if (t && t.type === TILE_TYPES.BLOCKED) {
-            blocked.add(`${i % COLS},${Math.floor(i / COLS)}`);
-        }
-    });
-    
-    const queue = [[{ col: startTile.col, row: startTile.row }]];
-    const visited = new Set([`${startTile.col},${startTile.row}`]);
-    let path = null;
-    
-    while (queue.length > 0 && !path) {
-        const p = queue.shift();
-        const curr = p[p.length - 1];
+    for (let i = 0; i < empty.length; i++) {
+        const idx = empty[i];
+        const col = idx % COLS, row = Math.floor(idx / COLS);
         
-        if (curr.col === realEndPos.col && curr.row === realEndPos.row) {
-            path = p;
-            break;
-        }
-        
-        const moves = [
-            { col: curr.col + 1, row: curr.row },
-            { col: curr.col, row: curr.row + 1 },
-            { col: curr.col - 1, row: curr.row },
-            { col: curr.col, row: curr.row - 1 }
-        ].sort(() => Math.random() - 0.3);
-        
-        for (const m of moves) {
-            const key = `${m.col},${m.row}`;
-            if (m.col >= 0 && m.col < COLS && m.row >= 0 && m.row < ROWS &&
-                !visited.has(key) && !blocked.has(key)) {
-                visited.add(key);
-                queue.push([...p, m]);
+        if (deadPlaced < deadEndCount && startTile && endTile) {
+            const dStart = Math.abs(col - startTile.col) + Math.abs(row - startTile.row);
+            const dEnd = Math.abs(col - endTile.col) + Math.abs(row - endTile.row);
+            if (dStart >= 2 && dEnd >= 2) {
+                const deadType = Math.random() > 0.5 ? TILE_TYPES.DEAD_STRAIGHT : TILE_TYPES.DEAD_CURVE;
+                grid[idx] = new Tile(col, row, deadType);
+                grid[idx].isDeadEnd = true;
+                deadPlaced++;
+                continue;
             }
         }
-    }
-    
-    // Colocar tiles en el camino
-    if (path) {
-        for (let i = 1; i < path.length - 1; i++) {
-            const { col, row } = path[i];
-            if (grid[row * COLS + col]) continue;
-            
-            const prev = path[i - 1], next = path[i + 1];
-            let fromDir = 0, toDir = 0;
-            
-            if (prev.col < col) fromDir = DIR.W;
-            else if (prev.col > col) fromDir = DIR.E;
-            else if (prev.row < row) fromDir = DIR.N;
-            else fromDir = DIR.S;
-            
-            if (next.col > col) toDir = DIR.E;
-            else if (next.col < col) toDir = DIR.W;
-            else if (next.row > row) toDir = DIR.S;
-            else toDir = DIR.N;
-            
-            const needed = fromDir | toDir;
-            let type = (needed === (DIR.N|DIR.S) || needed === (DIR.E|DIR.W)) 
-                ? TILE_TYPES.STRAIGHT : TILE_TYPES.CURVE;
-            
-            const tile = new Tile(col, row, type);
-            // Encontrar rotación correcta
-            for (let r = 0; r < 4; r++) {
-                tile.rotation = r;
-                if ((tile.getConnections() & needed) === needed) break;
-            }
-            tile.correctRotation = tile.rotation;
-            grid[row * COLS + col] = tile;
-        }
+        
+        const rand = Math.random();
+        let type = rand < 0.35 ? TILE_TYPES.STRAIGHT : rand < 0.7 ? TILE_TYPES.CURVE : rand < 0.88 ? TILE_TYPES.T_JUNCTION : TILE_TYPES.CROSS;
+        grid[idx] = new Tile(col, row, type);
     }
 }
 
-function fillEmpty(deadEndCount) {
-    const emptyPositions = [];
-    
-    // Recolectar posiciones vacías
-    for (let i = 0; i < COLS * ROWS; i++) {
-        if (!grid[i]) {
-            emptyPositions.push(i);
+function randomizeRotations() {
+    grid.forEach(tile => {
+        if (tile && !tile.locked && tile.type !== TILE_TYPES.BLOCKED) {
+            tile.rotation = Math.floor(Math.random() * 4);
         }
-    }
+    });
+}
+
+function addSpecials(features) {
+    if (!features.length) return;
+    const eligible = [];
+    grid.forEach((t, i) => { if (t && !t.locked && !t.special && t.type !== TILE_TYPES.BLOCKED) eligible.push(i); });
+    eligible.sort(() => Math.random() - 0.5);
     
-    // Mezclar posiciones
-    emptyPositions.sort(() => Math.random() - 0.5);
-    
-    // Colocar calles trampa (sin flechas) primero
-    let deadPlaced = 0;
-    for (let i = 0; i < emptyPositions.length && deadPlaced < deadEndCount; i++) {
-        const idx = emptyPositions[i];
-        const col = idx % COLS, row = Math.floor(idx / COLS);
-        
-        // No poner calles trampa muy cerca del inicio o la meta
-        const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
-        const endTile = grid.find(t => t && t.type === TILE_TYPES.END);
-        
-        const distToStart = startTile ? Math.abs(col - startTile.col) + Math.abs(row - startTile.row) : 999;
-        const distToEnd = endTile ? Math.abs(col - endTile.col) + Math.abs(row - endTile.row) : 999;
-        
-        if (distToStart >= 2 && distToEnd >= 2) {
-            // Elegir tipo de calle trampa
-            const deadType = Math.random() > 0.5 ? TILE_TYPES.DEAD_STRAIGHT : TILE_TYPES.DEAD_CURVE;
-            grid[idx] = new Tile(col, row, deadType);
-            grid[idx].isDeadEnd = true; // Marcar como calle trampa
-            deadPlaced++;
-            emptyPositions.splice(i, 1);
-            i--;
+    let idx = 0;
+    features.forEach(f => {
+        for (let i = 0; i < 2 && idx < eligible.length; i++, idx++) {
+            const tile = grid[eligible[idx]];
+            if (f === 'semaphore') { tile.special = 'semaphore'; tile.semaphoreState = 'red'; specialTiles.push(tile); }
+            else if (f === 'puddle') tile.special = 'puddle';
+            else if (f === 'boost') tile.special = 'boost';
         }
-    }
-    
-    // Rellenar el resto con calles normales (con flechas)
-    for (const idx of emptyPositions) {
-        if (grid[idx]) continue;
-        
-        const col = idx % COLS, row = Math.floor(idx / COLS);
-        const rand = Math.random();
-        let type;
-        if (rand < 0.35) type = TILE_TYPES.STRAIGHT;
-        else if (rand < 0.7) type = TILE_TYPES.CURVE;
-        else if (rand < 0.88) type = TILE_TYPES.T_JUNCTION;
-        else type = TILE_TYPES.CROSS;
-        grid[idx] = new Tile(col, row, type);
-    }
+    });
 }
 
 function checkConnections() {
@@ -604,17 +499,8 @@ function resetCar() {
     if (!start) return;
     
     const conn = start.getConnections();
-    // Buscar primera dirección disponible
     let dir = DIR.E;
-    [DIR.E, DIR.S, DIR.W, DIR.N].forEach(d => {
-        if (!dir || !(conn & dir)) {
-            if (conn & d) dir = d;
-        }
-    });
-    // Asegurar que dir sea válido
-    if (!(conn & dir)) {
-        [DIR.N, DIR.E, DIR.S, DIR.W].forEach(d => { if (conn & d) dir = d; });
-    }
+    [DIR.E, DIR.S, DIR.W, DIR.N].forEach(d => { if (conn & d) dir = d; });
     
     const config = LEVEL_CONFIG[Math.min(level - 1, 39)];
     car = {
@@ -634,21 +520,10 @@ function startCar() {
     if (gameState !== 'EDITING') return;
     clearInterval(countdownTimer);
     
-    // Usar la dirección que el jugador ya eligió (car.dir)
-    // Solo validar que la dirección sea válida
     const start = grid[car.row * COLS + car.col];
     const conn = start.getConnections();
-    
-    // Si la dirección actual no es válida, buscar una
     if (!(conn & car.dir)) {
-        [DIR.E, DIR.S, DIR.N, DIR.W].forEach(dir => {
-            if (!car.dir && (conn & dir)) car.dir = dir;
-        });
-    }
-    
-    if (!car.dir) {
-        crash('¡Sin salida disponible!');
-        return;
+        [DIR.E, DIR.S, DIR.N, DIR.W].forEach(dir => { if (conn & dir) car.dir = dir; });
     }
     
     car.angle = car.dir === DIR.N ? -Math.PI/2 : car.dir === DIR.E ? 0 : car.dir === DIR.S ? Math.PI/2 : Math.PI;
@@ -658,7 +533,6 @@ function startCar() {
     $('statusText').textContent = '¡EN MARCHA!';
     $('statusText').className = 'text-emerald-400 font-bold text-xs';
     
-    // Semáforos
     specialTiles.forEach(tile => {
         if (tile.special === 'semaphore') {
             const cycle = () => {
@@ -727,56 +601,64 @@ function gameLoop() {
         const d = DIR_DELTA[exitDir];
         const nc = car.col + d.dc, nr = car.row + d.dr;
         
-        if (grid[nr * COLS + nc]?.type === TILE_TYPES.BLOCKED) {
-            crash('¡Choque con obstáculo!');
-            return;
-        }
+        if (nc < 0 || nc >= COLS || nr < 0 || nr >= ROWS) { crash('¡Fuera del mapa!'); return; }
         
-        car.col = nc; car.row = nr;
+        const next = grid[nr * COLS + nc];
+        if (!next || next.type === TILE_TYPES.BLOCKED) { crash('¡Bloqueado!'); return; }
+        if (!(next.getConnections() & OPPOSITE[exitDir])) { crash('¡Choque!'); return; }
+        
+        car.dir = exitDir; car.col = nc; car.row = nr;
         car.angle = exitDir === DIR.N ? -Math.PI/2 : exitDir === DIR.E ? 0 : exitDir === DIR.S ? Math.PI/2 : Math.PI;
-        
-        draw();
-    } else {
-        const d = DIR_DELTA[car.dir];
-        car.x += d.dc * car.speed;
-        car.y += d.dr * car.speed;
-        draw();
     }
     
+    const d = DIR_DELTA[car.dir];
+    car.x += d.dc * car.speed; car.y += d.dr * car.speed;
+    
+    draw();
     animationId = requestAnimationFrame(gameLoop);
 }
 
-function win() {
-    cancelAnimationFrame(animationId);
-    clearInterval(countdownTimer);
-    gameState = 'WIN';
-    $('overlayTitle').textContent = '¡Felicidades!';
-    $('overlaySubtitle').textContent = 'Has completado el nivel.';
-    $('overlayBonus').textContent = `+${Math.floor(maxTime - timeLeft)} segundos de bonus`;
+function crash(msg) {
+    gameState = 'CRASHED';
+    clearInterval(countdownTimer); clearInterval(engineSoundInterval);
+    playSound('crash');
+    $('gameContainer').classList.add('shake');
+    setTimeout(() => $('gameContainer').classList.remove('shake'), 500);
+    $('overlayIcon').textContent = '💥';
+    $('overlayTitle').textContent = '¡CHOQUE!';
+    $('overlaySubtitle').textContent = msg;
+    $('overlayBonus').textContent = '';
+    $('overlayBtn').textContent = 'Reintentar';
+    $('overlayBtn').onclick = resetLevel;
     $('overlay').classList.remove('hidden');
+}
+
+function win() {
+    gameState = 'WON';
+    clearInterval(countdownTimer); clearInterval(engineSoundInterval);
+    playSound('win');
+    const bonus = timeLeft * 10 + level * 25;
     
-    // Sumar bonus por tiempo restante
-    const bonus = Math.floor(maxTime - timeLeft);
-    level += 1;
-    setTimeout(() => {
+    $('overlayIcon').textContent = '🏆';
+    $('overlayTitle').textContent = '¡NIVEL ' + level + '!';
+    $('overlaySubtitle').textContent = `Tiempo: ${timeLeft}s`;
+    $('overlayBonus').textContent = `+${bonus} pts`;
+    $('overlayBtn').textContent = level >= 40 ? 'Reiniciar' : 'Siguiente';
+    $('overlayBtn').onclick = () => {
+        if (level >= 40) level = 0;
+        level++;
         $('levelDisplay').textContent = level;
         generateLevel();
-    }, 3000);
-}
-
-function crash(reason) {
-    cancelAnimationFrame(animationId);
-    clearInterval(countdownTimer);
-    gameState = 'CRASH';
-    $('overlayTitle').textContent = '¡Juego Terminado!';
-    $('overlaySubtitle').textContent = reason;
-    $('overlayBonus').textContent = '';
+    };
     $('overlay').classList.remove('hidden');
-    
-    setTimeout(() => { location.reload(); }, 5000);
 }
 
-// Reemplazar la función drawTile con esta versión que incluye flechas
+function draw() {
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    grid.forEach(t => { if (t) drawTile(t); });
+    if (car) drawCar();
+}
 
 function drawTile(tile) {
     const x = tile.col * TILE_SIZE, y = tile.row * TILE_SIZE;
@@ -799,11 +681,10 @@ function drawTile(tile) {
     ctx.translate(cx, cy);
     ctx.rotate(tile.rotation * Math.PI / 2);
     
-    // Color según estado - calles trampa tienen color más oscuro/diferente
+    // Color según estado
     let color;
     if (tile.isDeadEnd) {
-        // Calles trampa: color más apagado
-        color = tile.powered ? '#65a30d' : '#525252'; // Verde oliva si conectada, gris oscuro si no
+        color = tile.powered ? '#65a30d' : '#525252';
     } else if (tile.type === TILE_TYPES.START) {
         color = '#10b981';
     } else if (tile.isEnd) {
@@ -813,9 +694,7 @@ function drawTile(tile) {
     }
     
     ctx.fillStyle = color;
-    
-    const conn = tile.type.base;
-    const s = TILE_SIZE;
+    const conn = tile.type.base, s = TILE_SIZE;
     
     // Dibujar brazos de carretera
     if (conn & DIR.N) ctx.fillRect(-h, -s/2, rw, s/2 + h);
@@ -826,16 +705,14 @@ function drawTile(tile) {
     // Centro
     ctx.beginPath(); ctx.arc(0, 0, h, 0, Math.PI * 2); ctx.fill();
     
-    // Líneas amarillas centrales (solo si NO es calle trampa)
+    // Líneas amarillas centrales y flechas (solo si NO es calle trampa)
     if (!tile.isDeadEnd && !tile.type.noArrows) {
         ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 2]);
         if ((conn & DIR.N) && (conn & DIR.S)) { ctx.beginPath(); ctx.moveTo(0, -s/2); ctx.lineTo(0, s/2); ctx.stroke(); }
         if ((conn & DIR.E) && (conn & DIR.W)) { ctx.beginPath(); ctx.moveTo(-s/2, 0); ctx.lineTo(s/2, 0); ctx.stroke(); }
         ctx.setLineDash([]);
-    }
-    
-    // *** DIBUJAR FLECHAS SOLO SI NO ES CALLE TRAMPA ***
-    if (!tile.isDeadEnd && !tile.type.noArrows) {
+        
+        // Dibujar flechas UNA sola vez
         drawDirectionArrows(conn, s, h, tile.powered);
     }
     
@@ -848,25 +725,24 @@ function drawTile(tile) {
     
     ctx.restore();
     
-    // Meta - bandera (solo hay una)
+    // Meta - bandera
     if (tile.isEnd) {
         ctx.font = `${TILE_SIZE * 0.35}px sans-serif`;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText('🏁', cx, cy);
     }
     
-    // Icono de advertencia en calles trampa (sutil)
+    // Icono en calles trampa
     if (tile.isDeadEnd) {
-        ctx.fillStyle = 'rgba(255, 200, 0, 0.3)';
-        ctx.font = `${TILE_SIZE * 0.2}px sans-serif`;
+        ctx.fillStyle = 'rgba(255, 200, 0, 0.4)';
+        ctx.font = `${TILE_SIZE * 0.25}px sans-serif`;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText('?', cx, cy);
     }
     
     // Especiales
     if (tile.special === 'semaphore') {
-        ctx.fillStyle = '#1f2937';
-        ctx.fillRect(cx - 4, cy - 10, 8, 20);
+        ctx.fillStyle = '#1f2937'; ctx.fillRect(cx - 4, cy - 10, 8, 20);
         const cols = { red: tile.semaphoreState === 'red' ? '#ef4444' : '#3f1515', yellow: tile.semaphoreState === 'yellow' ? '#fbbf24' : '#3f3515', green: tile.semaphoreState === 'green' ? '#22c55e' : '#153f25' };
         ctx.beginPath(); ctx.arc(cx, cy - 6, 2.5, 0, Math.PI * 2); ctx.fillStyle = cols.red; ctx.fill();
         ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, Math.PI * 2); ctx.fillStyle = cols.yellow; ctx.fill();
@@ -883,66 +759,50 @@ function drawTile(tile) {
 
 // Nueva función para dibujar flechas direccionales
 function drawDirectionArrows(conn, s, h, powered) {
-    const arrowSize = s * 0.12;
-    const arrowDist = s * 0.38; // Distancia del centro al borde
+    const arrowSize = s * 0.08;
+    const arrowDist = s * 0.42; // Más cerca del borde
+    ctx.fillStyle = powered ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.35)';
     
-    // Color de las flechas
-    ctx.fillStyle = powered ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.5)';
-    ctx.strokeStyle = powered ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.2)';
-    ctx.lineWidth = 1;
-    
-    // Flecha hacia Norte (arriba)
-    if (conn & DIR.N) {
-        ctx.save();
-        ctx.translate(0, -arrowDist);
-        drawArrow(arrowSize);
-        ctx.restore();
+    // Las flechas apuntan HACIA AFUERA (indicando salida)
+    if (conn & DIR.N) { 
+        ctx.save(); 
+        ctx.translate(0, -arrowDist); 
+        ctx.rotate(Math.PI); // Apunta hacia arriba (salida norte)
+        drawArrow(arrowSize); 
+        ctx.restore(); 
     }
-    
-    // Flecha hacia Sur (abajo)
-    if (conn & DIR.S) {
-        ctx.save();
-        ctx.translate(0, arrowDist);
-        ctx.rotate(Math.PI);
-        drawArrow(arrowSize);
-        ctx.restore();
+    if (conn & DIR.S) { 
+        ctx.save(); 
+        ctx.translate(0, arrowDist); 
+        // Sin rotación - apunta hacia abajo (salida sur)
+        drawArrow(arrowSize); 
+        ctx.restore(); 
     }
-    
-    // Flecha hacia Este (derecha)
-    if (conn & DIR.E) {
-        ctx.save();
-        ctx.translate(arrowDist, 0);
-        ctx.rotate(Math.PI / 2);
-        drawArrow(arrowSize);
-        ctx.restore();
+    if (conn & DIR.E) { 
+        ctx.save(); 
+        ctx.translate(arrowDist, 0); 
+        ctx.rotate(-Math.PI/2); // Apunta hacia la derecha (salida este)
+        drawArrow(arrowSize); 
+        ctx.restore(); 
     }
-    
-    // Flecha hacia Oeste (izquierda)
-    if (conn & DIR.W) {
-        ctx.save();
-        ctx.translate(-arrowDist, 0);
-        ctx.rotate(-Math.PI / 2);
-        drawArrow(arrowSize);
-        ctx.restore();
+    if (conn & DIR.W) { 
+        ctx.save(); 
+        ctx.translate(-arrowDist, 0); 
+        ctx.rotate(Math.PI/2); // Apunta hacia la izquierda (salida oeste)
+        drawArrow(arrowSize); 
+        ctx.restore(); 
     }
 }
 
-// Función auxiliar para dibujar una flecha apuntando hacia arriba
+// Función auxiliar para dibujar una flecha apuntando hacia ABAJO (salida)
 function drawArrow(size) {
     ctx.beginPath();
-    ctx.moveTo(0, -size);           // Punta
-    ctx.lineTo(-size * 0.7, size * 0.5);  // Esquina izquierda
-    ctx.lineTo(-size * 0.25, size * 0.3); // Muesca izquierda
-    ctx.lineTo(-size * 0.25, size);       // Base izquierda
-    ctx.lineTo(size * 0.25, size);        // Base derecha
-    ctx.lineTo(size * 0.25, size * 0.3);  // Muesca derecha
-    ctx.lineTo(size * 0.7, size * 0.5);   // Esquina derecha
+    ctx.moveTo(0, size * 1.2);        // Punta hacia abajo
+    ctx.lineTo(-size * 0.7, -size * 0.3);  // Esquina izquierda
+    ctx.lineTo(size * 0.7, -size * 0.3);   // Esquina derecha
     ctx.closePath();
     ctx.fill();
-    ctx.stroke();
 }
-
-// Reemplazar la función drawCar
 
 function drawCar() {
     ctx.save();
@@ -953,49 +813,27 @@ function drawCar() {
     // Indicador de dirección grande (flecha verde)
     if (gameState === 'EDITING') {
         ctx.fillStyle = 'rgba(74, 222, 128, 0.7)';
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.moveTo(18, 0);      // Punta
-        ctx.lineTo(10, -5);     // Arriba
-        ctx.lineTo(10, -2);
-        ctx.lineTo(6, -2);
-        ctx.lineTo(6, 2);
-        ctx.lineTo(10, 2);
-        ctx.lineTo(10, 5);      // Abajo
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
+        ctx.moveTo(18, 0); ctx.lineTo(10, -5); ctx.lineTo(10, 5);
+        ctx.closePath(); ctx.fill();
     }
     
     // Cuerpo del carro
     ctx.fillStyle = car.waiting ? '#94a3b8' : '#f472b6';
     ctx.beginPath(); ctx.roundRect(-9, -6, 18, 12, 2); ctx.fill();
-    
-    // Cabina
     ctx.fillStyle = car.waiting ? '#64748b' : '#ec4899';
     ctx.beginPath(); ctx.roundRect(-5, -4, 7, 8, 1); ctx.fill();
-    
-    // Ventana
     ctx.fillStyle = '#1e293b'; ctx.fillRect(-3, -3, 4, 6);
-    
-    // Luces delanteras
     ctx.fillStyle = car.waiting ? '#94a3b8' : '#fef08a';
     ctx.fillRect(7, -3, 2, 2); ctx.fillRect(7, 1, 2, 2);
-    
-    // Ruedas
     ctx.fillStyle = '#1e293b';
     ctx.fillRect(-6, -8, 3, 2); ctx.fillRect(-6, 6, 3, 2);
     ctx.fillRect(3, -8, 3, 2); ctx.fillRect(3, 6, 3, 2);
     
-    // Círculo indicador de clic (solo en modo edición)
     if (gameState === 'EDITING') {
-        ctx.strokeStyle = 'rgba(74, 222, 128, 0.6)';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([3, 3]);
-        ctx.beginPath();
-        ctx.arc(0, 0, 14, 0, Math.PI * 2);
-        ctx.stroke();
+        ctx.strokeStyle = 'rgba(74, 222, 128, 0.5)';
+        ctx.lineWidth = 2; ctx.setLineDash([3, 3]);
+        ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI * 2); ctx.stroke();
         ctx.setLineDash([]);
         
         // Texto "TAP" pequeño
@@ -1009,6 +847,8 @@ function drawCar() {
     
     ctx.restore();
 }
+
+window.onload = init;
 </script>
 
 </body>
