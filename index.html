@@ -315,6 +315,7 @@ let grid = [];
 let specialTiles = [];
 let blockedCells = [];
 let correctPath = [];
+let correctPath2 = [];
 let car = null;
 let level = 1;
 let driverName = "Conductor";
@@ -493,6 +494,7 @@ function generateLevel() {
     specialTiles = [];
     blockedCells = [];
     correctPath = [];
+    correctPath2 = [];
     
     // Primero agregar obstáculos
     addBlockedCells(config.obstacles);
@@ -516,6 +518,9 @@ function generateLevel() {
 function addBlockedCells(count) {
     if (count <= 0) return;
     
+    const start1_row = Math.floor(ROWS / 4);
+    const start2_row = Math.floor(ROWS * 3 / 4);
+
     let attempts = 0;
     while (blockedCells.length < count && attempts < 100) {
         attempts++;
@@ -523,7 +528,8 @@ function addBlockedCells(count) {
         const row = 1 + Math.floor(Math.random() * (ROWS - 2));
         
         // No bloquear esquinas ni cerca del inicio/fin
-        if ((col === 0 && row === 0) || (col === COLS-1 && row === ROWS-1)) continue;
+        if ((col === 0 && row === start1_row) || (col === COLS-1 && row === start1_row)) continue;
+        if ((col === 0 && row === start2_row) || (col === COLS-1 && row === start2_row)) continue;
         if (col <= 1 && row <= 1) continue;
         if (col >= COLS-2 && row >= ROWS-2) continue;
         
@@ -551,12 +557,19 @@ function addBlockedCells(count) {
 
 function addBridges(count) {
     if (count <= 0) return;
+
+    const allPathTiles = [...correctPath, ...correctPath2];
     
     // Buscar lugares donde el camino pueda tener un puente
-    const eligibleTiles = correctPath.filter((p, i) => {
-        if (i === 0 || i === correctPath.length - 1) return false;
-        const prev = correctPath[i - 1];
-        const next = correctPath[i + 1];
+    const eligibleTiles = allPathTiles.filter((p, i) => {
+        const path = allPathTiles === correctPath ? correctPath : correctPath2;
+        const localIndex = path.indexOf(p);
+        if (localIndex === 0 || localIndex === path.length - 1) return false;
+        
+        const prev = path[localIndex - 1];
+        const next = path[localIndex + 1];
+        if(!prev || !next) return false;
+
         // Solo en líneas rectas
         return (prev.col === p.col && next.col === p.col) || (prev.row === p.row && next.row === p.row);
     });
@@ -609,73 +622,88 @@ function startCountdown() {
 }
 
 function generateGuaranteedPath() {
-    const startCol = 0, startRow = 0;
-    const endCol = COLS - 1, endRow = ROWS - 1;
-    
-    // BFS para encontrar camino evitando obstáculos
-    const queue = [[{ col: startCol, row: startRow }]];
+    // Definir dos inicios y dos finales
+    const start1 = { col: 0, row: Math.floor(ROWS / 4) };
+    const end1 = { col: COLS - 1, row: Math.floor(ROWS / 4) };
+    const start2 = { col: 0, row: Math.floor(ROWS * 3 / 4) };
+    const end2 = { col: COLS - 1, row: Math.floor(ROWS * 3 / 4) };
+
+    // Generar primer camino
+    correctPath = generateSingleGuaranteedPath(start1, end1, blockedCells);
+
+    // Bloquear celdas del primer camino para que el segundo no se cruce tanto
+    const path1Cells = correctPath.map(p => `${p.col},${p.row}`);
+    const combinedBlocked = [...blockedCells, ...path1Cells];
+
+    // Generar segundo camino
+    correctPath2 = generateSingleGuaranteedPath(start2, end2, combinedBlocked);
+
+    // Colocar tiles para ambos caminos
+    const placePathTiles = (path) => {
+        for (let i = 0; i < path.length; i++) {
+            const { col, row } = path[i];
+            if (getTile(col, row)) continue;
+
+            const prev = i > 0 ? path[i - 1] : null;
+            const next = i < path.length - 1 ? path[i + 1] : null;
+
+            const tile = createPathTile(col, row, prev, next, i === 0, i === path.length - 1);
+            tile.onPath = true;
+            setTile(col, row, tile);
+        }
+    };
+
+    placePathTiles(correctPath);
+    placePathTiles(correctPath2);
+}
+
+function generateSingleGuaranteedPath(startPos, endPos, currentBlocked) {
+    let path = [];
+    const queue = [[startPos]];
     const visited = new Set();
-    visited.add(`${startCol},${startRow}`);
-    
+    visited.add(`${startPos.col},${startPos.row}`);
+
     while (queue.length > 0) {
-        const path = queue.shift();
-        const current = path[path.length - 1];
-        
-        if (current.col === endCol && current.row === endRow) {
-            correctPath = path;
+        const p = queue.shift();
+        const current = p[p.length - 1];
+
+        if (current.col === endPos.col && current.row === endPos.row) {
+            path = p;
             break;
         }
-        
-        // Movimientos posibles (priorizar hacia la meta)
-        const moves = [];
-        if (current.col < endCol) moves.push({ col: current.col + 1, row: current.row });
-        if (current.row < endRow) moves.push({ col: current.col, row: current.row + 1 });
-        if (current.col > 0) moves.push({ col: current.col - 1, row: current.row });
-        if (current.row > 0) moves.push({ col: current.col, row: current.row - 1 });
-        
-        // Mezclar para variedad
-        moves.sort(() => Math.random() - 0.3);
-        
+
+        const moves = [
+            { col: current.col + 1, row: current.row },
+            { col: current.col - 1, row: current.row },
+            { col: current.col, row: current.row + 1 },
+            { col: current.col, row: current.row - 1 }
+        ].sort(() => Math.random() - 0.5);
+
         for (const move of moves) {
             const key = `${move.col},${move.row}`;
-            if (!visited.has(key) && !blockedCells.includes(key)) {
+            if (move.col >= 0 && move.col < COLS && move.row >= 0 && move.row < ROWS && !visited.has(key) && !currentBlocked.includes(key)) {
                 visited.add(key);
-                queue.push([...path, move]);
+                queue.push([...p, move]);
             }
         }
     }
     
-    // Si no hay camino, limpiar obstáculos y regenerar
-    if (correctPath.length === 0) {
-        blockedCells = [];
-        grid = new Array(COLS * ROWS).fill(null);
-        correctPath = [{ col: startCol, row: startRow }];
-        let current = { col: startCol, row: startRow };
-        
-        while (current.col !== endCol || current.row !== endRow) {
-            let moves = [];
-            if (current.col < endCol) moves.push({ col: current.col + 1, row: current.row });
-            if (current.row < endRow) moves.push({ col: current.col, row: current.row + 1 });
-            
-            const move = moves[Math.floor(Math.random() * moves.length)];
-            correctPath.push(move);
-            current = move;
+    if (path.length === 0) {
+        // Fallback a un camino simple si BFS falla
+        path = [startPos];
+        let current = { ...startPos };
+        while(current.col !== endPos.col || current.row !== endPos.row) {
+            if (current.col < endPos.col) current.col++;
+            else if (current.col > endPos.col) current.col--;
+            else if (current.row < endPos.row) current.row++;
+            else if (current.row > endPos.row) current.row--;
+            path.push({ ...current });
         }
     }
-    
-    // Colocar tiles del camino
-    for (let i = 0; i < correctPath.length; i++) {
-        const { col, row } = correctPath[i];
-        if (getTile(col, row)) continue; // Ya hay un tile (obstáculo)
-        
-        const prev = i > 0 ? correctPath[i - 1] : null;
-        const next = i < correctPath.length - 1 ? correctPath[i + 1] : null;
-        
-        const tile = createPathTile(col, row, prev, next, i === 0, i === correctPath.length - 1);
-        tile.onPath = true;
-        setTile(col, row, tile);
-    }
+
+    return path;
 }
+
 
 function createPathTile(col, row, prev, next, isStart, isEnd) {
     if (isStart) {
@@ -758,7 +786,7 @@ function randomizeRotations() {
 function addSpecialElements(features) {
     if (!features || features.length === 0) return;
     
-    const eligibleTiles = correctPath.slice(1, -1).filter(p => {
+    const eligibleTiles = [...correctPath, ...correctPath2].slice(1, -1).filter(p => {
         const t = getTile(p.col, p.row);
         return t && !t.special && !t.isBridge && t.type !== TILE_TYPES.BLOCKED;
     });
@@ -803,11 +831,11 @@ function setTile(col, row, tile) {
 function checkConnections() {
     grid.forEach(t => { if (t) t.powered = false; });
     
-    const start = grid.find(t => t && t.type === TILE_TYPES.START);
-    if (!start) return;
+    const starts = grid.filter(t => t && t.type === TILE_TYPES.START);
+    if (starts.length === 0) return;
     
-    const queue = [start];
-    start.powered = true;
+    const queue = [...starts];
+    starts.forEach(s => s.powered = true);
     
     while (queue.length > 0) {
         const current = queue.shift();
@@ -877,7 +905,46 @@ function startCar() {
     if (gameState !== 'EDITING') return;
     
     if (countdownTimer) clearInterval(countdownTimer);
+
+    // Determinar qué camino está completo
+    const poweredEnds = grid.filter(t => t && t.type === TILE_TYPES.END && t.powered);
+    let startTile;
+
+    if (poweredEnds.length > 0) {
+        // Asumir que el primer final encontrado es el bueno
+        const endTile = poweredEnds[0];
+        // Encontrar el inicio correspondiente (simple y basado en la fila)
+        const correspondingStartRow = endTile.row < ROWS / 2 ? Math.floor(ROWS / 4) : Math.floor(ROWS * 3 / 4);
+        startTile = grid.find(t => t && t.type === TILE_TYPES.START && t.row === correspondingStartRow);
+    } 
     
+    // Si no se encuentra un camino completo, o por defecto
+    if (!startTile) {
+        startTile = grid.find(t => t && t.type === TILE_TYPES.START);
+        if (!startTile) { // No hay punto de partida
+             crash("No se encontró un punto de partida.");
+             return;
+        }
+    }
+    
+    // Reposicionar el coche en el punto de partida correcto
+    const connections = startTile.getConnections();
+    let dir = DIR.E;
+    [DIR.E, DIR.S, DIR.W, DIR.N].forEach(d => {
+        if (connections & d) dir = d;
+    });
+
+    car.col = startTile.col;
+    car.row = startTile.row;
+    car.x = startTile.col * TILE_SIZE + TILE_SIZE / 2;
+    car.y = startTile.row * TILE_SIZE + TILE_SIZE / 2;
+    car.dir = dir;
+    car.angle = getAngleFromDir(dir);
+    
+    const delta = DIR_DELTA[dir];
+    car.x -= delta.dc * 12;
+    car.y -= delta.dr * 12;
+
     gameState = 'RUNNING';
     btnStart.classList.add('opacity-50', 'pointer-events-none');
     statusText.textContent = '¡EN MARCHA!';
