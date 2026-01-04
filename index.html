@@ -43,27 +43,68 @@
         }
         input[type="text"]:focus { outline: none; border-color: #10b981; }
         ::-webkit-scrollbar { display: none; }
+        .vehicle-btn { transition: all 0.2s; border: 3px solid transparent; }
+        .vehicle-btn.selected { border-color: #10b981; transform: scale(1.1); }
+        .color-btn { width: 32px; height: 32px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; }
+        .color-btn.selected { border-color: white; transform: scale(1.15); }
     </style>
 </head>
 <body class="h-screen w-screen flex flex-col items-center justify-center overflow-hidden">
 
     <!-- PANTALLA DE INICIO -->
-    <div id="startScreen" class="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center z-50 p-4">
-        <div class="text-center">
-            <div class="text-6xl mb-4">🚗</div>
-            <h1 class="text-4xl font-bold text-emerald-400 mb-2">RunCar</h1>
-            <p class="text-slate-400 mb-8">Puzzle de Carreteras</p>
-            <div class="mb-6">
+    <div id="startScreen" class="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center z-50 p-4 overflow-y-auto">
+        <div class="text-center py-4">
+            <div class="text-5xl mb-3">🚗</div>
+            <h1 class="text-3xl font-bold text-emerald-400 mb-1">RunCar</h1>
+            <p class="text-slate-400 mb-4 text-sm">Puzzle de Carreteras</p>
+            
+            <div class="mb-4">
                 <label class="block text-slate-300 mb-2 text-sm">Nombre del conductor:</label>
                 <input type="text" id="driverName" placeholder="Tu nombre" maxlength="15" autocomplete="off">
             </div>
-            <button onclick="startGame()" class="btn-game bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 px-12 rounded-xl text-xl shadow-lg border-b-4 border-emerald-800">
+            
+            <!-- Selector de Vehículo -->
+            <div class="mb-4">
+                <label class="block text-slate-300 mb-2 text-sm">Elige tu vehículo:</label>
+                <div class="flex justify-center gap-3">
+                    <button onclick="selectVehicle('car')" id="btn-car" class="vehicle-btn selected bg-slate-700 p-3 rounded-xl">
+                        <span class="text-3xl">🚗</span>
+                        <p class="text-xs mt-1">Carro</p>
+                    </button>
+                    <button onclick="selectVehicle('truck')" id="btn-truck" class="vehicle-btn bg-slate-700 p-3 rounded-xl">
+                        <span class="text-3xl">🛻</span>
+                        <p class="text-xs mt-1">Camioneta</p>
+                    </button>
+                    <button onclick="selectVehicle('bus')" id="btn-bus" class="vehicle-btn bg-slate-700 p-3 rounded-xl">
+                        <span class="text-3xl">🚌</span>
+                        <p class="text-xs mt-1">Bus</p>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Selector de Color -->
+            <div class="mb-5">
+                <label class="block text-slate-300 mb-2 text-sm">Color del vehículo:</label>
+                <div class="flex justify-center gap-2 flex-wrap max-w-xs mx-auto">
+                    <button onclick="selectColor('#f472b6')" class="color-btn selected" style="background: #f472b6;" id="color-pink"></button>
+                    <button onclick="selectColor('#ef4444')" class="color-btn" style="background: #ef4444;" id="color-red"></button>
+                    <button onclick="selectColor('#f97316')" class="color-btn" style="background: #f97316;" id="color-orange"></button>
+                    <button onclick="selectColor('#eab308')" class="color-btn" style="background: #eab308;" id="color-yellow"></button>
+                    <button onclick="selectColor('#22c55e')" class="color-btn" style="background: #22c55e;" id="color-green"></button>
+                    <button onclick="selectColor('#3b82f6')" class="color-btn" style="background: #3b82f6;" id="color-blue"></button>
+                    <button onclick="selectColor('#8b5cf6')" class="color-btn" style="background: #8b5cf6;" id="color-purple"></button>
+                    <button onclick="selectColor('#ffffff')" class="color-btn" style="background: #ffffff;" id="color-white"></button>
+                </div>
+            </div>
+            
+            <button onclick="startGame()" class="btn-game bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-10 rounded-xl text-lg shadow-lg border-b-4 border-emerald-800">
                 🏁 JUGAR
             </button>
-            <div class="mt-8 text-slate-500 text-xs max-w-xs">
+            
+            <div class="mt-4 text-slate-500 text-xs max-w-xs">
                 <p>Gira las fichas para armar el camino.<br>
-                👆 Toca el carro para elegir dirección.<br>
-                ⚠️ ¡Cuidado con las calles sin señales!</p>
+                👆 Toca el vehículo para elegir dirección.<br>
+                🟡 La línea muestra la ruta.</p>
             </div>
         </div>
     </div>
@@ -71,7 +112,7 @@
     <!-- Header -->
     <div class="absolute top-0 w-full p-2 flex justify-between items-center pointer-events-none z-10">
         <div class="bg-slate-800/95 px-3 py-1.5 rounded-lg border border-slate-600 shadow-lg">
-            <p class="text-emerald-400 font-bold text-sm">🚗 <span id="driverDisplay">Conductor</span></p>
+            <p class="text-emerald-400 font-bold text-sm"><span id="vehicleIcon">🚗</span> <span id="driverDisplay">Conductor</span></p>
             <p class="text-xs text-slate-400">Nivel <span id="levelDisplay">1</span>/40</p>
         </div>
         <div class="bg-slate-800/95 px-3 py-1.5 rounded-lg border border-slate-600 shadow-lg flex flex-col items-center">
@@ -99,7 +140,7 @@
 
     <!-- Hint -->
     <div class="text-center text-slate-400 text-xs mt-1 px-4">
-        <p id="levelHint">Arma el camino hacia la meta correcta 🏁</p>
+        <p id="levelHint">Arma el camino hacia la meta 🏁</p>
     </div>
 
     <!-- Controls -->
@@ -113,6 +154,27 @@
 <script>
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+
+// Variables de personalización del vehículo
+let selectedVehicle = 'car';
+let selectedColor = '#f472b6';
+
+function selectVehicle(type) {
+    selectedVehicle = type;
+    document.querySelectorAll('.vehicle-btn').forEach(btn => btn.classList.remove('selected'));
+    document.getElementById('btn-' + type).classList.add('selected');
+}
+
+function selectColor(color) {
+    selectedColor = color;
+    document.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('selected'));
+    // Encontrar y marcar el botón correcto
+    document.querySelectorAll('.color-btn').forEach(btn => {
+        if (btn.style.background === color || btn.style.backgroundColor === color) {
+            btn.classList.add('selected');
+        }
+    });
+}
 
 let audioCtx = null, soundEnabled = true;
 function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
@@ -195,6 +257,7 @@ function startGame() {
     initAudio();
     driverName = $('driverName').value.trim() || "Conductor";
     $('driverDisplay').textContent = driverName;
+    $('vehicleIcon').textContent = selectedVehicle === 'car' ? '🚗' : selectedVehicle === 'truck' ? '🛻' : '🚌';
     $('startScreen').classList.add('hidden');
     level = 1; $('levelDisplay').textContent = level;
     generateLevel();
@@ -232,7 +295,7 @@ function handleClick(e) {
     
     if (car) {
         const carDist = Math.sqrt((clickX - car.x) ** 2 + (clickY - car.y) ** 2);
-        if (carDist < TILE_SIZE * 0.4) { rotateCar(); return; }
+        if (carDist < TILE_SIZE * 0.5) { rotateCar(); return; }
     }
     
     const col = Math.floor(clickX / TILE_SIZE), row = Math.floor(clickY / TILE_SIZE);
@@ -258,6 +321,7 @@ function rotateCar() {
     car.dir = dirs[(idx + 1) % dirs.length];
     car.angle = car.dir === DIR.N ? -Math.PI/2 : car.dir === DIR.E ? 0 : car.dir === DIR.S ? Math.PI/2 : Math.PI;
     playSound('rotate');
+    calculatePreviewPath();
     draw();
 }
 
@@ -281,28 +345,17 @@ function generateLevel() {
     $('progressBar').className = 'progress-bar h-full bg-emerald-500 rounded-full';
     $('statusText').textContent = 'GIRA LAS FICHAS';
     $('statusText').className = 'text-yellow-400 font-bold text-xs';
-    $('levelHint').textContent = `🏁 1 meta | ⚠️ ${config.deadEnds} calles trampa | 👆 Toca el carro`;
+    $('levelHint').textContent = `🏁 Nivel ${level} | 👆 Toca el vehículo para girar`;
     
     resize();
     grid = new Array(COLS * ROWS).fill(null);
     specialTiles = [];
     
-    // 1. Colocar inicio
     placeStart();
-    
-    // 2. Colocar UNA SOLA meta (con múltiples entradas)
     placeEnd();
-    
-    // 3. Colocar obstáculos
     placeObstacles(config.obstacles);
-    
-    // 4. Rellenar espacios vacíos (incluyendo calles trampa)
     fillEmpty(config.deadEnds);
-    
-    // 5. Aleatorizar rotaciones
     randomizeRotations();
-    
-    // 6. Agregar elementos especiales
     addSpecials(config.features);
     
     resetCar();
@@ -323,7 +376,6 @@ function placeStart() {
     grid[pos.row * COLS + pos.col] = tile;
 }
 
-// Nueva función para colocar UNA sola meta
 function placeEnd() {
     const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
     const positions = [
@@ -467,6 +519,58 @@ function checkConnections() {
             }
         });
     }
+    
+    calculatePreviewPath();
+}
+
+function calculatePreviewPath() {
+    previewPath = [];
+    if (!car) return;
+    
+    let col = car.col, row = car.row, dir = car.dir;
+    const visited = new Set();
+    
+    previewPath.push({ x: col * TILE_SIZE + TILE_SIZE / 2, y: row * TILE_SIZE + TILE_SIZE / 2 });
+    
+    for (let steps = 0; steps < 100; steps++) {
+        const key = `${col},${row},${dir}`;
+        if (visited.has(key)) break;
+        visited.add(key);
+        
+        const tile = grid[row * COLS + col];
+        if (!tile) break;
+        
+        if (tile.isEnd) {
+            previewPath[previewPath.length - 1].isEnd = true;
+            break;
+        }
+        
+        const conn = tile.getConnections();
+        const entry = OPPOSITE[dir];
+        
+        if (!tile.locked && !(conn & entry) && steps > 0) break;
+        
+        const exits = conn & ~entry;
+        let exitDir = 0;
+        
+        if (exits & dir) exitDir = dir;
+        else [DIR.N, DIR.E, DIR.S, DIR.W].forEach(d => { if (!exitDir && (exits & d)) exitDir = d; });
+        
+        if (!exitDir) break;
+        
+        const d = DIR_DELTA[exitDir];
+        const nc = col + d.dc, nr = row + d.dr;
+        
+        if (nc < 0 || nc >= COLS || nr < 0 || nr >= ROWS) break;
+        
+        const next = grid[nr * COLS + nc];
+        if (!next || next.type === TILE_TYPES.BLOCKED) break;
+        if (!(next.getConnections() & OPPOSITE[exitDir])) break;
+        
+        previewPath.push({ x: nc * TILE_SIZE + TILE_SIZE / 2, y: nr * TILE_SIZE + TILE_SIZE / 2 });
+        
+        col = nc; row = nr; dir = exitDir;
+    }
 }
 
 function startCountdown() {
@@ -512,7 +616,6 @@ function resetCar() {
         speed: config.speed, baseSpeed: config.speed, waiting: false
     };
     gameState = 'EDITING';
-    draw();
 }
 
 function startCar() {
@@ -657,7 +760,63 @@ function draw() {
     ctx.fillStyle = '#1e293b';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     grid.forEach(t => { if (t) drawTile(t); });
+    
+    if (gameState === 'EDITING' && previewPath.length > 1) {
+        drawPreviewPath();
+    }
+    
     if (car) drawCar();
+}
+
+function drawPreviewPath() {
+    ctx.save();
+    
+    // Sombra
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.setLineDash([8, 4]);
+    ctx.beginPath();
+    ctx.moveTo(previewPath[0].x, previewPath[0].y);
+    for (let i = 1; i < previewPath.length; i++) {
+        ctx.lineTo(previewPath[i].x, previewPath[i].y);
+    }
+    ctx.stroke();
+    
+    // Línea principal amarilla
+    ctx.strokeStyle = 'rgba(251, 191, 36, 0.9)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(previewPath[0].x, previewPath[0].y);
+    for (let i = 1; i < previewPath.length; i++) {
+        ctx.lineTo(previewPath[i].x, previewPath[i].y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    // Indicador final
+    const last = previewPath[previewPath.length - 1];
+    if (last.isEnd) {
+        ctx.fillStyle = 'rgba(34, 197, 94, 0.8)';
+        ctx.beginPath();
+        ctx.arc(last.x, last.y, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    } else {
+        ctx.strokeStyle = 'rgba(239, 68, 68, 0.9)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(last.x - 6, last.y - 6);
+        ctx.lineTo(last.x + 6, last.y + 6);
+        ctx.moveTo(last.x + 6, last.y - 6);
+        ctx.lineTo(last.x - 6, last.y + 6);
+        ctx.stroke();
+    }
+    
+    ctx.restore();
 }
 
 function drawTile(tile) {
@@ -681,42 +840,27 @@ function drawTile(tile) {
     ctx.translate(cx, cy);
     ctx.rotate(tile.rotation * Math.PI / 2);
     
-    // Color según estado
-    let color;
-    if (tile.isDeadEnd) {
-        color = tile.powered ? '#65a30d' : '#525252';
-    } else if (tile.type === TILE_TYPES.START) {
-        color = '#10b981';
-    } else if (tile.isEnd) {
-        color = tile.powered ? '#4ade80' : '#64748b';
-    } else {
-        color = tile.powered ? '#4ade80' : '#64748b';
-    }
+    let color = tile.isDeadEnd ? (tile.powered ? '#65a30d' : '#525252') : 
+                tile.type === TILE_TYPES.START ? '#10b981' : 
+                tile.powered ? '#4ade80' : '#64748b';
     
     ctx.fillStyle = color;
     const conn = tile.type.base, s = TILE_SIZE;
     
-    // Dibujar brazos de carretera
     if (conn & DIR.N) ctx.fillRect(-h, -s/2, rw, s/2 + h);
     if (conn & DIR.S) ctx.fillRect(-h, -h, rw, s/2 + h);
     if (conn & DIR.E) ctx.fillRect(-h, -h, s/2 + h, rw);
     if (conn & DIR.W) ctx.fillRect(-s/2, -h, s/2 + h, rw);
     
-    // Centro
     ctx.beginPath(); ctx.arc(0, 0, h, 0, Math.PI * 2); ctx.fill();
     
-    // Líneas amarillas centrales y flechas (solo si NO es calle trampa)
     if (!tile.isDeadEnd && !tile.type.noArrows) {
         ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 2]);
         if ((conn & DIR.N) && (conn & DIR.S)) { ctx.beginPath(); ctx.moveTo(0, -s/2); ctx.lineTo(0, s/2); ctx.stroke(); }
         if ((conn & DIR.E) && (conn & DIR.W)) { ctx.beginPath(); ctx.moveTo(-s/2, 0); ctx.lineTo(s/2, 0); ctx.stroke(); }
         ctx.setLineDash([]);
-        
-        // Dibujar flechas UNA sola vez
-        drawDirectionArrows(conn, s, h, tile.powered);
     }
     
-    // Texto GO en inicio
     if (tile.type === TILE_TYPES.START) {
         ctx.fillStyle = 'white'; ctx.font = 'bold 9px sans-serif';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -725,14 +869,12 @@ function drawTile(tile) {
     
     ctx.restore();
     
-    // Meta - bandera
     if (tile.isEnd) {
         ctx.font = `${TILE_SIZE * 0.35}px sans-serif`;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText('🏁', cx, cy);
     }
     
-    // Icono en calles trampa
     if (tile.isDeadEnd) {
         ctx.fillStyle = 'rgba(255, 200, 0, 0.4)';
         ctx.font = `${TILE_SIZE * 0.25}px sans-serif`;
@@ -740,7 +882,6 @@ function drawTile(tile) {
         ctx.fillText('?', cx, cy);
     }
     
-    // Especiales
     if (tile.special === 'semaphore') {
         ctx.fillStyle = '#1f2937'; ctx.fillRect(cx - 4, cy - 10, 8, 20);
         const cols = { red: tile.semaphoreState === 'red' ? '#ef4444' : '#3f1515', yellow: tile.semaphoreState === 'yellow' ? '#fbbf24' : '#3f3515', green: tile.semaphoreState === 'green' ? '#22c55e' : '#153f25' };
@@ -757,99 +898,93 @@ function drawTile(tile) {
     }
 }
 
-// Nueva función para dibujar flechas direccionales
-function drawDirectionArrows(conn, s, h, powered) {
-    const arrowSize = s * 0.08;
-    const arrowDist = s * 0.42; // Más cerca del borde
-    ctx.fillStyle = powered ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.35)';
-    
-    // Las flechas apuntan HACIA AFUERA (indicando salida)
-    if (conn & DIR.N) { 
-        ctx.save(); 
-        ctx.translate(0, -arrowDist); 
-        ctx.rotate(Math.PI); // Apunta hacia arriba (salida norte)
-        drawArrow(arrowSize); 
-        ctx.restore(); 
-    }
-    if (conn & DIR.S) { 
-        ctx.save(); 
-        ctx.translate(0, arrowDist); 
-        // Sin rotación - apunta hacia abajo (salida sur)
-        drawArrow(arrowSize); 
-        ctx.restore(); 
-    }
-    if (conn & DIR.E) { 
-        ctx.save(); 
-        ctx.translate(arrowDist, 0); 
-        ctx.rotate(-Math.PI/2); // Apunta hacia la derecha (salida este)
-        drawArrow(arrowSize); 
-        ctx.restore(); 
-    }
-    if (conn & DIR.W) { 
-        ctx.save(); 
-        ctx.translate(-arrowDist, 0); 
-        ctx.rotate(Math.PI/2); // Apunta hacia la izquierda (salida oeste)
-        drawArrow(arrowSize); 
-        ctx.restore(); 
-    }
-}
-
-// Función auxiliar para dibujar una flecha apuntando hacia ABAJO (salida)
-function drawArrow(size) {
-    ctx.beginPath();
-    ctx.moveTo(0, size * 1.2);        // Punta hacia abajo
-    ctx.lineTo(-size * 0.7, -size * 0.3);  // Esquina izquierda
-    ctx.lineTo(size * 0.7, -size * 0.3);   // Esquina derecha
-    ctx.closePath();
-    ctx.fill();
-}
-
 function drawCar() {
     ctx.save();
     ctx.translate(car.x, car.y);
     ctx.rotate(car.angle);
-    ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 4;
+    ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 5;
     
-    // Indicador de dirección grande (flecha verde)
-    if (gameState === 'EDITING') {
-        ctx.fillStyle = 'rgba(74, 222, 128, 0.7)';
-        ctx.beginPath();
-        ctx.moveTo(18, 0); ctx.lineTo(10, -5); ctx.lineTo(10, 5);
-        ctx.closePath(); ctx.fill();
+    const mainColor = selectedColor;
+    const darkColor = shadeColor(selectedColor, -30);
+    const waiting = car.waiting;
+    
+    if (selectedVehicle === 'car') {
+        // Carro compacto
+        ctx.fillStyle = waiting ? '#94a3b8' : mainColor;
+        ctx.beginPath(); ctx.roundRect(-10, -6, 20, 12, 3); ctx.fill();
+        ctx.fillStyle = waiting ? '#64748b' : darkColor;
+        ctx.beginPath(); ctx.roundRect(-5, -4, 8, 8, 2); ctx.fill();
+        ctx.fillStyle = '#1e293b'; ctx.fillRect(-3, -3, 5, 6);
+        ctx.fillStyle = waiting ? '#94a3b8' : '#fef08a';
+        ctx.fillRect(8, -3, 2, 2); ctx.fillRect(8, 1, 2, 2);
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(-7, -8, 4, 2); ctx.fillRect(-7, 6, 4, 2);
+        ctx.fillRect(3, -8, 4, 2); ctx.fillRect(3, 6, 4, 2);
+    } else if (selectedVehicle === 'truck') {
+        // Camioneta
+        ctx.fillStyle = waiting ? '#94a3b8' : mainColor;
+        ctx.beginPath(); ctx.roundRect(-14, -7, 28, 14, 3); ctx.fill();
+        ctx.fillStyle = waiting ? '#64748b' : darkColor;
+        ctx.beginPath(); ctx.roundRect(-12, -5, 10, 10, 2); ctx.fill();
+        ctx.fillStyle = '#1e293b'; ctx.fillRect(-10, -4, 6, 8);
+        ctx.fillStyle = '#475569';
+        ctx.fillRect(0, -5, 12, 10);
+        ctx.fillStyle = waiting ? '#94a3b8' : '#fef08a';
+        ctx.fillRect(12, -3, 2, 2); ctx.fillRect(12, 1, 2, 2);
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(-11, -9, 5, 2); ctx.fillRect(-11, 7, 5, 2);
+        ctx.fillRect(6, -9, 5, 2); ctx.fillRect(6, 7, 5, 2);
+    } else if (selectedVehicle === 'bus') {
+        // Bus
+        ctx.fillStyle = waiting ? '#94a3b8' : mainColor;
+        ctx.beginPath(); ctx.roundRect(-16, -8, 32, 16, 4); ctx.fill();
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(-12, -6, 5, 5); ctx.fillRect(-4, -6, 5, 5); ctx.fillRect(4, -6, 5, 5);
+        ctx.fillRect(-12, 1, 5, 5); ctx.fillRect(-4, 1, 5, 5); ctx.fillRect(4, 1, 5, 5);
+        ctx.fillStyle = waiting ? '#64748b' : darkColor;
+        ctx.fillRect(10, -6, 5, 12);
+        ctx.fillStyle = waiting ? '#94a3b8' : '#fef08a';
+        ctx.fillRect(14, -4, 2, 3); ctx.fillRect(14, 1, 2, 3);
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(-13, -10, 6, 2); ctx.fillRect(-13, 8, 6, 2);
+        ctx.fillRect(7, -10, 6, 2); ctx.fillRect(7, 8, 6, 2);
     }
     
-    // Cuerpo del carro
-    ctx.fillStyle = car.waiting ? '#94a3b8' : '#f472b6';
-    ctx.beginPath(); ctx.roundRect(-9, -6, 18, 12, 2); ctx.fill();
-    ctx.fillStyle = car.waiting ? '#64748b' : '#ec4899';
-    ctx.beginPath(); ctx.roundRect(-5, -4, 7, 8, 1); ctx.fill();
-    ctx.fillStyle = '#1e293b'; ctx.fillRect(-3, -3, 4, 6);
-    ctx.fillStyle = car.waiting ? '#94a3b8' : '#fef08a';
-    ctx.fillRect(7, -3, 2, 2); ctx.fillRect(7, 1, 2, 2);
-    ctx.fillStyle = '#1e293b';
-    ctx.fillRect(-6, -8, 3, 2); ctx.fillRect(-6, 6, 3, 2);
-    ctx.fillRect(3, -8, 3, 2); ctx.fillRect(3, 6, 3, 2);
-    
+    // Indicador de dirección en modo edición
     if (gameState === 'EDITING') {
-        ctx.strokeStyle = 'rgba(74, 222, 128, 0.5)';
-        ctx.lineWidth = 2; ctx.setLineDash([3, 3]);
-        ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI * 2); ctx.stroke();
-        ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(74, 222, 128, 0.8)';
+        ctx.beginPath();
+        const offset = selectedVehicle === 'bus' ? 22 : selectedVehicle === 'truck' ? 18 : 14;
+        ctx.moveTo(offset + 6, 0);
+        ctx.lineTo(offset - 2, -5);
+        ctx.lineTo(offset - 2, 5);
+        ctx.closePath();
+        ctx.fill();
         
-        // Texto "TAP" pequeño
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-        ctx.font = 'bold 6px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.rotate(-car.angle); // Desrotar para texto horizontal
-        ctx.fillText('TAP', 0, -20);
+        ctx.strokeStyle = 'rgba(74, 222, 128, 0.5)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([3, 3]);
+        const radius = selectedVehicle === 'bus' ? 20 : selectedVehicle === 'truck' ? 18 : 14;
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
     }
     
     ctx.restore();
 }
 
+// Función auxiliar para oscurecer colores
+function shadeColor(color, percent) {
+    const num = parseInt(color.replace('#', ''), 16);
+    const amt = Math.round(2.55 * percent);
+    const R = Math.max(0, Math.min(255, (num >> 16) + amt));
+    const G = Math.max(0, Math.min(255, (num >> 8 & 0x00FF) + amt));
+    const B = Math.max(0, Math.min(255, (num & 0x0000FF) + amt));
+    return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
+}
+
 window.onload = init;
 </script>
-
 </body>
 </html>
