@@ -61,7 +61,9 @@
                 🏁 JUGAR
             </button>
             <div class="mt-8 text-slate-500 text-xs max-w-xs">
-                <p>Gira las fichas y arma el camino.<br>¡El carro sigue la ruta verde!</p>
+                <p>Gira las fichas para armar el camino.<br>
+                👆 Toca el carro para elegir dirección.<br>
+                ¡El carro sigue la ruta que armes!</p>
             </div>
         </div>
     </div>
@@ -227,8 +229,20 @@ function handleClick(e) {
     initAudio();
     if (gameState !== 'EDITING') return;
     const rect = canvas.getBoundingClientRect();
-    const col = Math.floor((e.clientX - rect.left) / TILE_SIZE);
-    const row = Math.floor((e.clientY - rect.top) / TILE_SIZE);
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+    const col = Math.floor(clickX / TILE_SIZE);
+    const row = Math.floor(clickY / TILE_SIZE);
+    
+    // Verificar si se hizo clic en el carro
+    if (car) {
+        const carDist = Math.sqrt((clickX - car.x) ** 2 + (clickY - car.y) ** 2);
+        if (carDist < TILE_SIZE * 0.4) {
+            rotateCar();
+            return;
+        }
+    }
+    
     if (col >= 0 && col < COLS && row >= 0 && row < ROWS) {
         const tile = grid[row * COLS + col];
         if (tile && !tile.locked && tile.type !== TILE_TYPES.BLOCKED) {
@@ -238,6 +252,31 @@ function handleClick(e) {
             draw();
         }
     }
+}
+
+// Nueva función para rotar el carro
+function rotateCar() {
+    if (!car || gameState !== 'EDITING') return;
+    
+    const start = grid[car.row * COLS + car.col];
+    if (!start) return;
+    
+    const conn = start.getConnections();
+    const directions = [DIR.N, DIR.E, DIR.S, DIR.W];
+    const availableDirs = directions.filter(d => conn & d);
+    
+    if (availableDirs.length <= 1) return;
+    
+    // Encontrar siguiente dirección disponible
+    const currentIndex = availableDirs.indexOf(car.dir);
+    const nextIndex = (currentIndex + 1) % availableDirs.length;
+    car.dir = availableDirs[nextIndex];
+    
+    // Actualizar ángulo
+    car.angle = car.dir === DIR.N ? -Math.PI/2 : car.dir === DIR.E ? 0 : car.dir === DIR.S ? Math.PI/2 : Math.PI;
+    
+    playSound('rotate');
+    draw();
 }
 
 function resetLevel() {
@@ -262,7 +301,7 @@ function generateLevel() {
     $('statusText').className = 'text-yellow-400 font-bold text-xs';
     
     const totalEnds = config.numFakeEnds + 1;
-    $('levelHint').textContent = `🏁 ${totalEnds} metas - ¡Encuentra la correcta!`;
+    $('levelHint').textContent = `🏁 ${totalEnds} metas | 👆 Toca el carro para girar`;
     
     resize();
     grid = new Array(COLS * ROWS).fill(null);
@@ -596,12 +635,26 @@ function resetCar() {
     const start = grid.find(t => t && t.type === TILE_TYPES.START);
     if (!start) return;
     
+    const conn = start.getConnections();
+    // Buscar primera dirección disponible
+    let dir = DIR.E;
+    [DIR.E, DIR.S, DIR.W, DIR.N].forEach(d => {
+        if (!dir || !(conn & dir)) {
+            if (conn & d) dir = d;
+        }
+    });
+    // Asegurar que dir sea válido
+    if (!(conn & dir)) {
+        [DIR.N, DIR.E, DIR.S, DIR.W].forEach(d => { if (conn & d) dir = d; });
+    }
+    
     const config = LEVEL_CONFIG[Math.min(level - 1, 39)];
     car = {
         col: start.col, row: start.row,
         x: start.col * TILE_SIZE + TILE_SIZE / 2,
         y: start.row * TILE_SIZE + TILE_SIZE / 2,
-        dir: 0, angle: 0,
+        dir: dir,
+        angle: dir === DIR.N ? -Math.PI/2 : dir === DIR.E ? 0 : dir === DIR.S ? Math.PI/2 : Math.PI,
         speed: config.speed, baseSpeed: config.speed, waiting: false
     };
     gameState = 'EDITING';
@@ -613,33 +666,23 @@ function startCar() {
     if (gameState !== 'EDITING') return;
     clearInterval(countdownTimer);
     
-    // Determinar dirección inicial basada en conexiones verdes
+    // Usar la dirección que el jugador ya eligió (car.dir)
+    // Solo validar que la dirección sea válida
     const start = grid[car.row * COLS + car.col];
     const conn = start.getConnections();
     
-    // Buscar primera dirección conectada (powered)
-    let exitDir = 0;
-    [DIR.E, DIR.S, DIR.N, DIR.W].forEach(dir => {
-        if (!exitDir && (conn & dir)) {
-            const d = DIR_DELTA[dir];
-            const nc = car.col + d.dc, nr = car.row + d.dr;
-            if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS) {
-                const neighbor = grid[nr * COLS + nc];
-                if (neighbor && neighbor.powered && (neighbor.getConnections() & OPPOSITE[dir])) {
-                    exitDir = dir;
-                }
-            }
-        }
-    });
-    
-    if (!exitDir) {
-        // Si no hay camino verde, tomar cualquier salida
+    // Si la dirección actual no es válida, buscar una
+    if (!(conn & car.dir)) {
         [DIR.E, DIR.S, DIR.N, DIR.W].forEach(dir => {
-            if (!exitDir && (conn & dir)) exitDir = dir;
+            if (!car.dir && (conn & dir)) car.dir = dir;
         });
     }
     
-    car.dir = exitDir || DIR.E;
+    if (!car.dir) {
+        crash('¡Sin salida disponible!');
+        return;
+    }
+    
     car.angle = car.dir === DIR.N ? -Math.PI/2 : car.dir === DIR.E ? 0 : car.dir === DIR.S ? Math.PI/2 : Math.PI;
     
     gameState = 'RUNNING';
@@ -870,6 +913,17 @@ function drawCar() {
     ctx.rotate(car.angle);
     ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 4;
     
+    // Indicador de dirección (flecha sutil)
+    if (gameState === 'EDITING') {
+        ctx.fillStyle = 'rgba(74, 222, 128, 0.4)';
+        ctx.beginPath();
+        ctx.moveTo(14, 0);
+        ctx.lineTo(8, -4);
+        ctx.lineTo(8, 4);
+        ctx.closePath();
+        ctx.fill();
+    }
+    
     ctx.fillStyle = car.waiting ? '#94a3b8' : '#f472b6';
     ctx.beginPath(); ctx.roundRect(-9, -6, 18, 12, 2); ctx.fill();
     ctx.fillStyle = car.waiting ? '#64748b' : '#ec4899';
@@ -880,6 +934,17 @@ function drawCar() {
     ctx.fillStyle = '#1e293b';
     ctx.fillRect(-6, -8, 3, 2); ctx.fillRect(-6, 6, 3, 2);
     ctx.fillRect(3, -8, 3, 2); ctx.fillRect(3, 6, 3, 2);
+    
+    // Círculo indicador de clic (solo en modo edición)
+    if (gameState === 'EDITING') {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([2, 2]);
+        ctx.beginPath();
+        ctx.arc(0, 0, 12, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
     
     ctx.restore();
 }
