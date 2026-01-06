@@ -48,6 +48,21 @@
         .color-btn { width: 32px; height: 32px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; }
         .color-btn.selected { border-color: white; transform: scale(1.15); }
         
+        /* Selector de empresa */
+        .company-btn { 
+            width: 50px; 
+            height: 50px; 
+            border-radius: 10px; 
+            border: 3px solid transparent; 
+            cursor: pointer; 
+            background: #1e293b;
+            padding: 4px;
+            transition: all 0.2s;
+        }
+        .company-btn:hover { transform: scale(1.05); }
+        .company-btn.selected { border-color: #10b981; transform: scale(1.1); box-shadow: 0 0 15px rgba(16, 185, 129, 0.5); }
+        .company-btn img { width: 100%; height: 100%; object-fit: contain; border-radius: 6px; }
+        
         /* Preparación del pedido - Fuera del área de juego */
         .prep-container {
             display: flex;
@@ -149,6 +164,31 @@
             <div class="mb-4">
                 <label class="block text-slate-300 mb-2 text-sm">Nombre del repartidor:</label>
                 <input type="text" id="driverName" placeholder="Tu nombre" maxlength="15" autocomplete="off">
+            </div>
+            
+            <!-- Selector de Empresa -->
+            <div class="mb-4">
+                <label class="block text-slate-300 mb-2 text-sm">Trabaja para:</label>
+                <div class="flex justify-center gap-2 flex-wrap max-w-sm mx-auto">
+                    <button onclick="selectCompany('rappi')" id="btn-rappi" class="company-btn selected">
+                        <img src="LOGO-RAPPI.png" alt="Rappi">
+                    </button>
+                    <button onclick="selectCompany('uber')" id="btn-uber" class="company-btn">
+                        <img src="UBER.png" alt="Uber">
+                    </button>
+                    <button onclick="selectCompany('pedidosya')" id="btn-pedidosya" class="company-btn">
+                        <img src="pedidosya.png" alt="PedidosYa">
+                    </button>
+                    <button onclick="selectCompany('indriver')" id="btn-indriver" class="company-btn">
+                        <img src="INDRIVER.png" alt="InDriver">
+                    </button>
+                    <button onclick="selectCompany('amazon')" id="btn-amazon" class="company-btn">
+                        <img src="amazon.png" alt="Amazon">
+                    </button>
+                    <button onclick="selectCompany('servientrega')" id="btn-servientrega" class="company-btn">
+                        <img src="SERVIENTREGA.png" alt="Servientrega">
+                    </button>
+                </div>
             </div>
             
             <!-- Selector de Vehículo -->
@@ -271,6 +311,23 @@ const ctx = canvas.getContext('2d');
 // Variables de personalización del vehículo
 let selectedVehicle = 'moto';
 let selectedColor = '#1a1a1a';
+let selectedCompany = 'rappi';
+
+// Colores de las empresas
+const companyColors = {
+    rappi: '#ff5a00',
+    uber: '#000000',
+    pedidosya: '#d42e58',
+    indriver: '#2db742',
+    amazon: '#ff9900',
+    servientrega: '#003087'
+};
+
+function selectCompany(company) {
+    selectedCompany = company;
+    document.querySelectorAll('.company-btn').forEach(btn => btn.classList.remove('selected'));
+    document.getElementById('btn-' + company).classList.add('selected');
+}
 
 // Variables para animación de preparación
 let prepAnimationInterval = null;
@@ -1184,84 +1241,301 @@ function drawCar() {
     const waiting = car.waiting;
     
     if (selectedVehicle === 'moto') {
-        // Moto de delivery
-        ctx.fillStyle = waiting ? '#94a3b8' : mainColor;
-        // Cuerpo de la moto
-        ctx.beginPath(); ctx.roundRect(-12, -4, 24, 8, 2); ctx.fill();
+        // Moto de delivery mejorada
+        const companyColor = companyColors[selectedCompany] || '#ef4444';
+        
+        // Sombra del vehículo
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath(); ctx.ellipse(0, 8, 10, 3, 0, 0, Math.PI * 2); ctx.fill();
+        
+        // Rueda trasera con detalles
+        ctx.fillStyle = '#1a1a1a';
+        ctx.beginPath(); ctx.arc(-7, 4, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#4b5563';
+        ctx.beginPath(); ctx.arc(-7, 4, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#9ca3af';
+        ctx.beginPath(); ctx.arc(-7, 4, 1.5, 0, Math.PI * 2); ctx.fill();
+        
+        // Rueda delantera con detalles
+        ctx.fillStyle = '#1a1a1a';
+        ctx.beginPath(); ctx.arc(9, 4, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#4b5563';
+        ctx.beginPath(); ctx.arc(9, 4, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#9ca3af';
+        ctx.beginPath(); ctx.arc(9, 4, 1.5, 0, Math.PI * 2); ctx.fill();
+        
+        // Chasis/cuerpo de la moto
+        ctx.fillStyle = waiting ? '#6b7280' : mainColor;
+        ctx.beginPath();
+        ctx.moveTo(-10, 2);
+        ctx.lineTo(-5, -4);
+        ctx.lineTo(8, -4);
+        ctx.lineTo(12, 0);
+        ctx.lineTo(10, 4);
+        ctx.lineTo(-8, 4);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Tanque de gasolina
+        ctx.fillStyle = waiting ? '#4b5563' : darkColor;
+        ctx.beginPath(); ctx.roundRect(-3, -6, 8, 4, 2); ctx.fill();
+        
         // Asiento
-        ctx.fillStyle = waiting ? '#64748b' : '#374151';
-        ctx.beginPath(); ctx.roundRect(-6, -6, 10, 4, 2); ctx.fill();
-        // Caja de delivery
-        ctx.fillStyle = waiting ? '#6b7280' : '#ef4444';
-        ctx.beginPath(); ctx.roundRect(-14, -8, 8, 10, 2); ctx.fill();
+        ctx.fillStyle = '#1f2937';
+        ctx.beginPath(); ctx.roundRect(-8, -7, 10, 3, 1); ctx.fill();
+        
+        // Caja de delivery con logo de empresa
+        ctx.fillStyle = waiting ? '#4b5563' : companyColor;
+        ctx.beginPath(); ctx.roundRect(-16, -10, 10, 12, 2); ctx.fill();
+        // Borde de la caja
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-15, -9, 8, 10);
+        // Símbolo de paquete
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 6px sans-serif';
+        ctx.font = 'bold 7px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('📦', -10, -3);
-        // Rueda trasera
-        ctx.fillStyle = '#1e293b';
-        ctx.beginPath(); ctx.arc(-8, 5, 4, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#6b7280';
-        ctx.beginPath(); ctx.arc(-8, 5, 2, 0, Math.PI * 2); ctx.fill();
-        // Rueda delantera
-        ctx.fillStyle = '#1e293b';
-        ctx.beginPath(); ctx.arc(8, 5, 4, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#6b7280';
-        ctx.beginPath(); ctx.arc(8, 5, 2, 0, Math.PI * 2); ctx.fill();
-        // Manubrio
-        ctx.fillStyle = waiting ? '#64748b' : '#4b5563';
-        ctx.fillRect(6, -7, 6, 3);
+        ctx.fillText('📦', -11, -4);
+        
+        // Manubrio mejorado
+        ctx.fillStyle = '#374151';
+        ctx.fillRect(7, -8, 5, 2);
+        ctx.fillStyle = '#1f2937';
+        ctx.beginPath(); ctx.arc(7, -7, 1.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(12, -7, 1.5, 0, Math.PI * 2); ctx.fill();
+        
         // Luz delantera
-        ctx.fillStyle = waiting ? '#94a3b8' : '#fef08a';
-        ctx.beginPath(); ctx.arc(12, -2, 2, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = waiting ? '#6b7280' : '#fef08a';
+        ctx.beginPath(); ctx.arc(13, -1, 2.5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = waiting ? '#9ca3af' : '#fbbf24';
+        ctx.beginPath(); ctx.arc(13, -1, 1.5, 0, Math.PI * 2); ctx.fill();
+        
+        // Luz trasera
+        ctx.fillStyle = '#dc2626';
+        ctx.beginPath(); ctx.roundRect(-12, 1, 3, 2, 1); ctx.fill();
+        
+        // Escape
+        ctx.fillStyle = '#6b7280';
+        ctx.fillRect(-5, 3, 8, 2);
+        ctx.fillStyle = '#9ca3af';
+        ctx.beginPath(); ctx.arc(-5, 4, 1.5, 0, Math.PI * 2); ctx.fill();
     } else if (selectedVehicle === 'car') {
-        // Carro compacto
-        ctx.fillStyle = waiting ? '#94a3b8' : mainColor;
-        ctx.beginPath(); ctx.roundRect(-10, -6, 20, 12, 3); ctx.fill();
-        ctx.fillStyle = waiting ? '#64748b' : darkColor;
-        ctx.beginPath(); ctx.roundRect(-5, -4, 8, 8, 2); ctx.fill();
-        ctx.fillStyle = '#1e293b'; ctx.fillRect(-3, -3, 5, 6);
-        ctx.fillStyle = waiting ? '#94a3b8' : '#fef08a';
-        ctx.fillRect(8, -3, 2, 2); ctx.fillRect(8, 1, 2, 2);
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(-7, -8, 4, 2); ctx.fillRect(-7, 6, 4, 2);
-        ctx.fillRect(3, -8, 4, 2); ctx.fillRect(3, 6, 4, 2);
+        // Carro mejorado estilo sedan
+        const companyColor = companyColors[selectedCompany] || '#ef4444';
+        
+        // Sombra
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath(); ctx.ellipse(0, 9, 12, 3, 0, 0, Math.PI * 2); ctx.fill();
+        
+        // Ruedas traseras
+        ctx.fillStyle = '#1a1a1a';
+        ctx.beginPath(); ctx.arc(-7, 6, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#4b5563';
+        ctx.beginPath(); ctx.arc(-7, 6, 2.5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#9ca3af';
+        ctx.beginPath(); ctx.arc(-7, 6, 1, 0, Math.PI * 2); ctx.fill();
+        
+        // Ruedas delanteras
+        ctx.fillStyle = '#1a1a1a';
+        ctx.beginPath(); ctx.arc(7, 6, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#4b5563';
+        ctx.beginPath(); ctx.arc(7, 6, 2.5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#9ca3af';
+        ctx.beginPath(); ctx.arc(7, 6, 1, 0, Math.PI * 2); ctx.fill();
+        
+        // Cuerpo del carro
+        ctx.fillStyle = waiting ? '#6b7280' : mainColor;
+        ctx.beginPath(); ctx.roundRect(-12, -3, 24, 10, 3); ctx.fill();
+        
+        // Techo/cabina
+        ctx.fillStyle = waiting ? '#4b5563' : darkColor;
+        ctx.beginPath();
+        ctx.moveTo(-6, -3);
+        ctx.lineTo(-4, -8);
+        ctx.lineTo(6, -8);
+        ctx.lineTo(8, -3);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Ventanas
+        ctx.fillStyle = '#1e3a5f';
+        ctx.beginPath();
+        ctx.moveTo(-5, -3);
+        ctx.lineTo(-3, -7);
+        ctx.lineTo(0, -7);
+        ctx.lineTo(0, -3);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(1, -3);
+        ctx.lineTo(1, -7);
+        ctx.lineTo(5, -7);
+        ctx.lineTo(7, -3);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Luces delanteras
+        ctx.fillStyle = waiting ? '#6b7280' : '#fef08a';
+        ctx.beginPath(); ctx.roundRect(10, -1, 3, 3, 1); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(10, 3, 3, 2, 1); ctx.fill();
+        
+        // Luces traseras
+        ctx.fillStyle = '#dc2626';
+        ctx.beginPath(); ctx.roundRect(-13, 0, 2, 4, 1); ctx.fill();
+        
+        // Logo de empresa en el lateral
+        ctx.fillStyle = companyColor;
+        ctx.beginPath(); ctx.arc(0, 2, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 4px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🚗', 0, 2);
+        
+        // Parachoques
+        ctx.fillStyle = '#374151';
+        ctx.beginPath(); ctx.roundRect(-12, 5, 24, 2, 1); ctx.fill();
     } else if (selectedVehicle === 'truck') {
-        // Camioneta
-        ctx.fillStyle = waiting ? '#94a3b8' : mainColor;
-        ctx.beginPath(); ctx.roundRect(-14, -7, 28, 14, 3); ctx.fill();
-        ctx.fillStyle = waiting ? '#64748b' : darkColor;
-        ctx.beginPath(); ctx.roundRect(-12, -5, 10, 10, 2); ctx.fill();
-        ctx.fillStyle = '#1e293b'; ctx.fillRect(-10, -4, 6, 8);
-        ctx.fillStyle = '#475569';
-        ctx.fillRect(0, -5, 12, 10);
-        ctx.fillStyle = waiting ? '#94a3b8' : '#fef08a';
-        ctx.fillRect(12, -3, 2, 2); ctx.fillRect(12, 1, 2, 2);
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(-11, -9, 5, 2); ctx.fillRect(-11, 7, 5, 2);
-        ctx.fillRect(6, -9, 5, 2); ctx.fillRect(6, 7, 5, 2);
+        // Camioneta de reparto mejorada
+        const companyColor = companyColors[selectedCompany] || '#ef4444';
+        
+        // Sombra
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath(); ctx.ellipse(0, 10, 14, 4, 0, 0, Math.PI * 2); ctx.fill();
+        
+        // Ruedas traseras (dobles)
+        ctx.fillStyle = '#1a1a1a';
+        ctx.beginPath(); ctx.arc(-9, 6, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#4b5563';
+        ctx.beginPath(); ctx.arc(-9, 6, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#6b7280';
+        ctx.beginPath(); ctx.arc(-9, 6, 1.5, 0, Math.PI * 2); ctx.fill();
+        
+        // Ruedas delanteras
+        ctx.fillStyle = '#1a1a1a';
+        ctx.beginPath(); ctx.arc(9, 6, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#4b5563';
+        ctx.beginPath(); ctx.arc(9, 6, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#6b7280';
+        ctx.beginPath(); ctx.arc(9, 6, 1.5, 0, Math.PI * 2); ctx.fill();
+        
+        // Caja de carga
+        ctx.fillStyle = waiting ? '#4b5563' : companyColor;
+        ctx.beginPath(); ctx.roundRect(-16, -8, 16, 14, 2); ctx.fill();
+        ctx.strokeStyle = '#1f2937';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-15, -7, 14, 12);
+        // Líneas de la caja
+        ctx.beginPath();
+        ctx.moveTo(-15, -2);
+        ctx.lineTo(-1, -2);
+        ctx.moveTo(-8, -7);
+        ctx.lineTo(-8, 5);
+        ctx.stroke();
+        
+        // Cabina
+        ctx.fillStyle = waiting ? '#6b7280' : mainColor;
+        ctx.beginPath(); ctx.roundRect(0, -6, 14, 12, 3); ctx.fill();
+        
+        // Ventana de cabina
+        ctx.fillStyle = '#1e3a5f';
+        ctx.beginPath(); ctx.roundRect(2, -5, 8, 6, 2); ctx.fill();
+        
+        // Espejo retrovisor
+        ctx.fillStyle = '#374151';
+        ctx.fillRect(0, -3, 2, 4);
+        
+        // Luces delanteras
+        ctx.fillStyle = waiting ? '#6b7280' : '#fef08a';
+        ctx.beginPath(); ctx.roundRect(12, -2, 3, 3, 1); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(12, 2, 3, 2, 1); ctx.fill();
+        
+        // Luces traseras
+        ctx.fillStyle = '#dc2626';
+        ctx.beginPath(); ctx.roundRect(-17, 0, 2, 4, 1); ctx.fill();
+        
+        // Parrilla
+        ctx.fillStyle = '#1f2937';
+        ctx.beginPath(); ctx.roundRect(13, -1, 2, 5, 1); ctx.fill();
     } else if (selectedVehicle === 'bus') {
-        // Bus
-        ctx.fillStyle = waiting ? '#94a3b8' : mainColor;
-        ctx.beginPath(); ctx.roundRect(-16, -8, 32, 16, 4); ctx.fill();
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(-12, -6, 5, 5); ctx.fillRect(-4, -6, 5, 5); ctx.fillRect(4, -6, 5, 5);
-        ctx.fillRect(-12, 1, 5, 5); ctx.fillRect(-4, 1, 5, 5); ctx.fillRect(4, 1, 5, 5);
-        ctx.fillStyle = waiting ? '#64748b' : darkColor;
-        ctx.fillRect(10, -6, 5, 12);
-        ctx.fillStyle = waiting ? '#94a3b8' : '#fef08a';
-        ctx.fillRect(14, -4, 2, 3); ctx.fillRect(14, 1, 2, 3);
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(-13, -10, 6, 2); ctx.fillRect(-13, 8, 6, 2);
-        ctx.fillRect(7, -10, 6, 2); ctx.fillRect(7, 8, 6, 2);
+        // Bus de reparto mejorado
+        const companyColor = companyColors[selectedCompany] || '#ef4444';
+        
+        // Sombra
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath(); ctx.ellipse(0, 11, 16, 4, 0, 0, Math.PI * 2); ctx.fill();
+        
+        // Ruedas traseras
+        ctx.fillStyle = '#1a1a1a';
+        ctx.beginPath(); ctx.arc(-11, 7, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#4b5563';
+        ctx.beginPath(); ctx.arc(-11, 7, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#6b7280';
+        ctx.beginPath(); ctx.arc(-11, 7, 1.5, 0, Math.PI * 2); ctx.fill();
+        
+        // Ruedas delanteras
+        ctx.fillStyle = '#1a1a1a';
+        ctx.beginPath(); ctx.arc(11, 7, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#4b5563';
+        ctx.beginPath(); ctx.arc(11, 7, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#6b7280';
+        ctx.beginPath(); ctx.arc(11, 7, 1.5, 0, Math.PI * 2); ctx.fill();
+        
+        // Cuerpo principal del bus
+        ctx.fillStyle = waiting ? '#6b7280' : mainColor;
+        ctx.beginPath(); ctx.roundRect(-18, -8, 36, 16, 4); ctx.fill();
+        
+        // Franja de empresa
+        ctx.fillStyle = companyColor;
+        ctx.fillRect(-18, -2, 36, 4);
+        
+        // Ventanas superiores
+        ctx.fillStyle = '#1e3a5f';
+        for (let i = 0; i < 5; i++) {
+            ctx.beginPath(); ctx.roundRect(-15 + i * 7, -7, 5, 4, 1); ctx.fill();
+        }
+        
+        // Ventanas inferiores
+        for (let i = 0; i < 5; i++) {
+            ctx.beginPath(); ctx.roundRect(-15 + i * 7, 3, 5, 4, 1); ctx.fill();
+        }
+        
+        // Puerta
+        ctx.fillStyle = '#374151';
+        ctx.beginPath(); ctx.roundRect(14, -6, 4, 12, 1); ctx.fill();
+        ctx.fillStyle = '#1e3a5f';
+        ctx.beginPath(); ctx.roundRect(15, -5, 2, 10, 1); ctx.fill();
+        
+        // Luces delanteras
+        ctx.fillStyle = waiting ? '#6b7280' : '#fef08a';
+        ctx.beginPath(); ctx.roundRect(16, -7, 3, 3, 1); ctx.fill();
+        ctx.fillStyle = '#f97316';
+        ctx.beginPath(); ctx.roundRect(16, 5, 3, 2, 1); ctx.fill();
+        
+        // Luces traseras
+        ctx.fillStyle = '#dc2626';
+        ctx.beginPath(); ctx.roundRect(-19, -5, 2, 4, 1); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(-19, 3, 2, 3, 1); ctx.fill();
+        
+        // Espejo lateral
+        ctx.fillStyle = '#374151';
+        ctx.fillRect(18, -4, 2, 3);
+        
+        // Letrero de destino
+        ctx.fillStyle = '#000000';
+        ctx.beginPath(); ctx.roundRect(-10, -10, 20, 3, 1); ctx.fill();
+        ctx.fillStyle = '#fef08a';
+        ctx.font = 'bold 3px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('DELIVERY', 0, -8);
     }
     
     // Indicador de dirección en modo edición
     if (gameState === 'EDITING') {
         ctx.fillStyle = 'rgba(74, 222, 128, 0.8)';
         ctx.beginPath();
-        const offset = selectedVehicle === 'bus' ? 22 : selectedVehicle === 'truck' ? 18 : selectedVehicle === 'moto' ? 16 : 14;
+        const offset = selectedVehicle === 'bus' ? 24 : selectedVehicle === 'truck' ? 20 : selectedVehicle === 'moto' ? 18 : 16;
         ctx.moveTo(offset + 6, 0);
         ctx.lineTo(offset - 2, -5);
         ctx.lineTo(offset - 2, 5);
@@ -1271,7 +1545,7 @@ function drawCar() {
         ctx.strokeStyle = 'rgba(74, 222, 128, 0.5)';
         ctx.lineWidth = 2;
         ctx.setLineDash([3, 3]);
-        const radius = selectedVehicle === 'bus' ? 20 : selectedVehicle === 'truck' ? 18 : selectedVehicle === 'moto' ? 16 : 14;
+        const radius = selectedVehicle === 'bus' ? 24 : selectedVehicle === 'truck' ? 22 : selectedVehicle === 'moto' ? 18 : 16;
         ctx.beginPath();
         ctx.arc(0, 0, radius, 0, Math.PI * 2);
         ctx.stroke();
