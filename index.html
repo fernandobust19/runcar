@@ -244,10 +244,13 @@
 
     <!-- Header -->
     <div class="absolute top-0 w-full p-2 flex justify-between items-center pointer-events-none z-10">
-        <div class="bg-slate-800/95 px-3 py-1.5 rounded-lg border border-slate-600 shadow-lg">
-            <p class="text-emerald-400 font-bold text-sm"><span id="vehicleIcon">🏍️</span> <span id="driverDisplay">Repartidor</span></p>
-            <p class="text-xs text-slate-400">Pedido <span id="levelDisplay">1</span>/40</p>
-            <p class="text-yellow-400 font-bold text-sm">💰 $<span id="moneyDisplay">0</span></p>
+        <div class="bg-slate-800/95 px-3 py-1.5 rounded-lg border border-slate-600 shadow-lg flex items-center gap-2">
+            <img id="companyLogo" src="LOGO-RAPPI.png" alt="Empresa" class="w-10 h-10 rounded-lg object-contain bg-white p-1">
+            <div>
+                <p class="text-emerald-400 font-bold text-sm"><span id="vehicleIcon">🏍️</span> <span id="driverDisplay">Repartidor</span></p>
+                <p class="text-xs text-slate-400">Pedido <span id="levelDisplay">1</span>/40</p>
+                <p class="text-yellow-400 font-bold text-sm">💰 $<span id="moneyDisplay">0</span></p>
+            </div>
         </div>
         
         <!-- Preparación del pedido - En el header -->
@@ -278,7 +281,8 @@
         
         <!-- Mensaje de salida del pedido -->
         <div id="orderReady" class="order-ready hidden">
-            <span class="emoji">🛵💨</span>
+            <span class="emoji" id="orderVehicleEmoji">🛵</span>
+            <span class="emoji" style="font-size: 30px;">💨</span>
             <h2>¡SALE EL PEDIDO!</h2>
         </div>
         
@@ -321,6 +325,24 @@ const companyColors = {
     indriver: '#2db742',
     amazon: '#ff9900',
     servientrega: '#003087'
+};
+
+// Logos de las empresas
+const companyLogos = {
+    rappi: 'LOGO-RAPPI.png',
+    uber: 'UBER.png',
+    pedidosya: 'pedidosya.png',
+    indriver: 'INDRIVER.png',
+    amazon: 'amazon.png',
+    servientrega: 'SERVIENTREGA.png'
+};
+
+// Emojis de vehículos
+const vehicleEmojis = {
+    moto: '🏍️',
+    car: '🚗',
+    truck: '🛻',
+    bus: '🚌'
 };
 
 function selectCompany(company) {
@@ -433,7 +455,8 @@ function startGame() {
     initAudio();
     driverName = $('driverName').value.trim() || "Repartidor";
     $('driverDisplay').textContent = driverName;
-    $('vehicleIcon').textContent = selectedVehicle === 'moto' ? '🏍️' : selectedVehicle === 'car' ? '🚗' : selectedVehicle === 'truck' ? '🛻' : '🚌';
+    $('vehicleIcon').textContent = vehicleEmojis[selectedVehicle] || '🏍️';
+    $('companyLogo').src = companyLogos[selectedCompany] || 'LOGO-RAPPI.png';
     $('startScreen').classList.add('hidden');
     level = 1; $('levelDisplay').textContent = level;
     generateLevel();
@@ -869,6 +892,9 @@ function stopPrepAnimation() {
 
 // Función para mostrar mensaje de salida del pedido
 function showOrderReady() {
+    // Actualizar el emoji del vehículo en el mensaje
+    $('orderVehicleEmoji').textContent = vehicleEmojis[selectedVehicle] || '🏍️';
+    
     $('orderReady').classList.remove('hidden');
     $('statusText').textContent = '¡SALE EL PEDIDO!';
     $('statusText').className = 'text-emerald-400 font-bold text-xs pulse';
