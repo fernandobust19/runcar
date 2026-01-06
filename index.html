@@ -43,25 +43,74 @@
         }
         input[type="text"]:focus { outline: none; border-color: #10b981; }
         ::-webkit-scrollbar { display: none; }
-        .vehicle-btn { transition: all 0.2s; border: 3px solid transparent; }
-        .vehicle-btn.selected { border-color: #10b981; transform: scale(1.1); }
+        .vehicle-btn { transition: all 0.2s; border: 2px solid transparent; }
+        .vehicle-btn.selected { border-color: #10b981; transform: scale(1.05); }
         .color-btn { width: 32px; height: 32px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; }
         .color-btn.selected { border-color: white; transform: scale(1.15); }
         
-        /* Selector de empresa */
+        /* Selector de empresa - Compacto */
         .company-btn { 
-            width: 50px; 
-            height: 50px; 
-            border-radius: 10px; 
-            border: 3px solid transparent; 
+            width: 36px; 
+            height: 36px; 
+            border-radius: 8px; 
+            border: 2px solid transparent; 
             cursor: pointer; 
             background: #1e293b;
-            padding: 4px;
+            padding: 2px;
             transition: all 0.2s;
         }
         .company-btn:hover { transform: scale(1.05); }
-        .company-btn.selected { border-color: #10b981; transform: scale(1.1); box-shadow: 0 0 15px rgba(16, 185, 129, 0.5); }
-        .company-btn img { width: 100%; height: 100%; object-fit: contain; border-radius: 6px; }
+        .company-btn.selected { border-color: #10b981; transform: scale(1.08); box-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
+        .company-btn img { width: 100%; height: 100%; object-fit: contain; border-radius: 5px; }
+        
+        /* Slider de color */
+        .color-slider-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+        }
+        .color-slider {
+            -webkit-appearance: none;
+            width: 180px;
+            height: 20px;
+            border-radius: 10px;
+            background: linear-gradient(to right, #1a1a1a, #f472b6, #ef4444, #f97316, #eab308, #22c55e, #3b82f6, #8b5cf6, #ffffff);
+            outline: none;
+            cursor: pointer;
+        }
+        .color-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid #10b981;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        .color-slider::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid #10b981;
+            cursor: pointer;
+        }
+        .color-preview {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        
+        /* Input compacto */
+        input[type="text"].compact {
+            padding: 8px 12px;
+            font-size: 14px;
+            max-width: 200px;
+        }
         
         /* Preparación del pedido - Fuera del área de juego */
         .prep-container {
@@ -154,22 +203,22 @@
 </head>
 <body class="h-screen w-screen flex flex-col items-center justify-center overflow-hidden">
 
-    <!-- PANTALLA DE INICIO -->
-    <div id="startScreen" class="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center z-50 p-4 overflow-y-auto">
-        <div class="text-center py-4">
-            <div class="text-5xl mb-3">�📦</div>
-            <h1 class="text-3xl font-bold text-emerald-400 mb-1">Delivery Rush</h1>
-            <p class="text-slate-400 mb-4 text-sm">¡Entregas Rápidas!</p>
+    <!-- PANTALLA DE INICIO - COMPACTA -->
+    <div id="startScreen" class="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center z-50 p-2">
+        <div class="text-center">
+            <div class="text-3xl mb-1">🛵📦</div>
+            <h1 class="text-2xl font-bold text-emerald-400 mb-0">Delivery Rush</h1>
+            <p class="text-slate-400 mb-2 text-xs">¡Entregas Rápidas!</p>
             
-            <div class="mb-4">
-                <label class="block text-slate-300 mb-2 text-sm">Nombre del repartidor:</label>
-                <input type="text" id="driverName" placeholder="Tu nombre" maxlength="15" autocomplete="off">
+            <!-- Nombre -->
+            <div class="mb-2">
+                <input type="text" id="driverName" placeholder="Tu nombre" maxlength="12" autocomplete="off" class="compact">
             </div>
             
             <!-- Selector de Empresa -->
-            <div class="mb-4">
-                <label class="block text-slate-300 mb-2 text-sm">Trabaja para:</label>
-                <div class="flex justify-center gap-2 flex-wrap max-w-sm mx-auto">
+            <div class="mb-2">
+                <label class="block text-slate-400 mb-1 text-xs">Empresa:</label>
+                <div class="flex justify-center gap-1 flex-wrap max-w-xs mx-auto">
                     <button onclick="selectCompany('rappi')" id="btn-rappi" class="company-btn selected">
                         <img src="LOGO-RAPPI.png" alt="Rappi">
                     </button>
@@ -192,53 +241,42 @@
             </div>
             
             <!-- Selector de Vehículo -->
-            <div class="mb-4">
-                <label class="block text-slate-300 mb-2 text-sm">Elige tu vehículo de delivery:</label>
-                <div class="flex justify-center gap-3 flex-wrap">
-                    <button onclick="selectVehicle('moto')" id="btn-moto" class="vehicle-btn selected bg-slate-700 p-3 rounded-xl">
-                        <span class="text-3xl">🏍️</span>
-                        <p class="text-xs mt-1">Moto</p>
+            <div class="mb-2">
+                <label class="block text-slate-400 mb-1 text-xs">Vehículo:</label>
+                <div class="flex justify-center gap-2">
+                    <button onclick="selectVehicle('moto')" id="btn-moto" class="vehicle-btn selected bg-slate-700 p-2 rounded-lg">
+                        <span class="text-xl">🏍️</span>
+                        <p class="text-[10px]">Moto</p>
                     </button>
-                    <button onclick="selectVehicle('car')" id="btn-car" class="vehicle-btn bg-slate-700 p-3 rounded-xl">
-                        <span class="text-3xl">🚗</span>
-                        <p class="text-xs mt-1">Carro</p>
+                    <button onclick="selectVehicle('car')" id="btn-car" class="vehicle-btn bg-slate-700 p-2 rounded-lg">
+                        <span class="text-xl">🚗</span>
+                        <p class="text-[10px]">Auto</p>
                     </button>
-                    <button onclick="selectVehicle('truck')" id="btn-truck" class="vehicle-btn bg-slate-700 p-3 rounded-xl">
-                        <span class="text-3xl">🛻</span>
-                        <p class="text-xs mt-1">Camioneta</p>
+                    <button onclick="selectVehicle('truck')" id="btn-truck" class="vehicle-btn bg-slate-700 p-2 rounded-lg">
+                        <span class="text-xl">🛻</span>
+                        <p class="text-[10px]">Camioneta</p>
                     </button>
-                    <button onclick="selectVehicle('bus')" id="btn-bus" class="vehicle-btn bg-slate-700 p-3 rounded-xl">
-                        <span class="text-3xl">🚌</span>
-                        <p class="text-xs mt-1">Bus</p>
+                    <button onclick="selectVehicle('bus')" id="btn-bus" class="vehicle-btn bg-slate-700 p-2 rounded-lg">
+                        <span class="text-xl">🚌</span>
+                        <p class="text-[10px]">Bus</p>
                     </button>
                 </div>
             </div>
             
-            <!-- Selector de Color -->
-            <div class="mb-5">
-                <label class="block text-slate-300 mb-2 text-sm">Color del vehículo:</label>
-                <div class="flex justify-center gap-2 flex-wrap max-w-xs mx-auto">
-                    <button onclick="selectColor('#1a1a1a')" class="color-btn selected" style="background: #1a1a1a; border: 2px solid #444;" id="color-black"></button>
-                    <button onclick="selectColor('#f472b6')" class="color-btn" style="background: #f472b6;" id="color-pink"></button>
-                    <button onclick="selectColor('#ef4444')" class="color-btn" style="background: #ef4444;" id="color-red"></button>
-                    <button onclick="selectColor('#f97316')" class="color-btn" style="background: #f97316;" id="color-orange"></button>
-                    <button onclick="selectColor('#eab308')" class="color-btn" style="background: #eab308;" id="color-yellow"></button>
-                    <button onclick="selectColor('#22c55e')" class="color-btn" style="background: #22c55e;" id="color-green"></button>
-                    <button onclick="selectColor('#3b82f6')" class="color-btn" style="background: #3b82f6;" id="color-blue"></button>
-                    <button onclick="selectColor('#8b5cf6')" class="color-btn" style="background: #8b5cf6;" id="color-purple"></button>
-                    <button onclick="selectColor('#ffffff')" class="color-btn" style="background: #ffffff;" id="color-white"></button>
+            <!-- Selector de Color con Slider -->
+            <div class="mb-3">
+                <label class="block text-slate-400 mb-1 text-xs">Color:</label>
+                <div class="color-slider-container">
+                    <input type="range" min="0" max="100" value="0" class="color-slider" id="colorSlider" oninput="updateColorFromSlider(this.value)">
+                    <div class="color-preview" id="colorPreview" style="background: #1a1a1a;"></div>
                 </div>
             </div>
             
-            <button onclick="startGame()" class="btn-game bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-10 rounded-xl text-lg shadow-lg border-b-4 border-emerald-800">
+            <button onclick="startGame()" class="btn-game bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-6 rounded-lg text-sm shadow-lg border-b-2 border-emerald-800">
                 🛵 ¡A REPARTIR!
             </button>
             
-            <div class="mt-4 text-slate-500 text-xs max-w-xs">
-                <p>Prepara la ruta de entrega.<br>
-                👆 Toca el vehículo para elegir dirección.<br>
-                📦 ¡Entrega el pedido a tiempo!</p>
-            </div>
+            <p class="mt-2 text-slate-500 text-[10px]">👆 Toca fichas para girar | 📦 Entrega a tiempo</p>
         </div>
     </div>
 
@@ -354,6 +392,25 @@ function selectCompany(company) {
 // Variables para animación de preparación
 let prepAnimationInterval = null;
 
+// Colores disponibles para el slider
+const sliderColors = [
+    '#1a1a1a', '#4a4a4a', '#6b7280', 
+    '#f472b6', '#ec4899', '#db2777',
+    '#ef4444', '#dc2626', '#b91c1c',
+    '#f97316', '#ea580c', '#c2410c',
+    '#eab308', '#ca8a04', '#a16207',
+    '#22c55e', '#16a34a', '#15803d',
+    '#3b82f6', '#2563eb', '#1d4ed8',
+    '#8b5cf6', '#7c3aed', '#6d28d9',
+    '#ffffff', '#e5e5e5', '#d4d4d4'
+];
+
+function updateColorFromSlider(value) {
+    const index = Math.floor((value / 100) * (sliderColors.length - 1));
+    selectedColor = sliderColors[index];
+    document.getElementById('colorPreview').style.background = selectedColor;
+}
+
 function selectVehicle(type) {
     selectedVehicle = type;
     document.querySelectorAll('.vehicle-btn').forEach(btn => btn.classList.remove('selected'));
@@ -362,13 +419,7 @@ function selectVehicle(type) {
 
 function selectColor(color) {
     selectedColor = color;
-    document.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('selected'));
-    // Encontrar y marcar el botón correcto
-    document.querySelectorAll('.color-btn').forEach(btn => {
-        if (btn.style.background === color || btn.style.backgroundColor === color) {
-            btn.classList.add('selected');
-        }
-    });
+    document.getElementById('colorPreview').style.background = color;
 }
 
 let audioCtx = null, soundEnabled = true;
