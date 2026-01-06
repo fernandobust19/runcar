@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>RunCar - Puzzle de Carreteras</title>
+    <title>Delivery Rush - Entregas Rápidas</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         * { box-sizing: border-box; }
@@ -47,6 +47,94 @@
         .vehicle-btn.selected { border-color: #10b981; transform: scale(1.1); }
         .color-btn { width: 32px; height: 32px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; }
         .color-btn.selected { border-color: white; transform: scale(1.15); }
+        
+        /* Preparación del pedido - Fuera del área de juego */
+        .prep-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: linear-gradient(135deg, #1e293b, #334155);
+            padding: 10px 16px;
+            border-radius: 12px;
+            border: 2px solid #475569;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .prep-icon {
+            font-size: 36px;
+            animation: prepShake 0.5s ease-in-out infinite;
+        }
+        @keyframes prepShake {
+            0%, 100% { transform: rotate(-5deg); }
+            50% { transform: rotate(5deg); }
+        }
+        .prep-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .prep-text {
+            font-size: 12px;
+            color: #fbbf24;
+            font-weight: bold;
+        }
+        .prep-bar-container {
+            width: 100px;
+            height: 8px;
+            background: #1e293b;
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid #475569;
+        }
+        .prep-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #f97316, #eab308);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+        .prep-bar.filling {
+            animation: barGlow 1s ease-in-out infinite;
+        }
+        @keyframes barGlow {
+            0%, 100% { box-shadow: 0 0 5px #f97316; }
+            50% { box-shadow: 0 0 15px #eab308; }
+        }
+        
+        /* Mensaje de salida del pedido */
+        .order-ready {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: linear-gradient(135deg, #10b981, #059669);
+            padding: 30px 50px;
+            border-radius: 20px;
+            z-index: 35;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(16, 185, 129, 0.5);
+            animation: orderPopup 0.5s ease-out forwards;
+        }
+        @keyframes orderPopup {
+            0% { transform: translate(-50%, -50%) scale(0) rotate(-10deg); }
+            50% { transform: translate(-50%, -50%) scale(1.1) rotate(5deg); }
+            100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+        }
+        .order-ready h2 {
+            font-size: 28px;
+            color: white;
+            margin: 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .order-ready .emoji {
+            font-size: 50px;
+            display: block;
+            margin-bottom: 10px;
+            animation: riderGo 0.3s ease-in-out infinite alternate;
+        }
+        @keyframes riderGo {
+            from { transform: translateX(-5px); }
+            to { transform: translateX(5px); }
+        }
     </style>
 </head>
 <body class="h-screen w-screen flex flex-col items-center justify-center overflow-hidden">
@@ -54,20 +142,24 @@
     <!-- PANTALLA DE INICIO -->
     <div id="startScreen" class="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center z-50 p-4 overflow-y-auto">
         <div class="text-center py-4">
-            <div class="text-5xl mb-3">🚗</div>
-            <h1 class="text-3xl font-bold text-emerald-400 mb-1">RunCar</h1>
-            <p class="text-slate-400 mb-4 text-sm">Puzzle de Carreteras</p>
+            <div class="text-5xl mb-3">�📦</div>
+            <h1 class="text-3xl font-bold text-emerald-400 mb-1">Delivery Rush</h1>
+            <p class="text-slate-400 mb-4 text-sm">¡Entregas Rápidas!</p>
             
             <div class="mb-4">
-                <label class="block text-slate-300 mb-2 text-sm">Nombre del conductor:</label>
+                <label class="block text-slate-300 mb-2 text-sm">Nombre del repartidor:</label>
                 <input type="text" id="driverName" placeholder="Tu nombre" maxlength="15" autocomplete="off">
             </div>
             
             <!-- Selector de Vehículo -->
             <div class="mb-4">
-                <label class="block text-slate-300 mb-2 text-sm">Elige tu vehículo:</label>
-                <div class="flex justify-center gap-3">
-                    <button onclick="selectVehicle('car')" id="btn-car" class="vehicle-btn selected bg-slate-700 p-3 rounded-xl">
+                <label class="block text-slate-300 mb-2 text-sm">Elige tu vehículo de delivery:</label>
+                <div class="flex justify-center gap-3 flex-wrap">
+                    <button onclick="selectVehicle('moto')" id="btn-moto" class="vehicle-btn selected bg-slate-700 p-3 rounded-xl">
+                        <span class="text-3xl">🏍️</span>
+                        <p class="text-xs mt-1">Moto</p>
+                    </button>
+                    <button onclick="selectVehicle('car')" id="btn-car" class="vehicle-btn bg-slate-700 p-3 rounded-xl">
                         <span class="text-3xl">🚗</span>
                         <p class="text-xs mt-1">Carro</p>
                     </button>
@@ -86,7 +178,8 @@
             <div class="mb-5">
                 <label class="block text-slate-300 mb-2 text-sm">Color del vehículo:</label>
                 <div class="flex justify-center gap-2 flex-wrap max-w-xs mx-auto">
-                    <button onclick="selectColor('#f472b6')" class="color-btn selected" style="background: #f472b6;" id="color-pink"></button>
+                    <button onclick="selectColor('#1a1a1a')" class="color-btn selected" style="background: #1a1a1a; border: 2px solid #444;" id="color-black"></button>
+                    <button onclick="selectColor('#f472b6')" class="color-btn" style="background: #f472b6;" id="color-pink"></button>
                     <button onclick="selectColor('#ef4444')" class="color-btn" style="background: #ef4444;" id="color-red"></button>
                     <button onclick="selectColor('#f97316')" class="color-btn" style="background: #f97316;" id="color-orange"></button>
                     <button onclick="selectColor('#eab308')" class="color-btn" style="background: #eab308;" id="color-yellow"></button>
@@ -98,13 +191,13 @@
             </div>
             
             <button onclick="startGame()" class="btn-game bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-10 rounded-xl text-lg shadow-lg border-b-4 border-emerald-800">
-                🏁 JUGAR
+                🛵 ¡A REPARTIR!
             </button>
             
             <div class="mt-4 text-slate-500 text-xs max-w-xs">
-                <p>Gira las fichas para armar el camino.<br>
+                <p>Prepara la ruta de entrega.<br>
                 👆 Toca el vehículo para elegir dirección.<br>
-                🟡 La línea muestra la ruta.</p>
+                📦 ¡Entrega el pedido a tiempo!</p>
             </div>
         </div>
     </div>
@@ -112,11 +205,24 @@
     <!-- Header -->
     <div class="absolute top-0 w-full p-2 flex justify-between items-center pointer-events-none z-10">
         <div class="bg-slate-800/95 px-3 py-1.5 rounded-lg border border-slate-600 shadow-lg">
-            <p class="text-emerald-400 font-bold text-sm"><span id="vehicleIcon">🚗</span> <span id="driverDisplay">Conductor</span></p>
-            <p class="text-xs text-slate-400">Nivel <span id="levelDisplay">1</span>/40</p>
+            <p class="text-emerald-400 font-bold text-sm"><span id="vehicleIcon">🏍️</span> <span id="driverDisplay">Repartidor</span></p>
+            <p class="text-xs text-slate-400">Pedido <span id="levelDisplay">1</span>/40</p>
+            <p class="text-yellow-400 font-bold text-sm">💰 $<span id="moneyDisplay">0</span></p>
         </div>
-        <div class="bg-slate-800/95 px-3 py-1.5 rounded-lg border border-slate-600 shadow-lg flex flex-col items-center">
-            <span id="statusText" class="text-yellow-400 font-bold text-xs">GIRA LAS FICHAS</span>
+        
+        <!-- Preparación del pedido - En el header -->
+        <div id="prepContainer" class="prep-container hidden">
+            <div class="prep-icon">📦</div>
+            <div class="prep-info">
+                <span class="prep-text" id="prepText">Preparando...</span>
+                <div class="prep-bar-container">
+                    <div class="prep-bar filling" id="prepBar"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="statusContainer" class="bg-slate-800/95 px-3 py-1.5 rounded-lg border border-slate-600 shadow-lg flex flex-col items-center">
+            <span id="statusText" class="text-yellow-400 font-bold text-xs">PREPARA LA RUTA</span>
             <div class="w-24 h-1.5 bg-slate-700 rounded-full mt-1 overflow-hidden">
                 <div id="progressBar" class="progress-bar h-full bg-emerald-500 rounded-full" style="width: 100%"></div>
             </div>
@@ -129,6 +235,13 @@
     <!-- Game Area -->
     <div class="relative p-1" id="gameContainer">
         <canvas id="gameCanvas"></canvas>
+        
+        <!-- Mensaje de salida del pedido -->
+        <div id="orderReady" class="order-ready hidden">
+            <span class="emoji">🛵💨</span>
+            <h2>¡SALE EL PEDIDO!</h2>
+        </div>
+        
         <div id="overlay" class="hidden absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-20 rounded-xl p-4">
             <div class="text-6xl mb-3 animate-bounce" id="overlayIcon">🏆</div>
             <h2 class="text-2xl font-bold mb-1 text-white text-center" id="overlayTitle"></h2>
@@ -140,13 +253,13 @@
 
     <!-- Hint -->
     <div class="text-center text-slate-400 text-xs mt-1 px-4">
-        <p id="levelHint">Arma el camino hacia la meta 🏁</p>
+        <p id="levelHint">Prepara la ruta de entrega 📦</p>
     </div>
 
     <!-- Controls -->
     <div class="absolute bottom-3 w-full flex justify-center gap-2 px-3 z-10">
         <button onclick="resetLevel()" class="btn-game bg-slate-600 hover:bg-slate-500 text-white p-3 rounded-xl shadow-lg border-b-4 border-slate-800">🔄</button>
-        <button onclick="startCar()" id="btnStart" class="btn-game bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded-xl text-base shadow-lg border-b-4 border-emerald-800">🚗 ARRANCAR</button>
+        <button onclick="startCar()" id="btnStart" class="btn-game bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded-xl text-base shadow-lg border-b-4 border-emerald-800">� ¡ENTREGAR!</button>
         <button onclick="toggleSound()" class="btn-game bg-blue-600 hover:bg-blue-500 text-white p-3 rounded-xl shadow-lg border-b-4 border-blue-800"><span id="soundIcon">🔊</span></button>
         <button onclick="showMenu()" class="btn-game bg-purple-600 hover:bg-purple-500 text-white p-3 rounded-xl shadow-lg border-b-4 border-purple-800">☰</button>
     </div>
@@ -156,8 +269,11 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
 // Variables de personalización del vehículo
-let selectedVehicle = 'car';
-let selectedColor = '#f472b6';
+let selectedVehicle = 'moto';
+let selectedColor = '#1a1a1a';
+
+// Variables para animación de preparación
+let prepAnimationInterval = null;
 
 function selectVehicle(type) {
     selectedVehicle = type;
@@ -226,8 +342,11 @@ const TILE_TYPES = {
     DEAD_CURVE: { id: 9, base: DIR.N | DIR.E, noArrows: true }
 };
 
-let grid = [], specialTiles = [], car = null, level = 1, driverName = "Conductor";
+let grid = [], specialTiles = [], car = null, level = 1, driverName = "Repartidor";
 let gameState = 'START', animationId, countdownTimer, timeLeft, maxTime, engineSoundInterval;
+let totalMoney = 0; // Dinero acumulado por propinas
+let savedEndPosition = null; // Posición guardada de la casa para reintentos
+let currentLevelForEnd = 0; // Nivel actual para saber cuándo cambiar la casa
 
 const $ = id => document.getElementById(id);
 
@@ -255,9 +374,9 @@ class Tile {
 
 function startGame() {
     initAudio();
-    driverName = $('driverName').value.trim() || "Conductor";
+    driverName = $('driverName').value.trim() || "Repartidor";
     $('driverDisplay').textContent = driverName;
-    $('vehicleIcon').textContent = selectedVehicle === 'car' ? '🚗' : selectedVehicle === 'truck' ? '🛻' : '🚌';
+    $('vehicleIcon').textContent = selectedVehicle === 'moto' ? '🏍️' : selectedVehicle === 'car' ? '🚗' : selectedVehicle === 'truck' ? '🛻' : '🚌';
     $('startScreen').classList.add('hidden');
     level = 1; $('levelDisplay').textContent = level;
     generateLevel();
@@ -329,10 +448,13 @@ function resetLevel() {
     cancelAnimationFrame(animationId);
     clearInterval(countdownTimer);
     clearInterval(engineSoundInterval);
-    generateLevel();
+    stopPrepAnimation();
+    $('orderReady').classList.add('hidden');
+    retryLevel(); // Reintentar manteniendo la posición de la casa
 }
 
-function generateLevel() {
+// Función para reintentar el nivel manteniendo la posición de la casa
+function retryLevel() {
     const config = LEVEL_CONFIG[Math.min(level - 1, 39)];
     gameState = 'EDITING';
     $('overlay').classList.add('hidden');
@@ -343,9 +465,52 @@ function generateLevel() {
     $('timerDisplay').classList.remove('timer-warning');
     $('progressBar').style.width = '100%';
     $('progressBar').className = 'progress-bar h-full bg-emerald-500 rounded-full';
-    $('statusText').textContent = 'GIRA LAS FICHAS';
+    $('statusText').textContent = 'PREPARANDO PEDIDO';
     $('statusText').className = 'text-yellow-400 font-bold text-xs';
-    $('levelHint').textContent = `🏁 Nivel ${level} | 👆 Toca el vehículo para girar`;
+    $('levelHint').textContent = `📦 Pedido #${level} | 👆 Prepara la ruta de entrega`;
+    
+    startPrepAnimation();
+    
+    resize();
+    grid = new Array(COLS * ROWS).fill(null);
+    specialTiles = [];
+    
+    placeStart();
+    placeEnd(); // Usará la posición guardada porque el nivel no cambió
+    placeObstacles(config.obstacles);
+    fillEmpty(config.deadEnds);
+    randomizeRotations();
+    addSpecials(config.features);
+    
+    resetCar();
+    checkConnections();
+    draw();
+    startCountdown();
+}
+
+function generateLevel() {
+    const config = LEVEL_CONFIG[Math.min(level - 1, 39)];
+    gameState = 'EDITING';
+    $('overlay').classList.add('hidden');
+    $('btnStart').classList.remove('opacity-50', 'pointer-events-none');
+    
+    // Si cambió el nivel, limpiar la posición guardada de la casa
+    if (level !== currentLevelForEnd) {
+        savedEndPosition = null;
+        currentLevelForEnd = level;
+    }
+    
+    maxTime = config.time; timeLeft = maxTime;
+    $('timerDisplay').textContent = `⏱️ ${timeLeft}`;
+    $('timerDisplay').classList.remove('timer-warning');
+    $('progressBar').style.width = '100%';
+    $('progressBar').className = 'progress-bar h-full bg-emerald-500 rounded-full';
+    $('statusText').textContent = 'PREPARANDO PEDIDO';
+    $('statusText').className = 'text-yellow-400 font-bold text-xs';
+    $('levelHint').textContent = `📦 Pedido #${level} | 👆 Prepara la ruta de entrega`;
+    
+    // Mostrar animación de preparación
+    startPrepAnimation();
     
     resize();
     grid = new Array(COLS * ROWS).fill(null);
@@ -378,14 +543,25 @@ function placeStart() {
 
 function placeEnd() {
     const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
-    const positions = [
-        { col: COLS - 1, row: ROWS - 1 },
-        { col: COLS - 1, row: 0 },
-        { col: 0, row: ROWS - 1 },
-        { col: COLS - 1, row: Math.floor(ROWS / 2) }
-    ].filter(p => Math.abs(p.col - startTile.col) + Math.abs(p.row - startTile.row) >= 3);
     
-    const pos = positions[Math.floor(Math.random() * positions.length)] || { col: COLS - 1, row: ROWS - 1 };
+    let pos;
+    
+    // Si hay una posición guardada para este nivel, usarla
+    if (savedEndPosition) {
+        pos = savedEndPosition;
+    } else {
+        // Generar nueva posición y guardarla
+        const positions = [
+            { col: COLS - 1, row: ROWS - 1 },
+            { col: COLS - 1, row: 0 },
+            { col: 0, row: ROWS - 1 },
+            { col: COLS - 1, row: Math.floor(ROWS / 2) }
+        ].filter(p => Math.abs(p.col - startTile.col) + Math.abs(p.row - startTile.row) >= 3);
+        
+        pos = positions[Math.floor(Math.random() * positions.length)] || { col: COLS - 1, row: ROWS - 1 };
+        savedEndPosition = { col: pos.col, row: pos.row }; // Guardar la posición
+    }
+    
     const tile = new Tile(pos.col, pos.row, TILE_TYPES.END);
     tile.locked = true;
     tile.isEnd = true;
@@ -589,13 +765,64 @@ function startCountdown() {
             $('progressBar').className = 'progress-bar h-full bg-yellow-500 rounded-full';
         }
         
+        // Actualizar barra de preparación (se llena mientras pasa el tiempo)
+        const progress = ((maxTime - timeLeft) / maxTime) * 100;
+        updatePrepBar(progress);
+        
         if (timeLeft <= 0) {
             clearInterval(countdownTimer);
-            $('statusText').textContent = '¡TIEMPO!';
-            $('statusText').className = 'text-red-400 font-bold text-xs pulse';
-            setTimeout(startCar, 500);
+            updatePrepBar(100);
+            setTimeout(() => {
+                stopPrepAnimation();
+                showOrderReady();
+            }, 300);
         }
     }, 1000);
+}
+
+// Función para iniciar animación de preparación
+function startPrepAnimation() {
+    $('prepContainer').classList.remove('hidden');
+    $('statusContainer').classList.add('hidden');
+    $('orderReady').classList.add('hidden');
+    $('prepBar').style.width = '0%';
+    $('prepText').textContent = 'Preparando...';
+}
+
+// Función para actualizar la barra de preparación
+function updatePrepBar(progress) {
+    $('prepBar').style.width = progress + '%';
+    
+    if (progress < 30) {
+        $('prepText').textContent = 'Preparando...';
+    } else if (progress < 60) {
+        $('prepText').textContent = 'Cocinando...';
+    } else if (progress < 90) {
+        $('prepText').textContent = 'Empacando...';
+    } else {
+        $('prepText').textContent = '¡Listo!';
+    }
+}
+
+// Función para detener animación de preparación
+function stopPrepAnimation() {
+    $('prepContainer').classList.add('hidden');
+    $('statusContainer').classList.remove('hidden');
+}
+
+// Función para mostrar mensaje de salida del pedido
+function showOrderReady() {
+    $('orderReady').classList.remove('hidden');
+    $('statusText').textContent = '¡SALE EL PEDIDO!';
+    $('statusText').className = 'text-emerald-400 font-bold text-xs pulse';
+    
+    playSound('win');
+    
+    // Después de mostrar el mensaje, iniciar el vehículo
+    setTimeout(() => {
+        $('orderReady').classList.add('hidden');
+        actuallyStartCar();
+    }, 1500);
 }
 
 function resetCar() {
@@ -622,6 +849,14 @@ function startCar() {
     initAudio();
     if (gameState !== 'EDITING') return;
     clearInterval(countdownTimer);
+    stopPrepAnimation();
+    
+    // Siempre mostrar el mensaje "Sale el pedido" al entregar
+    showOrderReady();
+}
+
+function actuallyStartCar() {
+    $('orderReady').classList.add('hidden');
     
     const start = grid[car.row * COLS + car.col];
     const conn = start.getConnections();
@@ -633,7 +868,7 @@ function startCar() {
     
     gameState = 'RUNNING';
     $('btnStart').classList.add('opacity-50', 'pointer-events-none');
-    $('statusText').textContent = '¡EN MARCHA!';
+    $('statusText').textContent = '¡ENTREGANDO!';
     $('statusText').className = 'text-emerald-400 font-bold text-xs';
     
     specialTiles.forEach(tile => {
@@ -730,9 +965,9 @@ function crash(msg) {
     $('overlayIcon').textContent = '💥';
     $('overlayTitle').textContent = '¡CHOQUE!';
     $('overlaySubtitle').textContent = msg;
-    $('overlayBonus').textContent = '';
+    $('overlayBonus').textContent = '🏠 El cliente aún espera su pedido...';
     $('overlayBtn').textContent = 'Reintentar';
-    $('overlayBtn').onclick = resetLevel;
+    $('overlayBtn').onclick = retryLevel; // Reintentar mismo nivel, misma casa
     $('overlay').classList.remove('hidden');
 }
 
@@ -740,13 +975,21 @@ function win() {
     gameState = 'WON';
     clearInterval(countdownTimer); clearInterval(engineSoundInterval);
     playSound('win');
-    const bonus = timeLeft * 10 + level * 25;
     
-    $('overlayIcon').textContent = '🏆';
-    $('overlayTitle').textContent = '¡NIVEL ' + level + '!';
-    $('overlaySubtitle').textContent = `Tiempo: ${timeLeft}s`;
-    $('overlayBonus').textContent = `+${bonus} pts`;
-    $('overlayBtn').textContent = level >= 40 ? 'Reiniciar' : 'Siguiente';
+    // Calcular propinas: tiempo restante * $5 + bonus por nivel
+    const tipFromTime = timeLeft * 5;
+    const levelBonus = level * 10;
+    const totalTip = tipFromTime + levelBonus;
+    totalMoney += totalTip;
+    
+    // Actualizar display de dinero
+    $('moneyDisplay').textContent = totalMoney;
+    
+    $('overlayIcon').textContent = '🎉📦';
+    $('overlayTitle').textContent = '¡ENTREGA #' + level + ' COMPLETADA!';
+    $('overlaySubtitle').textContent = `⭐⭐⭐⭐⭐ ¡Excelente servicio!`;
+    $('overlayBonus').innerHTML = `<span class="block">⏱️ Tiempo: ${timeLeft}s = $${tipFromTime}</span><span class="block">🌟 Bonus: $${levelBonus}</span><span class="block text-lg mt-1">💰 Propina: $${totalTip}</span>`;
+    $('overlayBtn').textContent = level >= 40 ? 'Reiniciar' : 'Siguiente Pedido';
     $('overlayBtn').onclick = () => {
         if (level >= 40) level = 0;
         level++;
@@ -891,19 +1134,19 @@ function drawTile(tile) {
         ctx.arc(cx, cy, TILE_SIZE * 0.35, 0, Math.PI * 2);
         ctx.stroke();
         
-        // Bandera GRANDE
+        // Casa del cliente
         ctx.font = `${TILE_SIZE * 0.55}px sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.shadowColor = 'rgba(0,0,0,0.5)';
         ctx.shadowBlur = 4;
-        ctx.fillText('🏁', cx, cy - 2);
+        ctx.fillText('🏠', cx, cy - 2);
         ctx.shadowBlur = 0;
         
-        // Texto "META" debajo
+        // Texto "CLIENTE" debajo
         ctx.fillStyle = tile.powered ? '#ffffff' : '#94a3b8';
-        ctx.font = `bold ${TILE_SIZE * 0.16}px sans-serif`;
-        ctx.fillText('META', cx, cy + TILE_SIZE * 0.32);
+        ctx.font = `bold ${TILE_SIZE * 0.14}px sans-serif`;
+        ctx.fillText('CLIENTE', cx, cy + TILE_SIZE * 0.32);
     }
     
     if (tile.isDeadEnd) {
@@ -940,7 +1183,39 @@ function drawCar() {
     const darkColor = shadeColor(selectedColor, -30);
     const waiting = car.waiting;
     
-    if (selectedVehicle === 'car') {
+    if (selectedVehicle === 'moto') {
+        // Moto de delivery
+        ctx.fillStyle = waiting ? '#94a3b8' : mainColor;
+        // Cuerpo de la moto
+        ctx.beginPath(); ctx.roundRect(-12, -4, 24, 8, 2); ctx.fill();
+        // Asiento
+        ctx.fillStyle = waiting ? '#64748b' : '#374151';
+        ctx.beginPath(); ctx.roundRect(-6, -6, 10, 4, 2); ctx.fill();
+        // Caja de delivery
+        ctx.fillStyle = waiting ? '#6b7280' : '#ef4444';
+        ctx.beginPath(); ctx.roundRect(-14, -8, 8, 10, 2); ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 6px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('📦', -10, -3);
+        // Rueda trasera
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath(); ctx.arc(-8, 5, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#6b7280';
+        ctx.beginPath(); ctx.arc(-8, 5, 2, 0, Math.PI * 2); ctx.fill();
+        // Rueda delantera
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath(); ctx.arc(8, 5, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#6b7280';
+        ctx.beginPath(); ctx.arc(8, 5, 2, 0, Math.PI * 2); ctx.fill();
+        // Manubrio
+        ctx.fillStyle = waiting ? '#64748b' : '#4b5563';
+        ctx.fillRect(6, -7, 6, 3);
+        // Luz delantera
+        ctx.fillStyle = waiting ? '#94a3b8' : '#fef08a';
+        ctx.beginPath(); ctx.arc(12, -2, 2, 0, Math.PI * 2); ctx.fill();
+    } else if (selectedVehicle === 'car') {
         // Carro compacto
         ctx.fillStyle = waiting ? '#94a3b8' : mainColor;
         ctx.beginPath(); ctx.roundRect(-10, -6, 20, 12, 3); ctx.fill();
@@ -986,7 +1261,7 @@ function drawCar() {
     if (gameState === 'EDITING') {
         ctx.fillStyle = 'rgba(74, 222, 128, 0.8)';
         ctx.beginPath();
-        const offset = selectedVehicle === 'bus' ? 22 : selectedVehicle === 'truck' ? 18 : 14;
+        const offset = selectedVehicle === 'bus' ? 22 : selectedVehicle === 'truck' ? 18 : selectedVehicle === 'moto' ? 16 : 14;
         ctx.moveTo(offset + 6, 0);
         ctx.lineTo(offset - 2, -5);
         ctx.lineTo(offset - 2, 5);
@@ -996,7 +1271,7 @@ function drawCar() {
         ctx.strokeStyle = 'rgba(74, 222, 128, 0.5)';
         ctx.lineWidth = 2;
         ctx.setLineDash([3, 3]);
-        const radius = selectedVehicle === 'bus' ? 20 : selectedVehicle === 'truck' ? 18 : 14;
+        const radius = selectedVehicle === 'bus' ? 20 : selectedVehicle === 'truck' ? 18 : selectedVehicle === 'moto' ? 16 : 14;
         ctx.beginPath();
         ctx.arc(0, 0, radius, 0, Math.PI * 2);
         ctx.stroke();
@@ -1020,3 +1295,4 @@ window.onload = init;
 </script>
 </body>
 </html>
+
