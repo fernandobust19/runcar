@@ -394,6 +394,7 @@
         </div>
         
         <div id="overlay" class="hidden absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-20 rounded-xl p-4">
+            <img id="overlayImage" src="" alt="" class="hidden w-32 h-32 object-cover rounded-full border-4 border-emerald-400 mb-3 shadow-2xl">
             <div class="text-6xl mb-3 animate-bounce" id="overlayIcon">🏆</div>
             <h2 class="text-2xl font-bold mb-1 text-white text-center" id="overlayTitle"></h2>
             <p class="text-slate-300 text-sm mb-1 text-center" id="overlaySubtitle"></p>
@@ -411,6 +412,10 @@
     <div class="absolute bottom-3 w-full flex justify-center gap-2 px-3 z-10">
         <button onclick="resetLevel()" class="btn-game bg-slate-600 hover:bg-slate-500 text-white p-3 rounded-xl shadow-lg border-b-4 border-slate-800" title="Reiniciar nivel ($10)">🔄</button>
         <button onclick="addExtraTime()" class="btn-game bg-orange-600 hover:bg-orange-500 text-white p-3 rounded-xl shadow-lg border-b-4 border-orange-800" title="+5 segundos ($5)">⏱️+5</button>
+        <button onclick="toggleBridgeMode()" id="btnBridge" class="btn-game bg-purple-600 hover:bg-purple-500 text-white p-3 rounded-xl shadow-lg border-b-4 border-purple-800 relative" title="Colocar puente">
+            🌉
+            <span id="bridgeCount" class="absolute -top-1 -right-1 bg-yellow-400 text-black text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">0</span>
+        </button>
         <button onclick="startCar()" id="btnStart" class="btn-game bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded-xl text-base shadow-lg border-b-4 border-emerald-800">📦 ¡ENTREGAR!</button>
         <button onclick="toggleSound()" class="btn-game bg-blue-600 hover:bg-blue-500 text-white p-3 rounded-xl shadow-lg border-b-4 border-blue-800"><span id="soundIcon">🔊</span></button>
         <button onclick="openShop()" class="btn-game bg-yellow-600 hover:bg-yellow-500 text-white p-3 rounded-xl shadow-lg border-b-4 border-yellow-800">🛍️</button>
@@ -448,6 +453,19 @@
                         </div>
                     </div>
                     <span id="shopTruckIcon" class="text-2xl">🔒</span>
+                </div>
+                
+                <!-- Puente -->
+                <div id="shopBridge" class="flex items-center justify-between bg-slate-700 p-3 rounded-xl border-2 border-transparent hover:border-yellow-400 cursor-pointer transition-all" onclick="buyBridge()">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 flex items-center justify-center text-3xl">🌉</div>
+                        <div>
+                            <p class="text-white font-bold">Puente</p>
+                            <p class="text-yellow-400 text-sm" id="shopBridgeStatus">$100 c/u</p>
+                            <p class="text-emerald-400 text-xs" id="shopBridgeOwned">Tienes: 0</p>
+                        </div>
+                    </div>
+                    <span id="shopBridgeIcon" class="text-2xl">💰</span>
                 </div>
             </div>
             
@@ -626,6 +644,18 @@ function updateShopUI() {
         $('shopTruckStatus').className = 'text-red-400 text-sm';
         $('shopTruckIcon').textContent = '🔒';
     }
+    
+    // Puentes
+    $('shopBridgeOwned').textContent = `Tienes: ${bridgesOwned}`;
+    if (totalMoney >= BRIDGE_PRICE) {
+        $('shopBridgeStatus').textContent = '$100 c/u - ¡Disponible!';
+        $('shopBridgeStatus').className = 'text-yellow-400 text-sm';
+        $('shopBridgeIcon').textContent = '💰';
+    } else {
+        $('shopBridgeStatus').textContent = `$100 c/u (Faltan $${BRIDGE_PRICE - totalMoney})`;
+        $('shopBridgeStatus').className = 'text-red-400 text-sm';
+        $('shopBridgeIcon').textContent = '🔒';
+    }
 }
 
 function buyVehicle(vehicleType) {
@@ -675,6 +705,24 @@ function buyVehicle(vehicleType) {
         } else {
             alert(`💰 Te faltan $${PREMIUM_TRUCK_PRICE - totalMoney} para comprar la Camioneta Premium.`);
         }
+    }
+}
+
+function buyBridge() {
+    if (totalMoney >= BRIDGE_PRICE) {
+        if (confirm(`🌉 ¿Comprar Puente por $${BRIDGE_PRICE}?\n\nPermite conectar piezas sin importar sus salidas\nUso: Click en botón 🌉 y luego en una pieza`)) {
+            totalMoney -= BRIDGE_PRICE;
+            bridgesOwned++;
+            $('moneyDisplay').textContent = totalMoney;
+            $('shopMoney').textContent = totalMoney;
+            if ($('bridgeCount')) $('bridgeCount').textContent = bridgesOwned;
+            playSound('money');
+            updateShopUI();
+            saveGameData();
+            alert('✅ ¡Puente comprado!\n\n👉 Ahora tienes ' + bridgesOwned + ' puente(s)\n💡 Usa el botón 🌉 en el juego para colocarlo');
+        }
+    } else {
+        alert('💰 Te faltan $' + (BRIDGE_PRICE - totalMoney) + ' para comprar un Puente.');
     }
 }
 
@@ -773,7 +821,9 @@ const TILE_TYPES = {
     BLOCKED: { id: 7, base: 0, locked: true },
     // Calles trampa - transitables pero SIN flechas (confunden)
     DEAD_STRAIGHT: { id: 8, base: DIR.N | DIR.S, noArrows: true },
-    DEAD_CURVE: { id: 9, base: DIR.N | DIR.E, noArrows: true }
+    DEAD_CURVE: { id: 9, base: DIR.N | DIR.E, noArrows: true },
+    // PUENTE - Conecta cualquier pieza sin importar las conexiones
+    BRIDGE: { id: 10, base: DIR.N | DIR.E | DIR.S | DIR.W, isBridge: true }
 };
 
 let grid = [], specialTiles = [], car = null, level = 1, driverName = "Repartidor";
@@ -787,6 +837,8 @@ let premiumTruckUnlocked = false; // Camioneta premium desbloqueada
 const PREMIUM_TRUCK_PRICE = 4000; // Precio de la camioneta premium
 let deliveryStartTime = 0; // Tiempo cuando comenzó la entrega
 let deliveryTimer = null; // Timer para la entrega
+let bridgesOwned = 0; // Número de puentes que tiene el jugador
+const BRIDGE_PRICE = 100; // Precio de cada puente
 
 const $ = id => document.getElementById(id);
 
@@ -843,6 +895,7 @@ function saveGameData() {
         totalMoney: totalMoney,
         premiumMotoUnlocked: premiumMotoUnlocked,
         premiumTruckUnlocked: premiumTruckUnlocked,
+        bridgesOwned: bridgesOwned,
         selectedCompany: selectedCompany,
         selectedVehicle: selectedVehicle,
         selectedColor: selectedColor,
@@ -919,6 +972,9 @@ function loadGameData(playerName) {
             if (gameData.premiumTruckUnlocked) {
                 premiumTruckUnlocked = true;
             }
+            if (gameData.bridgesOwned !== undefined) {
+                bridgesOwned = gameData.bridgesOwned;
+            }
             
             // Cargar preferencias
             if (gameData.selectedCompany) {
@@ -991,6 +1047,33 @@ function showMenu() {
         $('startScreen').classList.remove('hidden');
         updatePremiumMotoUI(); // Actualizar UI de moto premium
         gameState = 'START';
+        bridgeModeActive = false;
+        if ($('btnBridge')) $('btnBridge').classList.remove('ring-4', 'ring-yellow-400');
+    }
+}
+
+// Variables para modo puente
+let bridgeModeActive = false;
+
+function toggleBridgeMode() {
+    if (bridgesOwned <= 0) {
+        alert('🌉 No tienes puentes disponibles\n\n💡 Cómpralos en la tienda (🛍️) por $100 cada uno');
+        return;
+    }
+    
+    if (gameState !== 'EDITING') {
+        alert('⚠️ Solo puedes colocar puentes durante la preparación');
+        return;
+    }
+    
+    bridgeModeActive = !bridgeModeActive;
+    const btn = $('btnBridge');
+    if (bridgeModeActive) {
+        btn.classList.add('ring-4', 'ring-yellow-400');
+        $('levelHint').textContent = '🌉 MODO PUENTE: Click en una pieza para convertirla en puente';
+    } else {
+        btn.classList.remove('ring-4', 'ring-yellow-400');
+        $('levelHint').textContent = `📦 Pedido #${level} | 👆 Prepara la ruta de entrega`;
     }
 }
 
@@ -998,6 +1081,7 @@ function init() {
     resize();
     loadGameData(); // Cargar datos guardados al iniciar
     updatePremiumMotoUI(); // Actualizar estado de moto premium al iniciar
+    if ($('bridgeCount')) $('bridgeCount').textContent = bridgesOwned;
     window.addEventListener('resize', () => { if (gameState !== 'START') { resize(); draw(); } });
     canvas.addEventListener('pointerdown', handleClick);
 }
@@ -1024,7 +1108,35 @@ function handleClick(e) {
     const col = Math.floor(clickX / TILE_SIZE), row = Math.floor(clickY / TILE_SIZE);
     if (col >= 0 && col < COLS && row >= 0 && row < ROWS) {
         const tile = grid[row * COLS + col];
-        if (tile && !tile.locked && tile.type !== TILE_TYPES.BLOCKED) {
+        
+        // Modo puente: convertir pieza en puente
+        if (bridgeModeActive && tile && !tile.locked && tile.type !== TILE_TYPES.BLOCKED) {
+            if (tile.type === TILE_TYPES.BRIDGE) {
+                alert('🌉 Esta pieza ya es un puente');
+                return;
+            }
+            
+            if (confirm('🌉 ¿Convertir esta pieza en puente?\n\nConectará con cualquier pieza sin importar las salidas')) {
+                const oldType = tile.type;
+                tile.type = TILE_TYPES.BRIDGE;
+                tile.isBridge = true;
+                bridgesOwned--;
+                $('bridgeCount').textContent = bridgesOwned;
+                saveGameData();
+                playSound('money');
+                
+                // Desactivar modo puente si no quedan más puentes
+                if (bridgesOwned <= 0) {
+                    bridgeModeActive = false;
+                    $('btnBridge').classList.remove('ring-4', 'ring-yellow-400');
+                    $('levelHint').textContent = `📦 Pedido #${level} | 👆 Prepara la ruta de entrega`;
+                }
+                
+                checkConnections();
+                draw();
+            }
+        } else if (!bridgeModeActive && tile && !tile.locked && tile.type !== TILE_TYPES.BLOCKED) {
+            // Modo normal: rotar pieza
             tile.rotation = (tile.rotation + 1) % 4;
             playSound('rotate');
             checkConnections();
@@ -1595,6 +1707,10 @@ function timeExpired() {
     $('gameContainer').classList.add('shake');
     setTimeout(() => $('gameContainer').classList.remove('shake'), 500);
     
+    // Asegurar que muestra icono y no imagen
+    $('overlayImage').classList.add('hidden');
+    $('overlayIcon').classList.remove('hidden');
+    
     $('overlayIcon').textContent = '⏰😫';
     $('overlayTitle').textContent = '¡TIEMPO AGOTADO!';
     $('overlaySubtitle').textContent = 'El cliente canceló el pedido';
@@ -1739,12 +1855,15 @@ function gameLoop() {
         const conn = tile?.getConnections() || 0;
         const entry = OPPOSITE[car.dir];
         
-        if (!tile?.locked && !(conn & entry)) { crash('¡Sin entrada!'); return; }
+        // PUENTE: Los puentes ignoran las validaciones de conexión
+        const isBridge = tile?.type === TILE_TYPES.BRIDGE || tile?.isBridge;
+        
+        if (!isBridge && !tile?.locked && !(conn & entry)) { crash('¡Sin entrada!'); return; }
         
         const exits = conn & ~entry;
         let exitDir = 0;
         
-        // MEJORADO: Para piezas con múltiples salidas (T_JUNCTION, CROSS)
+        // MEJORADO: Para piezas con múltiples salidas (T_JUNCTION, CROSS, BRIDGE)
         // Permite elegir CUALQUIER salida disponible
         
         // Recopilar todas las salidas disponibles
@@ -1776,7 +1895,13 @@ function gameLoop() {
         
         const next = grid[nr * COLS + nc];
         if (!next || next.type === TILE_TYPES.BLOCKED) { crash('¡Bloqueado!'); return; }
-        if (!(next.getConnections() & OPPOSITE[exitDir])) { crash('¡Choque!'); return; }
+        
+        // PUENTE: Si la pieza actual o la siguiente es un puente, NO validar conexiones
+        const nextIsBridge = next.type === TILE_TYPES.BRIDGE || next.isBridge;
+        if (!isBridge && !nextIsBridge && !(next.getConnections() & OPPOSITE[exitDir])) { 
+            crash('¡Choque!'); 
+            return; 
+        }
         
         car.dir = exitDir; car.col = nc; car.row = nr;
         car.angle = exitDir === DIR.N ? -Math.PI/2 : exitDir === DIR.E ? 0 : exitDir === DIR.S ? Math.PI/2 : Math.PI;
@@ -1795,6 +1920,11 @@ function crash(msg) {
     playSound('crash');
     $('gameContainer').classList.add('shake');
     setTimeout(() => $('gameContainer').classList.remove('shake'), 500);
+    
+    // Asegurar que muestra icono y no imagen
+    $('overlayImage').classList.add('hidden');
+    $('overlayIcon').classList.remove('hidden');
+    
     $('overlayIcon').textContent = '💥';
     $('overlayTitle').textContent = '¡CHOQUE!';
     $('overlaySubtitle').textContent = msg;
@@ -1841,7 +1971,14 @@ function win() {
         speedMessage = '¡Buen trabajo!';
     }
     
-    $('overlayIcon').textContent = emoji;
+    // Mostrar imagen del repartidor
+    const overlayImage = $('overlayImage');
+    overlayImage.src = 'repartidor.jpeg';
+    overlayImage.classList.remove('hidden');
+    
+    // Ocultar el emoji y mostrar la imagen
+    $('overlayIcon').classList.add('hidden');
+    
     $('overlayTitle').textContent = '¡ENTREGA #' + level + ' COMPLETADA!';
     $('overlaySubtitle').textContent = `⭐⭐⭐⭐⭐ ${speedMessage}`;
     
@@ -1856,6 +1993,10 @@ function win() {
     $('overlayBonus').innerHTML = bonusHTML;
     $('overlayBtn').textContent = level >= 40 ? 'Reiniciar' : 'Siguiente Pedido';
     $('overlayBtn').onclick = () => {
+        // Ocultar imagen del repartidor y restaurar icono
+        $('overlayImage').classList.add('hidden');
+        $('overlayIcon').classList.remove('hidden');
+        
         if (level >= 40) level = 0;
         level++;
         $('levelDisplay').textContent = level;
@@ -1953,6 +2094,38 @@ function drawTile(tile) {
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(tile.special === 'tree' ? '🌳' : tile.special === 'broken' ? '⚠️' : '🚧', cx, cy);
         ctx.restore(); return;
+    }
+    
+    // PUENTE: Dibujo especial
+    if (tile.type === TILE_TYPES.BRIDGE || tile.isBridge) {
+        // Fondo dorado brillante
+        ctx.fillStyle = '#fbbf24';
+        ctx.fillRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+        
+        // Borde naranja
+        ctx.strokeStyle = '#f97316';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+        
+        // Cruz central indicando conexión en todas direcciones
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(cx - 2, y + 5, 4, TILE_SIZE - 10);
+        ctx.fillRect(x + 5, cy - 2, TILE_SIZE - 10, 4);
+        
+        // Icono de puente
+        ctx.font = `${TILE_SIZE * 0.35}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#7c3aed';
+        ctx.fillText('🌉', cx, cy);
+        
+        // Texto "PUENTE"
+        ctx.font = `bold ${TILE_SIZE * 0.1}px sans-serif`;
+        ctx.fillStyle = '#7c3aed';
+        ctx.fillText('PUENTE', cx, cy + TILE_SIZE * 0.35);
+        
+        ctx.restore();
+        return;
     }
     
     ctx.translate(cx, cy);
