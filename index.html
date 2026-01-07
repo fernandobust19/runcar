@@ -837,6 +837,8 @@ let totalMoney = 0; // Dinero acumulado por propinas
 let savedEndPosition = null; // Posición guardada de la casa para reintentos
 let currentLevelForEnd = 0; // Nivel actual para saber cuándo cambiar la casa
 let premiumMotoUnlocked = false; // Moto premium desbloqueada
+let previewPath = []; // Ruta calculada
+let plannedRoute = []; // Ruta planificada con direcciones para que el carro la siga
 const PREMIUM_MOTO_PRICE = 2000; // Precio de la moto premium
 let premiumTruckUnlocked = false; // Camioneta premium desbloqueada
 const PREMIUM_TRUCK_PRICE = 4000; // Precio de la camioneta premium
@@ -1621,6 +1623,7 @@ function checkConnections() {
 
 function calculatePreviewPath() {
     previewPath = [];
+    plannedRoute = []; // Resetear la ruta planificada
     if (!car) return;
     
     let col = car.col, row = car.row, dir = car.dir;
@@ -1653,6 +1656,9 @@ function calculatePreviewPath() {
         else [DIR.N, DIR.E, DIR.S, DIR.W].forEach(d => { if (!exitDir && (exits & d)) exitDir = d; });
         
         if (!exitDir) break;
+        
+        // Guardar la dirección planificada para esta posición
+        plannedRoute.push({ col, row, dir: exitDir });
         
         const d = DIR_DELTA[exitDir];
         const nc = col + d.dc, nr = row + d.dr;
@@ -1901,29 +1907,40 @@ function gameLoop() {
         const exits = conn & ~entry;
         let exitDir = 0;
         
-        // MEJORADO: Para piezas con múltiples salidas (T_JUNCTION, CROSS, BRIDGE)
-        // Permite elegir CUALQUIER salida disponible
+        // SEGUIR LA RUTA PLANIFICADA: Buscar la dirección planificada para esta posición
+        const plannedMove = plannedRoute.find(r => r.col === car.col && r.row === car.row);
         
-        // Recopilar todas las salidas disponibles
-        const availableExits = [];
-        [DIR.N, DIR.E, DIR.S, DIR.W].forEach(d => { 
-            if (exits & d) availableExits.push(d); 
-        });
-        
-        if (availableExits.length === 0) {
-            crash('¡Callejón sin salida!'); 
-            return;
-        } else if (availableExits.length === 1) {
-            // Solo una salida disponible
-            exitDir = availableExits[0];
+        if (plannedMove && (exits & plannedMove.dir)) {
+            // Usar la dirección planificada si está disponible
+            exitDir = plannedMove.dir;
         } else {
-            // Múltiples salidas: priorizar seguir recto si es posible
-            if (exits & car.dir) {
-                exitDir = car.dir;
+            // Fallback: lógica anterior si no hay ruta planificada
+            // Recopilar todas las salidas disponibles
+            const availableExits = [];
+            [DIR.N, DIR.E, DIR.S, DIR.W].forEach(d => { 
+                if (exits & d) availableExits.push(d); 
+            });
+            
+            if (availableExits.length === 0) {
+                crash('¡Callejón sin salida!'); 
+                return;
+            } else if (availableExits.length === 1) {
+                // Solo una salida disponible
+                exitDir = availableExits[0];
             } else {
-                // Si no puede seguir recto, elegir ALEATORIAMENTE entre las salidas disponibles
-                exitDir = availableExits[Math.floor(Math.random() * availableExits.length)];
+                // Múltiples salidas: priorizar seguir recto si es posible
+                if (exits & car.dir) {
+                    exitDir = car.dir;
+                } else {
+                    // Si no puede seguir recto, elegir la primera disponible
+                    exitDir = availableExits[0];
+                }
             }
+        }
+        
+        if (!exitDir) {
+            crash('¡Callejón sin salida!');
+            return;
         }
         
         const d = DIR_DELTA[exitDir];
