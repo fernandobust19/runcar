@@ -632,9 +632,10 @@ function buyVehicle(vehicleType) {
         if (premiumMotoUnlocked) {
             alert('🏍️ ¡Ya tienes la Moto Premium! Selecciónala desde el menú principal.');
         } else if (totalMoney >= PREMIUM_MOTO_PRICE) {
-            if (confirm(`¿Comprar Moto Premium por $${PREMIUM_MOTO_PRICE}?`)) {
+            if (confirm(`¿Comprar Moto Premium por $${PREMIUM_MOTO_PRICE}?\n\n¡Aparecerá automáticamente en el siguiente nivel!`)) {
                 totalMoney -= PREMIUM_MOTO_PRICE;
                 premiumMotoUnlocked = true;
+                selectedVehicle = 'motoa'; // ¡Activar inmediatamente!
                 $('moneyDisplay').textContent = totalMoney;
                 $('shopMoney').textContent = totalMoney;
                 if ($('motoLock')) $('motoLock').textContent = '⭐';
@@ -645,7 +646,7 @@ function buyVehicle(vehicleType) {
                 playSound('money');
                 updateShopUI();
                 saveGameData(); // Guardar después de comprar
-                alert('🎉 ¡Moto Premium desbloqueada!');
+                alert('🎉 ¡Moto Premium desbloqueada!\n⚡ ¡Aparecerá en el siguiente nivel!');
             }
         } else {
             alert(`💰 Te faltan $${PREMIUM_MOTO_PRICE - totalMoney} para comprar la Moto Premium.`);
@@ -654,9 +655,10 @@ function buyVehicle(vehicleType) {
         if (premiumTruckUnlocked) {
             alert('🚚 ¡Ya tienes la Camioneta Premium! Selecciónala desde el menú principal.');
         } else if (totalMoney >= PREMIUM_TRUCK_PRICE) {
-            if (confirm(`¿Comprar Camioneta Premium por $${PREMIUM_TRUCK_PRICE}?`)) {
+            if (confirm(`¿Comprar Camioneta Premium por $${PREMIUM_TRUCK_PRICE}?\n\n¡Aparecerá automáticamente en el siguiente nivel!`)) {
                 totalMoney -= PREMIUM_TRUCK_PRICE;
                 premiumTruckUnlocked = true;
+                selectedVehicle = 'trucka'; // ¡Activar inmediatamente!
                 $('moneyDisplay').textContent = totalMoney;
                 $('shopMoney').textContent = totalMoney;
                 if ($('truckLock')) $('truckLock').textContent = '⭐';
@@ -667,7 +669,7 @@ function buyVehicle(vehicleType) {
                 playSound('money');
                 updateShopUI();
                 saveGameData(); // Guardar después de comprar
-                alert('🎉 ¡Camioneta Premium desbloqueada!');
+                alert('🎉 ¡Camioneta Premium desbloqueada!\n⚡ ¡Aparecerá en el siguiente nivel!');
             }
         } else {
             alert(`💰 Te faltan $${PREMIUM_TRUCK_PRICE - totalMoney} para comprar la Camioneta Premium.`);
@@ -832,9 +834,11 @@ function startGame() {
 }
 
 // ============ FUNCIONES DE GUARDADO LOCAL ============
+// Sistema mejorado: Soporta múltiples jugadores, cada uno con su propio progreso
 function saveGameData() {
     const gameData = {
         driverName: driverName,
+        level: level,
         totalMoney: totalMoney,
         premiumMotoUnlocked: premiumMotoUnlocked,
         premiumTruckUnlocked: premiumTruckUnlocked,
@@ -844,15 +848,43 @@ function saveGameData() {
         lastPlayed: new Date().toISOString()
     };
     try {
-        localStorage.setItem('deliveryRushSave', JSON.stringify(gameData));
+        // Guardar en el perfil del jugador actual
+        const playerKey = 'deliveryRush_' + driverName.toLowerCase().replace(/\s+/g, '_');
+        localStorage.setItem(playerKey, JSON.stringify(gameData));
+        
+        // Guardar también como último jugador activo
+        localStorage.setItem('deliveryRushLastPlayer', driverName);
+        
+        // Actualizar lista de jugadores
+        let playersList = [];
+        try {
+            playersList = JSON.parse(localStorage.getItem('deliveryRushPlayers') || '[]');
+        } catch(e) {}
+        if (!playersList.includes(driverName)) {
+            playersList.push(driverName);
+            localStorage.setItem('deliveryRushPlayers', JSON.stringify(playersList));
+        }
     } catch (e) {
         console.log('No se pudo guardar:', e);
     }
 }
 
-function loadGameData() {
+function loadGameData(playerName) {
     try {
-        const saved = localStorage.getItem('deliveryRushSave');
+        // Si no se especifica jugador, intentar cargar el último jugador activo
+        if (!playerName) {
+            playerName = localStorage.getItem('deliveryRushLastPlayer');
+        }
+        
+        if (!playerName) {
+            // No hay jugador previo, mostrar lista de jugadores si existe
+            showPlayersList();
+            return false;
+        }
+        
+        const playerKey = 'deliveryRush_' + playerName.toLowerCase().replace(/\s+/g, '_');
+        const saved = localStorage.getItem(playerKey);
+        
         if (saved) {
             const gameData = JSON.parse(saved);
             
@@ -861,6 +893,12 @@ function loadGameData() {
                 driverName = gameData.driverName;
                 $('driverName').value = driverName;
                 $('welcomeBack').classList.remove('hidden');
+                $('welcomeBack').innerHTML = '¡Bienvenido de nuevo! <button onclick="showPlayersList()" class="text-xs text-yellow-400 underline ml-2">Cambiar jugador</button>';
+            }
+            
+            // Cargar nivel
+            if (gameData.level !== undefined) {
+                level = gameData.level;
             }
             
             // Cargar dinero
@@ -907,11 +945,34 @@ function loadGameData() {
             }
             
             return true;
+        } else {
+            showPlayersList();
         }
     } catch (e) {
         console.log('No se pudo cargar:', e);
     }
     return false;
+}
+
+function showPlayersList() {
+    try {
+        const playersList = JSON.parse(localStorage.getItem('deliveryRushPlayers') || '[]');
+        if (playersList.length > 0) {
+            let playersHTML = '<div class="mt-2 p-2 bg-slate-700 rounded-lg"><p class="text-xs text-slate-300 mb-2">Jugadores guardados:</p>';
+            playersList.forEach(player => {
+                playersHTML += `<button onclick="loadPlayerData('${player}')" class="block w-full text-left px-3 py-1 mb-1 bg-slate-600 hover:bg-slate-500 rounded text-sm text-white">👤 ${player}</button>`;
+            });
+            playersHTML += '</div>';
+            $('welcomeBack').innerHTML = playersHTML;
+            $('welcomeBack').classList.remove('hidden');
+        }
+    } catch(e) {}
+}
+
+function loadPlayerData(playerName) {
+    loadGameData(playerName);
+    updatePremiumMotoUI();
+    $('driverName').value = playerName;
 }
 
 function clearGameData() {
@@ -1249,6 +1310,7 @@ function generateGuaranteedPath() {
 }
 
 // Función para orientar las piezas del camino correctamente
+// Las piezas con 3+ salidas (T_JUNCTION, CROSS) siempre quedan transitables por TODAS sus salidas
 function orientPathTiles(path) {
     for (let i = 0; i < path.length; i++) {
         const curr = path[i];
@@ -1279,6 +1341,8 @@ function orientPathTiles(path) {
         }
         
         // Encontrar la rotación que conecte las direcciones necesarias
+        // Para T_JUNCTION y CROSS, cualquier rotación que cumpla con las conexiones necesarias es válida
+        // Esto permite que TODAS las salidas de estas piezas sean transitables
         for (let rot = 0; rot < 4; rot++) {
             tile.rotation = rot;
             const conn = tile.getConnections();
@@ -1289,7 +1353,11 @@ function orientPathTiles(path) {
                     break;
                 }
             }
-            if (allConnected) break;
+            if (allConnected) {
+                // Si es T_JUNCTION o CROSS, dejar esta rotación
+                // Así TODAS sus salidas quedan desbloqueadas
+                break;
+            }
         }
     }
 }
@@ -1713,6 +1781,16 @@ function win() {
         if (level >= 40) level = 0;
         level++;
         $('levelDisplay').textContent = level;
+        
+        // Actualizar icono del vehículo si cambió (por compra)
+        if (selectedVehicle === 'motoa') {
+            $('vehicleIcon').innerHTML = '<img src="motoa.png" alt="Moto Premium" style="width:20px;height:20px;display:inline;vertical-align:middle;">';
+        } else if (selectedVehicle === 'trucka') {
+            $('vehicleIcon').innerHTML = '<img src="camionetaa.png" alt="Camioneta Premium" style="width:20px;height:20px;display:inline;vertical-align:middle;">';
+        } else {
+            $('vehicleIcon').textContent = vehicleEmojis[selectedVehicle] || '🏍️';
+        }
+        
         generateLevel();
     };
     $('overlay').classList.remove('hidden');
