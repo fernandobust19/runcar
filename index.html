@@ -2,18 +2,35 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0f172a">
     <title>Delivery Rush - Entregas Rápidas</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         * { box-sizing: border-box; }
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
         body {
             touch-action: manipulation;
-            font-family: 'Segoe UI', sans-serif;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
             background: linear-gradient(135deg, #0f172a, #1e293b);
             color: white;
-            overflow: hidden;
             user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            /* Safe area para iPhone con notch */
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
         }
         canvas {
             box-shadow: 0 8px 25px rgba(0,0,0,0.5);
@@ -37,72 +54,88 @@
         @keyframes timerPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
         .progress-bar { transition: width 1s linear; }
         input[type="text"] {
-            background: #1e293b; border: 2px solid #475569; color: white;
-            padding: 12px 16px; border-radius: 10px; font-size: 18px;
-            width: 100%; max-width: 280px; text-align: center;
+            background: #1e293b; 
+            border: 2px solid #475569; 
+            color: white;
+            padding: 14px 20px; 
+            border-radius: 12px; 
+            font-size: 18px;
+            width: 100%; 
+            max-width: 320px; 
+            text-align: center;
         }
-        input[type="text"]:focus { outline: none; border-color: #10b981; }
+        input[type="text"]:focus { outline: none; border-color: #10b981; box-shadow: 0 0 15px rgba(16, 185, 129, 0.3); }
+        input[type="text"]::placeholder { color: #64748b; }
         ::-webkit-scrollbar { display: none; }
-        .vehicle-btn { transition: all 0.2s; border: 2px solid transparent; }
-        .vehicle-btn.selected { border-color: #10b981; transform: scale(1.05); }
+        
+        /* Vehículos - botones más grandes */
+        .vehicle-btn { 
+            transition: all 0.2s; 
+            border: 3px solid transparent;
+            min-width: 70px;
+            padding: 10px 8px;
+        }
+        .vehicle-btn.selected { border-color: #10b981; transform: scale(1.08); box-shadow: 0 0 15px rgba(16, 185, 129, 0.4); }
         .color-btn { width: 32px; height: 32px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; }
         .color-btn.selected { border-color: white; transform: scale(1.15); }
         
-        /* Selector de empresa - Compacto */
+        /* Selector de empresa - Más grande para móviles */
         .company-btn { 
-            width: 36px; 
-            height: 36px; 
-            border-radius: 8px; 
-            border: 2px solid transparent; 
+            width: 48px; 
+            height: 48px; 
+            border-radius: 10px; 
+            border: 3px solid transparent; 
             cursor: pointer; 
             background: #1e293b;
-            padding: 2px;
+            padding: 4px;
             transition: all 0.2s;
         }
-        .company-btn:hover { transform: scale(1.05); }
-        .company-btn.selected { border-color: #10b981; transform: scale(1.08); box-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
-        .company-btn img { width: 100%; height: 100%; object-fit: contain; border-radius: 5px; }
+        .company-btn:hover { transform: scale(1.08); }
+        .company-btn.selected { border-color: #10b981; transform: scale(1.1); box-shadow: 0 0 15px rgba(16, 185, 129, 0.5); }
+        .company-btn img { width: 100%; height: 100%; object-fit: contain; border-radius: 6px; }
         
-        /* Slider de color */
+        /* Slider de color - Más grande */
         .color-slider-container {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 12px;
             justify-content: center;
+            padding: 5px 0;
         }
         .color-slider {
             -webkit-appearance: none;
-            width: 180px;
-            height: 20px;
-            border-radius: 10px;
+            appearance: none;
+            width: 220px;
+            height: 24px;
+            border-radius: 12px;
             background: linear-gradient(to right, #1a1a1a, #f472b6, #ef4444, #f97316, #eab308, #22c55e, #3b82f6, #8b5cf6, #ffffff);
             outline: none;
             cursor: pointer;
         }
         .color-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 24px;
-            height: 24px;
+            width: 30px;
+            height: 30px;
             border-radius: 50%;
             background: white;
-            border: 3px solid #10b981;
+            border: 4px solid #10b981;
             cursor: pointer;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.4);
         }
         .color-slider::-moz-range-thumb {
-            width: 24px;
-            height: 24px;
+            width: 30px;
+            height: 30px;
             border-radius: 50%;
             background: white;
-            border: 3px solid #10b981;
+            border: 4px solid #10b981;
             cursor: pointer;
         }
         .color-preview {
-            width: 28px;
-            height: 28px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
-            border: 2px solid white;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            border: 3px solid white;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.4);
         }
         
         /* Input compacto */
@@ -203,86 +236,116 @@
 </head>
 <body class="h-screen w-screen flex flex-col items-center justify-center overflow-hidden">
 
-    <!-- PANTALLA DE INICIO - COMPACTA -->
-    <div id="startScreen" class="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center z-50 p-2">
-        <div class="text-center">
-            <div class="text-3xl mb-1">🛵📦</div>
-            <h1 class="text-2xl font-bold text-emerald-400 mb-0">Delivery Rush</h1>
-            <p class="text-slate-400 mb-2 text-xs">¡Entregas Rápidas!</p>
+    <!-- PANTALLA DE INICIO - FULLSCREEN RESPONSIVE -->
+    <div id="startScreen" class="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center z-50 overflow-y-auto" style="padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);">
+        <div class="w-full max-w-md mx-auto px-4 py-6 flex flex-col min-h-full justify-between">
             
-            <!-- Nombre -->
-            <div class="mb-2">
-                <input type="text" id="driverName" placeholder="Tu nombre" maxlength="12" autocomplete="off" class="compact">
+            <!-- Header del menú -->
+            <div class="text-center mb-4">
+                <div class="text-5xl mb-2">🛵📦</div>
+                <h1 class="text-3xl font-bold text-emerald-400 mb-1">Delivery Rush</h1>
+                <p class="text-slate-400 text-sm">¡Entregas Rápidas!</p>
             </div>
             
-            <!-- Selector de Empresa -->
-            <div class="mb-2">
-                <label class="block text-slate-400 mb-1 text-xs">Empresa:</label>
-                <div class="flex justify-center gap-1 flex-wrap max-w-xs mx-auto">
-                    <button onclick="selectCompany('rappi')" id="btn-rappi" class="company-btn selected">
-                        <img src="LOGO-RAPPI.png" alt="Rappi">
-                    </button>
-                    <button onclick="selectCompany('uber')" id="btn-uber" class="company-btn">
-                        <img src="UBER.png" alt="Uber">
-                    </button>
-                    <button onclick="selectCompany('pedidosya')" id="btn-pedidosya" class="company-btn">
-                        <img src="pedidosya.png" alt="PedidosYa">
-                    </button>
-                    <button onclick="selectCompany('indriver')" id="btn-indriver" class="company-btn">
-                        <img src="INDRIVER.png" alt="InDriver">
-                    </button>
-                    <button onclick="selectCompany('amazon')" id="btn-amazon" class="company-btn">
-                        <img src="amazon.png" alt="Amazon">
-                    </button>
-                    <button onclick="selectCompany('servientrega')" id="btn-servientrega" class="company-btn">
-                        <img src="SERVIENTREGA.png" alt="Servientrega">
-                    </button>
+            <!-- Contenido principal con scroll -->
+            <div class="flex-1 space-y-5">
+                
+                <!-- Nombre del jugador -->
+                <div class="text-center">
+                    <label class="block text-slate-300 mb-2 text-sm font-medium">👤 Nombre del Repartidor</label>
+                    <input type="text" id="driverName" placeholder="Ingresa tu nombre" maxlength="12" autocomplete="off">
+                    <p id="welcomeBack" class="text-emerald-400 text-xs mt-1 hidden">¡Bienvenido de nuevo!</p>
+                </div>
+                
+                <!-- Dinero guardado -->
+                <div id="savedMoneyDisplay" class="text-center hidden">
+                    <p class="text-yellow-400 font-bold text-lg">💰 Tu dinero: $<span id="savedMoneyAmount">0</span></p>
+                </div>
+                
+                <!-- Selector de Empresa -->
+                <div>
+                    <label class="block text-slate-300 mb-2 text-sm font-medium text-center">🏢 Empresa de Delivery</label>
+                    <div class="flex justify-center gap-2 flex-wrap">
+                        <button onclick="selectCompany('rappi')" id="btn-rappi" class="company-btn selected">
+                            <img src="LOGO-RAPPI.png" alt="Rappi">
+                        </button>
+                        <button onclick="selectCompany('uber')" id="btn-uber" class="company-btn">
+                            <img src="UBER.png" alt="Uber">
+                        </button>
+                        <button onclick="selectCompany('pedidosya')" id="btn-pedidosya" class="company-btn">
+                            <img src="pedidosya.png" alt="PedidosYa">
+                        </button>
+                        <button onclick="selectCompany('indriver')" id="btn-indriver" class="company-btn">
+                            <img src="INDRIVER.png" alt="InDriver">
+                        </button>
+                        <button onclick="selectCompany('amazon')" id="btn-amazon" class="company-btn">
+                            <img src="amazon.png" alt="Amazon">
+                        </button>
+                        <button onclick="selectCompany('servientrega')" id="btn-servientrega" class="company-btn">
+                            <img src="SERVIENTREGA.png" alt="Servientrega">
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Selector de Vehículo -->
+                <div>
+                    <label class="block text-slate-300 mb-2 text-sm font-medium text-center">🚗 Vehículo</label>
+                    <div class="flex justify-center gap-2 flex-wrap">
+                        <button onclick="selectVehicle('moto')" id="btn-moto" class="vehicle-btn selected bg-slate-700 rounded-xl">
+                            <span class="text-2xl">🏍️</span>
+                            <p class="text-xs mt-1">Moto</p>
+                        </button>
+                        <button onclick="selectVehicle('car')" id="btn-car" class="vehicle-btn bg-slate-700 rounded-xl">
+                            <span class="text-2xl">🚗</span>
+                            <p class="text-xs mt-1">Auto</p>
+                        </button>
+                        <button onclick="selectVehicle('truck')" id="btn-truck" class="vehicle-btn bg-slate-700 rounded-xl">
+                            <span class="text-2xl">🛻</span>
+                            <p class="text-xs mt-1">Camioneta</p>
+                        </button>
+                        <button onclick="selectVehicle('bus')" id="btn-bus" class="vehicle-btn bg-slate-700 rounded-xl">
+                            <span class="text-2xl">🚌</span>
+                            <p class="text-xs mt-1">Bus</p>
+                        </button>
+                    </div>
+                    
+                    <!-- Vehículos Premium -->
+                    <p class="text-yellow-400 text-xs text-center mt-3 mb-2">⭐ Vehículos Premium</p>
+                    <div class="flex justify-center gap-3">
+                        <button onclick="selectPremiumMoto()" id="btn-motoa" class="vehicle-btn bg-slate-700 rounded-xl relative">
+                            <img src="motoa.png" alt="Moto Premium" class="w-10 h-10 object-contain mx-auto">
+                            <p class="text-xs text-yellow-400 mt-1">Premium</p>
+                            <span id="motoLock" class="absolute -top-2 -right-2 text-lg">🔒</span>
+                            <span id="motoPrice" class="absolute -bottom-2 left-0 right-0 text-[9px] text-yellow-300 bg-slate-900/90 rounded-full py-0.5">$2,000</span>
+                        </button>
+                        <button onclick="selectPremiumTruck()" id="btn-trucka" class="vehicle-btn bg-slate-700 rounded-xl relative">
+                            <img src="camionetaa.png" alt="Camioneta Premium" class="w-10 h-10 object-contain mx-auto">
+                            <p class="text-xs text-yellow-400 mt-1">Premium</p>
+                            <span id="truckLock" class="absolute -top-2 -right-2 text-lg">🔒</span>
+                            <span id="truckPrice" class="absolute -bottom-2 left-0 right-0 text-[9px] text-yellow-300 bg-slate-900/90 rounded-full py-0.5">$4,000</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Selector de Color -->
+                <div>
+                    <label class="block text-slate-300 mb-2 text-sm font-medium text-center">🎨 Color del Vehículo</label>
+                    <div class="color-slider-container">
+                        <input type="range" min="0" max="100" value="0" class="color-slider" id="colorSlider" oninput="updateColorFromSlider(this.value)">
+                        <div class="color-preview" id="colorPreview" style="background: #1a1a1a;"></div>
+                    </div>
                 </div>
             </div>
             
-            <!-- Selector de Vehículo -->
-            <div class="mb-2">
-                <label class="block text-slate-400 mb-1 text-xs">Vehículo:</label>
-                <div class="flex justify-center gap-2 flex-wrap">
-                    <button onclick="selectVehicle('moto')" id="btn-moto" class="vehicle-btn selected bg-slate-700 p-2 rounded-lg">
-                        <span class="text-xl">🏍️</span>
-                        <p class="text-[10px]">Moto</p>
-                    </button>
-                    <button onclick="selectVehicle('car')" id="btn-car" class="vehicle-btn bg-slate-700 p-2 rounded-lg">
-                        <span class="text-xl">🚗</span>
-                        <p class="text-[10px]">Auto</p>
-                    </button>
-                    <button onclick="selectVehicle('truck')" id="btn-truck" class="vehicle-btn bg-slate-700 p-2 rounded-lg">
-                        <span class="text-xl">🛻</span>
-                        <p class="text-[10px]">Camioneta</p>
-                    </button>
-                    <button onclick="selectVehicle('bus')" id="btn-bus" class="vehicle-btn bg-slate-700 p-2 rounded-lg">
-                        <span class="text-xl">🚌</span>
-                        <p class="text-[10px]">Bus</p>
-                    </button>
-                    <button onclick="selectPremiumMoto()" id="btn-motoa" class="vehicle-btn bg-slate-700 p-2 rounded-lg relative">
-                        <img src="motoa.png" alt="Moto Premium" class="w-8 h-8 object-contain mx-auto">
-                        <p class="text-[10px] text-yellow-400">Premium</p>
-                        <span id="motoLock" class="absolute -top-1 -right-1 text-sm">🔒</span>
-                        <span id="motoPrice" class="absolute -bottom-1 left-0 right-0 text-[8px] text-yellow-300 bg-slate-900/80 rounded">$2000</span>
-                    </button>
-                </div>
+            <!-- Botón de inicio y footer -->
+            <div class="text-center mt-6 pb-4">
+                <button onclick="startGame()" class="btn-game bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 px-10 rounded-xl text-lg shadow-xl border-b-4 border-emerald-800 w-full max-w-xs">
+                    🛵 ¡A REPARTIR!
+                </button>
+                
+                <p class="mt-4 text-slate-500 text-xs">👆 Toca fichas para girar | 📦 Entrega a tiempo</p>
+                <p class="text-slate-600 text-[10px] mt-1">v2.0 - Tus datos se guardan automáticamente</p>
             </div>
-            
-            <!-- Selector de Color con Slider -->
-            <div class="mb-3">
-                <label class="block text-slate-400 mb-1 text-xs">Color:</label>
-                <div class="color-slider-container">
-                    <input type="range" min="0" max="100" value="0" class="color-slider" id="colorSlider" oninput="updateColorFromSlider(this.value)">
-                    <div class="color-preview" id="colorPreview" style="background: #1a1a1a;"></div>
-                </div>
-            </div>
-            
-            <button onclick="startGame()" class="btn-game bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-6 rounded-lg text-sm shadow-lg border-b-2 border-emerald-800">
-                🛵 ¡A REPARTIR!
-            </button>
-            
-            <p class="mt-2 text-slate-500 text-[10px]">👆 Toca fichas para girar | 📦 Entrega a tiempo</p>
         </div>
     </div>
 
@@ -347,9 +410,50 @@
     <!-- Controls -->
     <div class="absolute bottom-3 w-full flex justify-center gap-2 px-3 z-10">
         <button onclick="resetLevel()" class="btn-game bg-slate-600 hover:bg-slate-500 text-white p-3 rounded-xl shadow-lg border-b-4 border-slate-800">🔄</button>
-        <button onclick="startCar()" id="btnStart" class="btn-game bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded-xl text-base shadow-lg border-b-4 border-emerald-800">� ¡ENTREGAR!</button>
+        <button onclick="startCar()" id="btnStart" class="btn-game bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded-xl text-base shadow-lg border-b-4 border-emerald-800">📦 ¡ENTREGAR!</button>
         <button onclick="toggleSound()" class="btn-game bg-blue-600 hover:bg-blue-500 text-white p-3 rounded-xl shadow-lg border-b-4 border-blue-800"><span id="soundIcon">🔊</span></button>
+        <button onclick="openShop()" class="btn-game bg-yellow-600 hover:bg-yellow-500 text-white p-3 rounded-xl shadow-lg border-b-4 border-yellow-800">🛍️</button>
         <button onclick="showMenu()" class="btn-game bg-purple-600 hover:bg-purple-500 text-white p-3 rounded-xl shadow-lg border-b-4 border-purple-800">☰</button>
+    </div>
+
+    <!-- TIENDA / SHOP MODAL -->
+    <div id="shopModal" class="hidden absolute inset-0 bg-black/95 flex flex-col items-center justify-center z-50 p-4">
+        <div class="bg-slate-800 rounded-2xl p-6 max-w-sm w-full border-2 border-yellow-500 shadow-2xl">
+            <div class="text-center mb-4">
+                <h2 class="text-2xl font-bold text-yellow-400">🛍️ TIENDA</h2>
+                <p class="text-slate-400 text-sm">Tu dinero: <span class="text-yellow-300 font-bold">$<span id="shopMoney">0</span></span></p>
+            </div>
+            
+            <div class="space-y-3">
+                <!-- Moto Premium -->
+                <div id="shopMoto" class="flex items-center justify-between bg-slate-700 p-3 rounded-xl border-2 border-transparent hover:border-yellow-400 cursor-pointer transition-all" onclick="buyVehicle('motoa')">
+                    <div class="flex items-center gap-3">
+                        <img src="motoa.png" alt="Moto Premium" class="w-12 h-12 object-contain">
+                        <div>
+                            <p class="text-white font-bold">Moto Premium</p>
+                            <p class="text-yellow-400 text-sm" id="shopMotoStatus">$2,000</p>
+                        </div>
+                    </div>
+                    <span id="shopMotoIcon" class="text-2xl">🔒</span>
+                </div>
+                
+                <!-- Camioneta Premium -->
+                <div id="shopTruck" class="flex items-center justify-between bg-slate-700 p-3 rounded-xl border-2 border-transparent hover:border-yellow-400 cursor-pointer transition-all" onclick="buyVehicle('trucka')">
+                    <div class="flex items-center gap-3">
+                        <img src="camionetaa.png" alt="Camioneta Premium" class="w-12 h-12 object-contain">
+                        <div>
+                            <p class="text-white font-bold">Camioneta Premium</p>
+                            <p class="text-yellow-400 text-sm" id="shopTruckStatus">$4,000</p>
+                        </div>
+                    </div>
+                    <span id="shopTruckIcon" class="text-2xl">🔒</span>
+                </div>
+            </div>
+            
+            <div class="mt-4 text-center">
+                <button onclick="closeShop()" class="btn-game bg-slate-600 hover:bg-slate-500 text-white font-bold py-2 px-6 rounded-lg">❌ Cerrar</button>
+            </div>
+        </div>
     </div>
 
 <script>
@@ -387,12 +491,17 @@ const vehicleEmojis = {
     car: '🚗',
     truck: '🛻',
     bus: '🚌',
-    motoa: '🏎️'  // Moto premium
+    motoa: '🏎️',  // Moto premium
+    trucka: '🚚'  // Camioneta premium
 };
 
 // Imagen de moto premium
 let premiumMotoImage = new Image();
 premiumMotoImage.src = 'motoa.png';
+
+// Imagen de camioneta premium
+let premiumTruckImage = new Image();
+premiumTruckImage.src = 'camionetaa.png';
 
 function selectCompany(company) {
     selectedCompany = company;
@@ -424,6 +533,7 @@ function updateColorFromSlider(value) {
 
 function selectVehicle(type) {
     if (type === 'motoa' && !premiumMotoUnlocked) return;
+    if (type === 'trucka' && !premiumTruckUnlocked) return;
     selectedVehicle = type;
     document.querySelectorAll('.vehicle-btn').forEach(btn => btn.classList.remove('selected'));
     document.getElementById('btn-' + type).classList.add('selected');
@@ -452,12 +562,135 @@ function selectPremiumMoto() {
     }
 }
 
+function selectPremiumTruck() {
+    if (premiumTruckUnlocked) {
+        selectVehicle('trucka');
+    } else {
+        if (totalMoney >= PREMIUM_TRUCK_PRICE) {
+            if (confirm(`¿Comprar Camioneta Premium por $${PREMIUM_TRUCK_PRICE}?\n\nTu dinero: $${totalMoney}`)) {
+                totalMoney -= PREMIUM_TRUCK_PRICE;
+                premiumTruckUnlocked = true;
+                $('moneyDisplay').textContent = totalMoney;
+                $('truckLock').textContent = '⭐';
+                $('truckPrice').textContent = 'TUYA';
+                $('truckPrice').classList.add('text-emerald-400');
+                selectVehicle('trucka');
+                playSound('money');
+                alert('🎉 ¡Camioneta Premium desbloqueada! ¡Máxima capacidad de carga!');
+            }
+        } else {
+            alert(`💰 Necesitas $${PREMIUM_TRUCK_PRICE} para comprar la Camioneta Premium.\n\nTu dinero actual: $${totalMoney}\nTe faltan: $${PREMIUM_TRUCK_PRICE - totalMoney}`);
+        }
+    }
+}
+
+// Funciones de la tienda
+function openShop() {
+    $('shopModal').classList.remove('hidden');
+    $('shopMoney').textContent = totalMoney;
+    updateShopUI();
+}
+
+function closeShop() {
+    $('shopModal').classList.add('hidden');
+}
+
+function updateShopUI() {
+    // Moto Premium
+    if (premiumMotoUnlocked) {
+        $('shopMotoStatus').textContent = '✅ COMPRADA';
+        $('shopMotoStatus').className = 'text-emerald-400 text-sm font-bold';
+        $('shopMotoIcon').textContent = '⭐';
+    } else if (totalMoney >= PREMIUM_MOTO_PRICE) {
+        $('shopMotoStatus').textContent = '$2,000 - ¡Disponible!';
+        $('shopMotoStatus').className = 'text-yellow-400 text-sm';
+        $('shopMotoIcon').textContent = '💰';
+    } else {
+        $('shopMotoStatus').textContent = `$2,000 (Faltan $${PREMIUM_MOTO_PRICE - totalMoney})`;
+        $('shopMotoStatus').className = 'text-red-400 text-sm';
+        $('shopMotoIcon').textContent = '🔒';
+    }
+    
+    // Camioneta Premium
+    if (premiumTruckUnlocked) {
+        $('shopTruckStatus').textContent = '✅ COMPRADA';
+        $('shopTruckStatus').className = 'text-emerald-400 text-sm font-bold';
+        $('shopTruckIcon').textContent = '⭐';
+    } else if (totalMoney >= PREMIUM_TRUCK_PRICE) {
+        $('shopTruckStatus').textContent = '$4,000 - ¡Disponible!';
+        $('shopTruckStatus').className = 'text-yellow-400 text-sm';
+        $('shopTruckIcon').textContent = '💰';
+    } else {
+        $('shopTruckStatus').textContent = `$4,000 (Faltan $${PREMIUM_TRUCK_PRICE - totalMoney})`;
+        $('shopTruckStatus').className = 'text-red-400 text-sm';
+        $('shopTruckIcon').textContent = '🔒';
+    }
+}
+
+function buyVehicle(vehicleType) {
+    if (vehicleType === 'motoa') {
+        if (premiumMotoUnlocked) {
+            alert('🏍️ ¡Ya tienes la Moto Premium! Selecciónala desde el menú principal.');
+        } else if (totalMoney >= PREMIUM_MOTO_PRICE) {
+            if (confirm(`¿Comprar Moto Premium por $${PREMIUM_MOTO_PRICE}?`)) {
+                totalMoney -= PREMIUM_MOTO_PRICE;
+                premiumMotoUnlocked = true;
+                $('moneyDisplay').textContent = totalMoney;
+                $('shopMoney').textContent = totalMoney;
+                if ($('motoLock')) $('motoLock').textContent = '⭐';
+                if ($('motoPrice')) {
+                    $('motoPrice').textContent = 'TUYA';
+                    $('motoPrice').classList.add('text-emerald-400');
+                }
+                playSound('money');
+                updateShopUI();
+                saveGameData(); // Guardar después de comprar
+                alert('🎉 ¡Moto Premium desbloqueada!');
+            }
+        } else {
+            alert(`💰 Te faltan $${PREMIUM_MOTO_PRICE - totalMoney} para comprar la Moto Premium.`);
+        }
+    } else if (vehicleType === 'trucka') {
+        if (premiumTruckUnlocked) {
+            alert('🚚 ¡Ya tienes la Camioneta Premium! Selecciónala desde el menú principal.');
+        } else if (totalMoney >= PREMIUM_TRUCK_PRICE) {
+            if (confirm(`¿Comprar Camioneta Premium por $${PREMIUM_TRUCK_PRICE}?`)) {
+                totalMoney -= PREMIUM_TRUCK_PRICE;
+                premiumTruckUnlocked = true;
+                $('moneyDisplay').textContent = totalMoney;
+                $('shopMoney').textContent = totalMoney;
+                if ($('truckLock')) $('truckLock').textContent = '⭐';
+                if ($('truckPrice')) {
+                    $('truckPrice').textContent = 'TUYA';
+                    $('truckPrice').classList.add('text-emerald-400');
+                }
+                playSound('money');
+                updateShopUI();
+                saveGameData(); // Guardar después de comprar
+                alert('🎉 ¡Camioneta Premium desbloqueada!');
+            }
+        } else {
+            alert(`💰 Te faltan $${PREMIUM_TRUCK_PRICE - totalMoney} para comprar la Camioneta Premium.`);
+        }
+    }
+}
+
 function updatePremiumMotoUI() {
     if (premiumMotoUnlocked) {
-        $('motoLock').textContent = '⭐';
-        $('motoPrice').textContent = 'TUYA';
-        $('motoPrice').classList.remove('text-yellow-300');
-        $('motoPrice').classList.add('text-emerald-400');
+        if ($('motoLock')) $('motoLock').textContent = '⭐';
+        if ($('motoPrice')) {
+            $('motoPrice').textContent = 'TUYA';
+            $('motoPrice').classList.remove('text-yellow-300');
+            $('motoPrice').classList.add('text-emerald-400');
+        }
+    }
+    if (premiumTruckUnlocked) {
+        if ($('truckLock')) $('truckLock').textContent = '⭐';
+        if ($('truckPrice')) {
+            $('truckPrice').textContent = 'TUYA';
+            $('truckPrice').classList.remove('text-yellow-300');
+            $('truckPrice').classList.add('text-emerald-400');
+        }
     }
 }
 
@@ -547,6 +780,8 @@ let savedEndPosition = null; // Posición guardada de la casa para reintentos
 let currentLevelForEnd = 0; // Nivel actual para saber cuándo cambiar la casa
 let premiumMotoUnlocked = false; // Moto premium desbloqueada
 const PREMIUM_MOTO_PRICE = 2000; // Precio de la moto premium
+let premiumTruckUnlocked = false; // Camioneta premium desbloqueada
+const PREMIUM_TRUCK_PRICE = 4000; // Precio de la camioneta premium
 let deliveryStartTime = 0; // Tiempo cuando comenzó la entrega
 let deliveryTimer = null; // Timer para la entrega
 
@@ -577,10 +812,16 @@ class Tile {
 function startGame() {
     initAudio();
     driverName = $('driverName').value.trim() || "Repartidor";
+    
+    // Guardar datos en localStorage
+    saveGameData();
+    
     $('driverDisplay').textContent = driverName;
     // Mostrar icono o imagen del vehículo
     if (selectedVehicle === 'motoa') {
         $('vehicleIcon').innerHTML = '<img src="motoa.png" alt="Moto Premium" style="width:20px;height:20px;display:inline;vertical-align:middle;">';
+    } else if (selectedVehicle === 'trucka') {
+        $('vehicleIcon').innerHTML = '<img src="camionetaa.png" alt="Camioneta Premium" style="width:20px;height:20px;display:inline;vertical-align:middle;">';
     } else {
         $('vehicleIcon').textContent = vehicleEmojis[selectedVehicle] || '🏍️';
     }
@@ -588,6 +829,96 @@ function startGame() {
     $('startScreen').classList.add('hidden');
     level = 1; $('levelDisplay').textContent = level;
     generateLevel();
+}
+
+// ============ FUNCIONES DE GUARDADO LOCAL ============
+function saveGameData() {
+    const gameData = {
+        driverName: driverName,
+        totalMoney: totalMoney,
+        premiumMotoUnlocked: premiumMotoUnlocked,
+        premiumTruckUnlocked: premiumTruckUnlocked,
+        selectedCompany: selectedCompany,
+        selectedVehicle: selectedVehicle,
+        selectedColor: selectedColor,
+        lastPlayed: new Date().toISOString()
+    };
+    try {
+        localStorage.setItem('deliveryRushSave', JSON.stringify(gameData));
+    } catch (e) {
+        console.log('No se pudo guardar:', e);
+    }
+}
+
+function loadGameData() {
+    try {
+        const saved = localStorage.getItem('deliveryRushSave');
+        if (saved) {
+            const gameData = JSON.parse(saved);
+            
+            // Cargar nombre
+            if (gameData.driverName && gameData.driverName !== "Repartidor") {
+                driverName = gameData.driverName;
+                $('driverName').value = driverName;
+                $('welcomeBack').classList.remove('hidden');
+            }
+            
+            // Cargar dinero
+            if (gameData.totalMoney !== undefined) {
+                totalMoney = gameData.totalMoney;
+                $('moneyDisplay').textContent = totalMoney;
+                if (totalMoney > 0) {
+                    $('savedMoneyDisplay').classList.remove('hidden');
+                    $('savedMoneyAmount').textContent = totalMoney;
+                }
+            }
+            
+            // Cargar desbloqueos
+            if (gameData.premiumMotoUnlocked) {
+                premiumMotoUnlocked = true;
+            }
+            if (gameData.premiumTruckUnlocked) {
+                premiumTruckUnlocked = true;
+            }
+            
+            // Cargar preferencias
+            if (gameData.selectedCompany) {
+                selectedCompany = gameData.selectedCompany;
+                document.querySelectorAll('.company-btn').forEach(btn => btn.classList.remove('selected'));
+                const companyBtn = document.getElementById('btn-' + selectedCompany);
+                if (companyBtn) companyBtn.classList.add('selected');
+            }
+            
+            if (gameData.selectedVehicle && (gameData.selectedVehicle !== 'motoa' || premiumMotoUnlocked) && (gameData.selectedVehicle !== 'trucka' || premiumTruckUnlocked)) {
+                selectedVehicle = gameData.selectedVehicle;
+                document.querySelectorAll('.vehicle-btn').forEach(btn => btn.classList.remove('selected'));
+                const vehicleBtn = document.getElementById('btn-' + selectedVehicle);
+                if (vehicleBtn) vehicleBtn.classList.add('selected');
+            }
+            
+            if (gameData.selectedColor) {
+                selectedColor = gameData.selectedColor;
+                $('colorPreview').style.background = selectedColor;
+                // Actualizar slider aproximadamente
+                const colorIndex = sliderColors.indexOf(selectedColor);
+                if (colorIndex >= 0) {
+                    $('colorSlider').value = (colorIndex / (sliderColors.length - 1)) * 100;
+                }
+            }
+            
+            return true;
+        }
+    } catch (e) {
+        console.log('No se pudo cargar:', e);
+    }
+    return false;
+}
+
+function clearGameData() {
+    if (confirm('¿Borrar todos tus datos guardados? (Dinero, vehículos desbloqueados, etc.)')) {
+        localStorage.removeItem('deliveryRushSave');
+        location.reload();
+    }
 }
 
 function showMenu() {
@@ -603,6 +934,7 @@ function showMenu() {
 
 function init() {
     resize();
+    loadGameData(); // Cargar datos guardados al iniciar
     updatePremiumMotoUI(); // Actualizar estado de moto premium al iniciar
     window.addEventListener('resize', () => { if (gameState !== 'START') { resize(); draw(); } });
     canvas.addEventListener('pointerdown', handleClick);
@@ -1132,6 +1464,7 @@ function timeExpired() {
     const penalty = 100;
     totalMoney = Math.max(0, totalMoney - penalty);
     $('moneyDisplay').textContent = totalMoney;
+    saveGameData(); // Guardar datos después de la penalización
     
     $('gameContainer').classList.add('shake');
     setTimeout(() => $('gameContainer').classList.remove('shake'), 500);
@@ -1346,8 +1679,9 @@ function win() {
     const totalEarned = deliveryPayment + timeBonus + speedBonus;
     totalMoney += totalEarned;
     
-    // Actualizar display de dinero
+    // Actualizar display de dinero y guardar datos
     $('moneyDisplay').textContent = totalMoney;
+    saveGameData();
     
     // Determinar mensaje según velocidad
     let speedMessage = '';
@@ -1990,23 +2324,108 @@ function drawCar() {
         ctx.beginPath();
         ctx.arc(0, 0, 18, 0, Math.PI * 2);
         ctx.fill();
+    } else if (selectedVehicle === 'trucka') {
+        // Camioneta Premium - usando imagen camionetaa.png
+        
+        // Sombra del vehículo
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.beginPath(); ctx.ellipse(0, 12, 18, 5, 0, 0, Math.PI * 2); ctx.fill();
+        
+        // Dibujar imagen de camioneta premium
+        // La imagen se dibuja correctamente orientada (la rotación ya está aplicada por ctx.rotate)
+        if (premiumTruckImage.complete && premiumTruckImage.naturalWidth > 0) {
+            // Dibujar la imagen centrada y escalada
+            const imgWidth = 50;
+            const imgHeight = 35;
+            ctx.drawImage(premiumTruckImage, -imgWidth/2, -imgHeight/2, imgWidth, imgHeight);
+        } else {
+            // Fallback si la imagen no carga - Camioneta deportiva plateada
+            // Ruedas traseras
+            ctx.fillStyle = '#1a1a1a';
+            ctx.beginPath(); ctx.arc(-12, 8, 6, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#c0c0c0';
+            ctx.beginPath(); ctx.arc(-12, 8, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#1a1a1a';
+            ctx.beginPath(); ctx.arc(-12, 8, 2, 0, Math.PI * 2); ctx.fill();
+            
+            // Ruedas delanteras
+            ctx.fillStyle = '#1a1a1a';
+            ctx.beginPath(); ctx.arc(12, 8, 6, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#c0c0c0';
+            ctx.beginPath(); ctx.arc(12, 8, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#1a1a1a';
+            ctx.beginPath(); ctx.arc(12, 8, 2, 0, Math.PI * 2); ctx.fill();
+            
+            // Cuerpo de la camioneta - plateado premium
+            ctx.fillStyle = waiting ? '#6b7280' : '#e5e7eb';
+            ctx.beginPath(); ctx.roundRect(-20, -8, 40, 18, 4); ctx.fill();
+            
+            // Cabina
+            ctx.fillStyle = waiting ? '#4b5563' : '#d1d5db';
+            ctx.beginPath();
+            ctx.moveTo(5, -8);
+            ctx.lineTo(8, -14);
+            ctx.lineTo(18, -14);
+            ctx.lineTo(20, -8);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Ventana
+            ctx.fillStyle = '#1e3a5f';
+            ctx.beginPath();
+            ctx.moveTo(7, -8);
+            ctx.lineTo(9, -12);
+            ctx.lineTo(17, -12);
+            ctx.lineTo(18, -8);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Caja de carga
+            ctx.fillStyle = '#9ca3af';
+            ctx.beginPath(); ctx.roundRect(-18, -6, 22, 12, 2); ctx.fill();
+            ctx.strokeStyle = '#6b7280';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(-17, -5, 20, 10);
+            
+            // Luces delanteras
+            ctx.fillStyle = '#fef3c7';
+            ctx.beginPath(); ctx.roundRect(18, -4, 3, 3, 1); ctx.fill();
+            ctx.beginPath(); ctx.roundRect(18, 2, 3, 2, 1); ctx.fill();
+            
+            // Luces traseras
+            ctx.fillStyle = '#dc2626';
+            ctx.beginPath(); ctx.roundRect(-21, -2, 2, 4, 1); ctx.fill();
+            
+            // Estrella premium
+            ctx.fillStyle = '#fbbf24';
+            ctx.font = 'bold 10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('⭐', -8, 0);
+        }
+        
+        // Efecto de brillo premium plateado
+        ctx.fillStyle = 'rgba(192, 192, 192, 0.25)';
+        ctx.beginPath();
+        ctx.arc(0, 0, 22, 0, Math.PI * 2);
+        ctx.fill();
     }
     
     // Indicador de dirección en modo edición
     if (gameState === 'EDITING') {
         ctx.fillStyle = 'rgba(74, 222, 128, 0.8)';
         ctx.beginPath();
-        const offset = selectedVehicle === 'bus' ? 24 : selectedVehicle === 'truck' ? 20 : selectedVehicle === 'motoa' ? 22 : selectedVehicle === 'moto' ? 18 : 16;
+        const offset = selectedVehicle === 'bus' ? 24 : selectedVehicle === 'trucka' ? 26 : selectedVehicle === 'truck' ? 20 : selectedVehicle === 'motoa' ? 22 : selectedVehicle === 'moto' ? 18 : 16;
         ctx.moveTo(offset + 6, 0);
         ctx.lineTo(offset - 2, -5);
         ctx.lineTo(offset - 2, 5);
         ctx.closePath();
         ctx.fill();
         
-        ctx.strokeStyle = selectedVehicle === 'motoa' ? 'rgba(251, 191, 36, 0.7)' : 'rgba(74, 222, 128, 0.5)';
+        ctx.strokeStyle = selectedVehicle === 'motoa' ? 'rgba(251, 191, 36, 0.7)' : selectedVehicle === 'trucka' ? 'rgba(192, 192, 192, 0.7)' : 'rgba(74, 222, 128, 0.5)';
         ctx.lineWidth = 2;
         ctx.setLineDash([3, 3]);
-        const radius = selectedVehicle === 'bus' ? 24 : selectedVehicle === 'truck' ? 22 : selectedVehicle === 'motoa' ? 24 : selectedVehicle === 'moto' ? 18 : 16;
+        const radius = selectedVehicle === 'bus' ? 24 : selectedVehicle === 'trucka' ? 28 : selectedVehicle === 'truck' ? 22 : selectedVehicle === 'motoa' ? 24 : selectedVehicle === 'moto' ? 18 : 16;
         ctx.beginPath();
         ctx.arc(0, 0, radius, 0, Math.PI * 2);
         ctx.stroke();
