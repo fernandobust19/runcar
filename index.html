@@ -243,7 +243,7 @@
             <!-- Selector de Vehículo -->
             <div class="mb-2">
                 <label class="block text-slate-400 mb-1 text-xs">Vehículo:</label>
-                <div class="flex justify-center gap-2">
+                <div class="flex justify-center gap-2 flex-wrap">
                     <button onclick="selectVehicle('moto')" id="btn-moto" class="vehicle-btn selected bg-slate-700 p-2 rounded-lg">
                         <span class="text-xl">🏍️</span>
                         <p class="text-[10px]">Moto</p>
@@ -259,6 +259,12 @@
                     <button onclick="selectVehicle('bus')" id="btn-bus" class="vehicle-btn bg-slate-700 p-2 rounded-lg">
                         <span class="text-xl">🚌</span>
                         <p class="text-[10px]">Bus</p>
+                    </button>
+                    <button onclick="selectPremiumMoto()" id="btn-motoa" class="vehicle-btn bg-slate-700 p-2 rounded-lg relative">
+                        <img src="motoa.png" alt="Moto Premium" class="w-8 h-8 object-contain mx-auto">
+                        <p class="text-[10px] text-yellow-400">Premium</p>
+                        <span id="motoLock" class="absolute -top-1 -right-1 text-sm">🔒</span>
+                        <span id="motoPrice" class="absolute -bottom-1 left-0 right-0 text-[8px] text-yellow-300 bg-slate-900/80 rounded">$2000</span>
                     </button>
                 </div>
             </div>
@@ -380,8 +386,13 @@ const vehicleEmojis = {
     moto: '🏍️',
     car: '🚗',
     truck: '🛻',
-    bus: '🚌'
+    bus: '🚌',
+    motoa: '🏎️'  // Moto premium
 };
+
+// Imagen de moto premium
+let premiumMotoImage = new Image();
+premiumMotoImage.src = 'motoa.png';
 
 function selectCompany(company) {
     selectedCompany = company;
@@ -412,9 +423,42 @@ function updateColorFromSlider(value) {
 }
 
 function selectVehicle(type) {
+    if (type === 'motoa' && !premiumMotoUnlocked) return;
     selectedVehicle = type;
     document.querySelectorAll('.vehicle-btn').forEach(btn => btn.classList.remove('selected'));
     document.getElementById('btn-' + type).classList.add('selected');
+}
+
+function selectPremiumMoto() {
+    if (premiumMotoUnlocked) {
+        selectVehicle('motoa');
+    } else {
+        // Mostrar opción de compra
+        if (totalMoney >= PREMIUM_MOTO_PRICE) {
+            if (confirm(`¿Comprar Moto Premium por $${PREMIUM_MOTO_PRICE}?\n\nTu dinero: $${totalMoney}`)) {
+                totalMoney -= PREMIUM_MOTO_PRICE;
+                premiumMotoUnlocked = true;
+                $('moneyDisplay').textContent = totalMoney;
+                $('motoLock').textContent = '⭐';
+                $('motoPrice').textContent = 'TUYA';
+                $('motoPrice').classList.add('text-emerald-400');
+                selectVehicle('motoa');
+                playSound('money');
+                alert('🎉 ¡Moto Premium desbloqueada! ¡Ahora eres un repartidor de élite!');
+            }
+        } else {
+            alert(`💰 Necesitas $${PREMIUM_MOTO_PRICE} para comprar la Moto Premium.\n\nTu dinero actual: $${totalMoney}\nTe faltan: $${PREMIUM_MOTO_PRICE - totalMoney}`);
+        }
+    }
+}
+
+function updatePremiumMotoUI() {
+    if (premiumMotoUnlocked) {
+        $('motoLock').textContent = '⭐';
+        $('motoPrice').textContent = 'TUYA';
+        $('motoPrice').classList.remove('text-yellow-300');
+        $('motoPrice').classList.add('text-emerald-400');
+    }
 }
 
 function selectColor(color) {
@@ -435,6 +479,30 @@ function playSound(type) {
         else if (type === 'crash') { osc.type = 'square'; osc.frequency.setValueAtTime(150, t); osc.frequency.exponentialRampToValueAtTime(40, t + 0.3); gain.gain.setValueAtTime(0.2, t); osc.start(t); osc.stop(t + 0.3); }
         else if (type === 'win') { [523,659,784,1047].forEach((f,i) => { const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); o.frequency.setValueAtTime(f, t+i*0.15); g.gain.setValueAtTime(0.1, t+i*0.15); o.start(t+i*0.15); o.stop(t+i*0.15+0.2); }); }
         else if (type === 'warning') { osc.frequency.setValueAtTime(400, t); gain.gain.setValueAtTime(0.1, t); osc.start(t); osc.stop(t + 0.1); }
+        else if (type === 'delivery') {
+            // Sonido de entrega exitosa - campanita + monedas
+            [880, 1100, 1320].forEach((f, i) => {
+                const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+                o.connect(g); g.connect(audioCtx.destination);
+                o.type = 'sine';
+                o.frequency.setValueAtTime(f, t + i * 0.1);
+                g.gain.setValueAtTime(0.15, t + i * 0.1);
+                g.gain.exponentialRampToValueAtTime(0.01, t + i * 0.1 + 0.3);
+                o.start(t + i * 0.1); o.stop(t + i * 0.1 + 0.3);
+            });
+        }
+        else if (type === 'money') {
+            // Sonido de cobrar dinero - cash register
+            [1200, 1400, 1600, 1800].forEach((f, i) => {
+                const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+                o.connect(g); g.connect(audioCtx.destination);
+                o.type = 'square';
+                o.frequency.setValueAtTime(f, t + 0.3 + i * 0.05);
+                g.gain.setValueAtTime(0.08, t + 0.3 + i * 0.05);
+                g.gain.exponentialRampToValueAtTime(0.01, t + 0.3 + i * 0.05 + 0.1);
+                o.start(t + 0.3 + i * 0.05); o.stop(t + 0.3 + i * 0.05 + 0.1);
+            });
+        }
     } catch(e) {}
 }
 function toggleSound() { soundEnabled = !soundEnabled; document.getElementById('soundIcon').textContent = soundEnabled ? '🔊' : '🔇'; }
@@ -477,6 +545,10 @@ let gameState = 'START', animationId, countdownTimer, timeLeft, maxTime, engineS
 let totalMoney = 0; // Dinero acumulado por propinas
 let savedEndPosition = null; // Posición guardada de la casa para reintentos
 let currentLevelForEnd = 0; // Nivel actual para saber cuándo cambiar la casa
+let premiumMotoUnlocked = false; // Moto premium desbloqueada
+const PREMIUM_MOTO_PRICE = 2000; // Precio de la moto premium
+let deliveryStartTime = 0; // Tiempo cuando comenzó la entrega
+let deliveryTimer = null; // Timer para la entrega
 
 const $ = id => document.getElementById(id);
 
@@ -506,7 +578,12 @@ function startGame() {
     initAudio();
     driverName = $('driverName').value.trim() || "Repartidor";
     $('driverDisplay').textContent = driverName;
-    $('vehicleIcon').textContent = vehicleEmojis[selectedVehicle] || '🏍️';
+    // Mostrar icono o imagen del vehículo
+    if (selectedVehicle === 'motoa') {
+        $('vehicleIcon').innerHTML = '<img src="motoa.png" alt="Moto Premium" style="width:20px;height:20px;display:inline;vertical-align:middle;">';
+    } else {
+        $('vehicleIcon').textContent = vehicleEmojis[selectedVehicle] || '🏍️';
+    }
     $('companyLogo').src = companyLogos[selectedCompany] || 'LOGO-RAPPI.png';
     $('startScreen').classList.add('hidden');
     level = 1; $('levelDisplay').textContent = level;
@@ -519,12 +596,14 @@ function showMenu() {
         clearInterval(countdownTimer);
         clearInterval(engineSoundInterval);
         $('startScreen').classList.remove('hidden');
+        updatePremiumMotoUI(); // Actualizar UI de moto premium
         gameState = 'START';
     }
 }
 
 function init() {
     resize();
+    updatePremiumMotoUI(); // Actualizar estado de moto premium al iniciar
     window.addEventListener('resize', () => { if (gameState !== 'START') { resize(); draw(); } });
     canvas.addEventListener('pointerdown', handleClick);
 }
@@ -774,11 +853,113 @@ function fillEmpty(deadEndCount) {
 }
 
 function randomizeRotations() {
+    // Primero generar un camino garantizado desde START hasta END
+    const guaranteedPath = generateGuaranteedPath();
+    
+    // Orientar las piezas del camino garantizado correctamente
+    if (guaranteedPath.length > 0) {
+        orientPathTiles(guaranteedPath);
+    }
+    
+    // Aleatorizar las demás piezas
     grid.forEach(tile => {
-        if (tile && !tile.locked && tile.type !== TILE_TYPES.BLOCKED) {
+        if (tile && !tile.locked && tile.type !== TILE_TYPES.BLOCKED && !tile.isOnPath) {
             tile.rotation = Math.floor(Math.random() * 4);
         }
     });
+}
+
+// Función para generar un camino garantizado usando BFS
+function generateGuaranteedPath() {
+    const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
+    const endTile = grid.find(t => t && t.type === TILE_TYPES.END);
+    if (!startTile || !endTile) return [];
+    
+    const visited = new Map();
+    const queue = [{ col: startTile.col, row: startTile.row, path: [] }];
+    visited.set(`${startTile.col},${startTile.row}`, true);
+    
+    while (queue.length > 0) {
+        const curr = queue.shift();
+        const currPath = [...curr.path, { col: curr.col, row: curr.row }];
+        
+        if (curr.col === endTile.col && curr.row === endTile.row) {
+            return currPath;
+        }
+        
+        // Direcciones: arriba, derecha, abajo, izquierda
+        const directions = [
+            { dc: 0, dr: -1, dir: DIR.N },
+            { dc: 1, dr: 0, dir: DIR.E },
+            { dc: 0, dr: 1, dir: DIR.S },
+            { dc: -1, dr: 0, dir: DIR.W }
+        ];
+        
+        // Aleatorizar direcciones para variedad
+        directions.sort(() => Math.random() - 0.5);
+        
+        for (const d of directions) {
+            const nc = curr.col + d.dc;
+            const nr = curr.row + d.dr;
+            const key = `${nc},${nr}`;
+            
+            if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS && !visited.has(key)) {
+                const tile = grid[nr * COLS + nc];
+                if (tile && tile.type !== TILE_TYPES.BLOCKED) {
+                    visited.set(key, true);
+                    queue.push({ col: nc, row: nr, path: currPath });
+                }
+            }
+        }
+    }
+    
+    return [];
+}
+
+// Función para orientar las piezas del camino correctamente
+function orientPathTiles(path) {
+    for (let i = 0; i < path.length; i++) {
+        const curr = path[i];
+        const tile = grid[curr.row * COLS + curr.col];
+        if (!tile || tile.locked) continue;
+        
+        tile.isOnPath = true;
+        
+        // Determinar qué direcciones necesita la pieza
+        const neededConnections = [];
+        
+        // Conexión con la pieza anterior
+        if (i > 0) {
+            const prev = path[i - 1];
+            if (prev.col < curr.col) neededConnections.push(DIR.W);
+            else if (prev.col > curr.col) neededConnections.push(DIR.E);
+            else if (prev.row < curr.row) neededConnections.push(DIR.N);
+            else if (prev.row > curr.row) neededConnections.push(DIR.S);
+        }
+        
+        // Conexión con la pieza siguiente
+        if (i < path.length - 1) {
+            const next = path[i + 1];
+            if (next.col < curr.col) neededConnections.push(DIR.W);
+            else if (next.col > curr.col) neededConnections.push(DIR.E);
+            else if (next.row < curr.row) neededConnections.push(DIR.N);
+            else if (next.row > curr.row) neededConnections.push(DIR.S);
+        }
+        
+        // Encontrar la rotación que conecte las direcciones necesarias
+        for (let rot = 0; rot < 4; rot++) {
+            tile.rotation = rot;
+            const conn = tile.getConnections();
+            let allConnected = true;
+            for (const dir of neededConnections) {
+                if (!(conn & dir)) {
+                    allConnected = false;
+                    break;
+                }
+            }
+            if (allConnected) break;
+        }
+    }
 }
 
 function addSpecials(features) {
@@ -883,7 +1064,7 @@ function calculatePreviewPath() {
 function startCountdown() {
     clearInterval(countdownTimer);
     countdownTimer = setInterval(() => {
-        if (gameState !== 'EDITING') { clearInterval(countdownTimer); return; }
+        if (gameState !== 'EDITING' && gameState !== 'RUNNING') { clearInterval(countdownTimer); return; }
         timeLeft--;
         $('timerDisplay').textContent = `⏱️ ${timeLeft}`;
         $('progressBar').style.width = `${(timeLeft / maxTime) * 100}%`;
@@ -903,10 +1084,9 @@ function startCountdown() {
         if (timeLeft <= 0) {
             clearInterval(countdownTimer);
             updatePrepBar(100);
-            setTimeout(() => {
-                stopPrepAnimation();
-                showOrderReady();
-            }, 300);
+            stopPrepAnimation();
+            // Tiempo agotado - descontar $100 de las propinas
+            timeExpired();
         }
     }, 1000);
 }
@@ -939,6 +1119,30 @@ function updatePrepBar(progress) {
 function stopPrepAnimation() {
     $('prepContainer').classList.add('hidden');
     $('statusContainer').classList.remove('hidden');
+}
+
+// Función para manejar tiempo expirado
+function timeExpired() {
+    gameState = 'TIMEOUT';
+    clearInterval(countdownTimer);
+    clearInterval(engineSoundInterval);
+    playSound('crash');
+    
+    // Descontar $100 de las propinas
+    const penalty = 100;
+    totalMoney = Math.max(0, totalMoney - penalty);
+    $('moneyDisplay').textContent = totalMoney;
+    
+    $('gameContainer').classList.add('shake');
+    setTimeout(() => $('gameContainer').classList.remove('shake'), 500);
+    
+    $('overlayIcon').textContent = '⏰😫';
+    $('overlayTitle').textContent = '¡TIEMPO AGOTADO!';
+    $('overlaySubtitle').textContent = 'El cliente canceló el pedido';
+    $('overlayBonus').innerHTML = `<span class="text-red-400">💸 Penalización: -$${penalty}</span><br><span>💰 Total: $${totalMoney}</span>`;
+    $('overlayBtn').textContent = 'Reintentar';
+    $('overlayBtn').onclick = retryLevel;
+    $('overlay').classList.remove('hidden');
 }
 
 // Función para mostrar mensaje de salida del pedido
@@ -982,8 +1186,11 @@ function resetCar() {
 function startCar() {
     initAudio();
     if (gameState !== 'EDITING') return;
-    clearInterval(countdownTimer);
+    // NO detenemos el countdown - el tiempo sigue corriendo
     stopPrepAnimation();
+    
+    // Guardar el tiempo cuando comienza la entrega
+    deliveryStartTime = Date.now();
     
     // Siempre mostrar el mensaje "Sale el pedido" al entregar
     showOrderReady();
@@ -1002,8 +1209,21 @@ function actuallyStartCar() {
     
     gameState = 'RUNNING';
     $('btnStart').classList.add('opacity-50', 'pointer-events-none');
-    $('statusText').textContent = '¡ENTREGANDO!';
-    $('statusText').className = 'text-emerald-400 font-bold text-xs';
+    $('statusText').textContent = '¡ENTREGANDO! ⏱️';
+    $('statusText').className = 'text-emerald-400 font-bold text-xs pulse';
+    
+    // Actualizar el estado para mostrar el tiempo de entrega
+    deliveryTimer = setInterval(() => {
+        if (gameState !== 'RUNNING') { clearInterval(deliveryTimer); return; }
+        const elapsed = Math.floor((Date.now() - deliveryStartTime) / 1000);
+        if (elapsed < 10) {
+            $('statusText').textContent = `⚡ ENTREGANDO: ${elapsed}s`;
+            $('statusText').className = 'text-yellow-400 font-bold text-xs pulse';
+        } else {
+            $('statusText').textContent = `🚚 ENTREGANDO: ${elapsed}s`;
+            $('statusText').className = 'text-emerald-400 font-bold text-xs';
+        }
+    }, 100);
     
     specialTiles.forEach(tile => {
         if (tile.special === 'semaphore') {
@@ -1092,7 +1312,7 @@ function gameLoop() {
 
 function crash(msg) {
     gameState = 'CRASHED';
-    clearInterval(countdownTimer); clearInterval(engineSoundInterval);
+    clearInterval(countdownTimer); clearInterval(engineSoundInterval); clearInterval(deliveryTimer);
     playSound('crash');
     $('gameContainer').classList.add('shake');
     setTimeout(() => $('gameContainer').classList.remove('shake'), 500);
@@ -1107,22 +1327,53 @@ function crash(msg) {
 
 function win() {
     gameState = 'WON';
-    clearInterval(countdownTimer); clearInterval(engineSoundInterval);
-    playSound('win');
+    clearInterval(countdownTimer); clearInterval(engineSoundInterval); clearInterval(deliveryTimer);
     
-    // Calcular propinas: tiempo restante * $5 + bonus por nivel
-    const tipFromTime = timeLeft * 5;
-    const levelBonus = level * 10;
-    const totalTip = tipFromTime + levelBonus;
-    totalMoney += totalTip;
+    // Calcular tiempo de entrega en segundos
+    const deliveryTime = Math.floor((Date.now() - deliveryStartTime) / 1000);
+    
+    // Reproducir sonido de entrega exitosa
+    playSound('delivery');
+    // Reproducir sonido de cobrar dinero
+    setTimeout(() => playSound('money'), 400);
+    
+    // Pago fijo de $75 por entrega correcta
+    const deliveryPayment = 75;
+    // Bonus por tiempo restante (pequeño extra)
+    const timeBonus = Math.floor(timeLeft / 5) * 5;
+    // BONUS ESPECIAL: $50 extra si la entrega es en menos de 10 segundos
+    const speedBonus = deliveryTime < 10 ? 50 : 0;
+    const totalEarned = deliveryPayment + timeBonus + speedBonus;
+    totalMoney += totalEarned;
     
     // Actualizar display de dinero
     $('moneyDisplay').textContent = totalMoney;
     
-    $('overlayIcon').textContent = '🎉📦';
+    // Determinar mensaje según velocidad
+    let speedMessage = '';
+    let emoji = '🎉📦💵';
+    if (deliveryTime < 10) {
+        speedMessage = '🚀 ¡ENTREGA RELÁMPAGO!';
+        emoji = '⚡🎉💰';
+    } else if (deliveryTime < 20) {
+        speedMessage = '🏎️ ¡Muy rápido!';
+    } else {
+        speedMessage = '¡Buen trabajo!';
+    }
+    
+    $('overlayIcon').textContent = emoji;
     $('overlayTitle').textContent = '¡ENTREGA #' + level + ' COMPLETADA!';
-    $('overlaySubtitle').textContent = `⭐⭐⭐⭐⭐ ¡Excelente servicio!`;
-    $('overlayBonus').innerHTML = `<span class="block">⏱️ Tiempo: ${timeLeft}s = $${tipFromTime}</span><span class="block">🌟 Bonus: $${levelBonus}</span><span class="block text-lg mt-1">💰 Propina: $${totalTip}</span>`;
+    $('overlaySubtitle').textContent = `⭐⭐⭐⭐⭐ ${speedMessage}`;
+    
+    let bonusHTML = `<span class="block">📦 Pago entrega: $${deliveryPayment}</span>`;
+    bonusHTML += `<span class="block">⏱️ Bonus tiempo restante: $${timeBonus}</span>`;
+    if (speedBonus > 0) {
+        bonusHTML += `<span class="block text-yellow-300">⚡ BONUS ENTREGA RÁPIDA (<10s): +$${speedBonus}</span>`;
+    }
+    bonusHTML += `<span class="block text-xs text-slate-400">⏱️ Tiempo de entrega: ${deliveryTime}s</span>`;
+    bonusHTML += `<span class="block text-lg mt-1">💰 Total ganado: $${totalEarned}</span>`;
+    bonusHTML += `<span class="block text-xs mt-1 text-slate-300">💳 Total acumulado: $${totalMoney}</span>`;
+    $('overlayBonus').innerHTML = bonusHTML;
     $('overlayBtn').textContent = level >= 40 ? 'Reiniciar' : 'Siguiente Pedido';
     $('overlayBtn').onclick = () => {
         if (level >= 40) level = 0;
@@ -1236,6 +1487,71 @@ function drawTile(tile) {
         if ((conn & DIR.N) && (conn & DIR.S)) { ctx.beginPath(); ctx.moveTo(0, -s/2); ctx.lineTo(0, s/2); ctx.stroke(); }
         if ((conn & DIR.E) && (conn & DIR.W)) { ctx.beginPath(); ctx.moveTo(-s/2, 0); ctx.lineTo(s/2, 0); ctx.stroke(); }
         ctx.setLineDash([]);
+    }
+    
+    // Dibujar indicador de dirección en piezas CROSS (cruz) para mostrar hacia dónde irá el carro
+    if (tile.type === TILE_TYPES.CROSS && gameState === 'EDITING') {
+        ctx.restore();
+        ctx.save();
+        
+        // Dibujar flechas en las 4 direcciones con colores
+        const arrowSize = TILE_SIZE * 0.12;
+        const arrowDist = TILE_SIZE * 0.35;
+        
+        // Fondo del indicador central
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.3)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, TILE_SIZE * 0.18, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Dibujar cruz con flechas direccionales
+        ctx.strokeStyle = '#60a5fa';
+        ctx.lineWidth = 2;
+        ctx.fillStyle = '#60a5fa';
+        
+        // Flecha Norte
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - arrowDist + arrowSize);
+        ctx.lineTo(cx - arrowSize, cy - arrowDist + arrowSize * 2);
+        ctx.lineTo(cx + arrowSize, cy - arrowDist + arrowSize * 2);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Flecha Sur
+        ctx.beginPath();
+        ctx.moveTo(cx, cy + arrowDist - arrowSize);
+        ctx.lineTo(cx - arrowSize, cy + arrowDist - arrowSize * 2);
+        ctx.lineTo(cx + arrowSize, cy + arrowDist - arrowSize * 2);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Flecha Este
+        ctx.beginPath();
+        ctx.moveTo(cx + arrowDist - arrowSize, cy);
+        ctx.lineTo(cx + arrowDist - arrowSize * 2, cy - arrowSize);
+        ctx.lineTo(cx + arrowDist - arrowSize * 2, cy + arrowSize);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Flecha Oeste
+        ctx.beginPath();
+        ctx.moveTo(cx - arrowDist + arrowSize, cy);
+        ctx.lineTo(cx - arrowDist + arrowSize * 2, cy - arrowSize);
+        ctx.lineTo(cx - arrowDist + arrowSize * 2, cy + arrowSize);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Símbolo de cruce en el centro
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `bold ${TILE_SIZE * 0.18}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('+', cx, cy);
+        
+        ctx.restore();
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(tile.rotation * Math.PI / 2);
     }
     
     if (tile.type === TILE_TYPES.START) {
@@ -1361,8 +1677,8 @@ function drawCar() {
         ctx.fillStyle = '#1f2937';
         ctx.beginPath(); ctx.roundRect(-8, -7, 10, 3, 1); ctx.fill();
         
-        // Caja de delivery con logo de empresa
-        ctx.fillStyle = waiting ? '#4b5563' : companyColor;
+        // Caja de delivery (sin logo de empresa - solo en header)
+        ctx.fillStyle = waiting ? '#4b5563' : '#ef4444';
         ctx.beginPath(); ctx.roundRect(-16, -10, 10, 12, 2); ctx.fill();
         // Borde de la caja
         ctx.strokeStyle = '#ffffff';
@@ -1461,14 +1777,9 @@ function drawCar() {
         ctx.fillStyle = '#dc2626';
         ctx.beginPath(); ctx.roundRect(-13, 0, 2, 4, 1); ctx.fill();
         
-        // Logo de empresa en el lateral
-        ctx.fillStyle = companyColor;
-        ctx.beginPath(); ctx.arc(0, 2, 3, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 4px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('🚗', 0, 2);
+        // Detalle en el lateral (sin logo de empresa - solo en header)
+        ctx.fillStyle = '#374151';
+        ctx.beginPath(); ctx.roundRect(-2, 1, 4, 3, 1); ctx.fill();
         
         // Parachoques
         ctx.fillStyle = '#374151';
@@ -1497,8 +1808,8 @@ function drawCar() {
         ctx.fillStyle = '#6b7280';
         ctx.beginPath(); ctx.arc(9, 6, 1.5, 0, Math.PI * 2); ctx.fill();
         
-        // Caja de carga
-        ctx.fillStyle = waiting ? '#4b5563' : companyColor;
+        // Caja de carga (sin logo de empresa - solo en header)
+        ctx.fillStyle = waiting ? '#4b5563' : '#6b7280';
         ctx.beginPath(); ctx.roundRect(-16, -8, 16, 14, 2); ctx.fill();
         ctx.strokeStyle = '#1f2937';
         ctx.lineWidth = 1;
@@ -1563,8 +1874,8 @@ function drawCar() {
         ctx.fillStyle = waiting ? '#6b7280' : mainColor;
         ctx.beginPath(); ctx.roundRect(-18, -8, 36, 16, 4); ctx.fill();
         
-        // Franja de empresa
-        ctx.fillStyle = companyColor;
+        // Franja decorativa (sin logo de empresa - solo en header)
+        ctx.fillStyle = '#374151';
         ctx.fillRect(-18, -2, 36, 4);
         
         // Ventanas superiores
@@ -1606,23 +1917,96 @@ function drawCar() {
         ctx.font = 'bold 3px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText('DELIVERY', 0, -8);
+    } else if (selectedVehicle === 'motoa') {
+        // Moto Premium - usando imagen motoa.png
+        const companyColor = companyColors[selectedCompany] || '#ef4444';
+        
+        // Sombra del vehículo
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.beginPath(); ctx.ellipse(0, 10, 14, 4, 0, 0, Math.PI * 2); ctx.fill();
+        
+        // Dibujar imagen de moto premium
+        if (premiumMotoImage.complete) {
+            ctx.drawImage(premiumMotoImage, -20, -15, 40, 30);
+        } else {
+            // Fallback si la imagen no carga - Moto deportiva dorada
+            // Rueda trasera
+            ctx.fillStyle = '#1a1a1a';
+            ctx.beginPath(); ctx.arc(-10, 5, 6, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#fbbf24';
+            ctx.beginPath(); ctx.arc(-10, 5, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#1a1a1a';
+            ctx.beginPath(); ctx.arc(-10, 5, 2, 0, Math.PI * 2); ctx.fill();
+            
+            // Rueda delantera
+            ctx.fillStyle = '#1a1a1a';
+            ctx.beginPath(); ctx.arc(12, 5, 6, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#fbbf24';
+            ctx.beginPath(); ctx.arc(12, 5, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#1a1a1a';
+            ctx.beginPath(); ctx.arc(12, 5, 2, 0, Math.PI * 2); ctx.fill();
+            
+            // Cuerpo deportivo dorado
+            ctx.fillStyle = waiting ? '#6b7280' : '#fbbf24';
+            ctx.beginPath();
+            ctx.moveTo(-14, 3);
+            ctx.lineTo(-8, -8);
+            ctx.lineTo(10, -8);
+            ctx.lineTo(16, 0);
+            ctx.lineTo(14, 5);
+            ctx.lineTo(-12, 5);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Detalles negros
+            ctx.fillStyle = '#1a1a1a';
+            ctx.beginPath(); ctx.roundRect(-6, -10, 12, 4, 2); ctx.fill();
+            
+            // Carenado
+            ctx.fillStyle = waiting ? '#4b5563' : '#f59e0b';
+            ctx.beginPath();
+            ctx.moveTo(8, -8);
+            ctx.lineTo(18, -4);
+            ctx.lineTo(18, 2);
+            ctx.lineTo(14, 4);
+            ctx.lineTo(8, -2);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Luz delantera dorada
+            ctx.fillStyle = '#fef3c7';
+            ctx.beginPath(); ctx.arc(17, -1, 3, 0, Math.PI * 2); ctx.fill();
+            
+            // Estrella premium
+            ctx.fillStyle = '#fbbf24';
+            ctx.font = 'bold 8px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('⭐', 0, -4);
+        }
+        
+        // Efecto de brillo premium
+        ctx.fillStyle = 'rgba(251, 191, 36, 0.3)';
+        ctx.beginPath();
+        ctx.arc(0, 0, 18, 0, Math.PI * 2);
+        ctx.fill();
     }
     
     // Indicador de dirección en modo edición
     if (gameState === 'EDITING') {
         ctx.fillStyle = 'rgba(74, 222, 128, 0.8)';
         ctx.beginPath();
-        const offset = selectedVehicle === 'bus' ? 24 : selectedVehicle === 'truck' ? 20 : selectedVehicle === 'moto' ? 18 : 16;
+        const offset = selectedVehicle === 'bus' ? 24 : selectedVehicle === 'truck' ? 20 : selectedVehicle === 'motoa' ? 22 : selectedVehicle === 'moto' ? 18 : 16;
         ctx.moveTo(offset + 6, 0);
         ctx.lineTo(offset - 2, -5);
         ctx.lineTo(offset - 2, 5);
         ctx.closePath();
         ctx.fill();
         
-        ctx.strokeStyle = 'rgba(74, 222, 128, 0.5)';
+        ctx.strokeStyle = selectedVehicle === 'motoa' ? 'rgba(251, 191, 36, 0.7)' : 'rgba(74, 222, 128, 0.5)';
         ctx.lineWidth = 2;
         ctx.setLineDash([3, 3]);
-        const radius = selectedVehicle === 'bus' ? 24 : selectedVehicle === 'truck' ? 22 : selectedVehicle === 'moto' ? 18 : 16;
+        const radius = selectedVehicle === 'bus' ? 24 : selectedVehicle === 'truck' ? 22 : selectedVehicle === 'motoa' ? 24 : selectedVehicle === 'moto' ? 18 : 16;
         ctx.beginPath();
         ctx.arc(0, 0, radius, 0, Math.PI * 2);
         ctx.stroke();
