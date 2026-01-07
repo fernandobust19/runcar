@@ -409,7 +409,8 @@
 
     <!-- Controls -->
     <div class="absolute bottom-3 w-full flex justify-center gap-2 px-3 z-10">
-        <button onclick="resetLevel()" class="btn-game bg-slate-600 hover:bg-slate-500 text-white p-3 rounded-xl shadow-lg border-b-4 border-slate-800">🔄</button>
+        <button onclick="resetLevel()" class="btn-game bg-slate-600 hover:bg-slate-500 text-white p-3 rounded-xl shadow-lg border-b-4 border-slate-800" title="Reiniciar nivel ($10)">🔄</button>
+        <button onclick="addExtraTime()" class="btn-game bg-orange-600 hover:bg-orange-500 text-white p-3 rounded-xl shadow-lg border-b-4 border-orange-800" title="+5 segundos ($5)">⏱️+5</button>
         <button onclick="startCar()" id="btnStart" class="btn-game bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded-xl text-base shadow-lg border-b-4 border-emerald-800">📦 ¡ENTREGAR!</button>
         <button onclick="toggleSound()" class="btn-game bg-blue-600 hover:bg-blue-500 text-white p-3 rounded-xl shadow-lg border-b-4 border-blue-800"><span id="soundIcon">🔊</span></button>
         <button onclick="openShop()" class="btn-game bg-yellow-600 hover:bg-yellow-500 text-white p-3 rounded-xl shadow-lg border-b-4 border-yellow-800">🛍️</button>
@@ -1048,12 +1049,69 @@ function rotateCar() {
 }
 
 function resetLevel() {
-    cancelAnimationFrame(animationId);
-    clearInterval(countdownTimer);
-    clearInterval(engineSoundInterval);
-    stopPrepAnimation();
-    $('orderReady').classList.add('hidden');
-    retryLevel(); // Reintentar manteniendo la posición de la casa
+    // Cobrar $10 por usar el botón de reinicio
+    const RESET_COST = 10;
+    
+    if (totalMoney < RESET_COST) {
+        alert('💰 No tienes suficiente dinero para reiniciar\n\nNecesitas: $' + RESET_COST + '\nTu dinero: $' + totalMoney + '\n\n💡 Continúa jugando para ganar más dinero');
+        return;
+    }
+    
+    if (confirm('🔄 ¿Reiniciar el nivel?\n\nCosto: $' + RESET_COST + '\nTu dinero actual: $' + totalMoney)) {
+        totalMoney -= RESET_COST;
+        $('moneyDisplay').textContent = totalMoney;
+        saveGameData(); // Guardar el cambio de dinero
+        
+        cancelAnimationFrame(animationId);
+        clearInterval(countdownTimer);
+        clearInterval(engineSoundInterval);
+        stopPrepAnimation();
+        $('orderReady').classList.add('hidden');
+        
+        playSound('rotate'); // Sonido de confirmación
+        retryLevel(); // Reintentar manteniendo la posición de la casa
+    }
+}
+
+function addExtraTime() {
+    // Cobrar $5 por agregar 5 segundos
+    const TIME_COST = 5;
+    const EXTRA_SECONDS = 5;
+    
+    if (gameState !== 'EDITING' && gameState !== 'RUNNING') {
+        alert('⚠️ Solo puedes agregar tiempo durante la preparación o entrega');
+        return;
+    }
+    
+    if (totalMoney < TIME_COST) {
+        alert('💰 No tienes suficiente dinero\n\nNecesitas: $' + TIME_COST + '\nTu dinero: $' + totalMoney);
+        return;
+    }
+    
+    if (confirm('⏱️ ¿Agregar ' + EXTRA_SECONDS + ' segundos?\n\nCosto: $' + TIME_COST + '\nTu dinero actual: $' + totalMoney)) {
+        totalMoney -= TIME_COST;
+        timeLeft += EXTRA_SECONDS;
+        maxTime += EXTRA_SECONDS; // También aumentar el máximo para el porcentaje
+        
+        $('moneyDisplay').textContent = totalMoney;
+        $('timerDisplay').textContent = `⏱️ ${timeLeft}`;
+        $('progressBar').style.width = `${(timeLeft / maxTime) * 100}%`;
+        
+        // Cambiar color de la barra si estaba en advertencia
+        if (timeLeft > 10) {
+            $('progressBar').className = 'progress-bar h-full bg-emerald-500 rounded-full';
+            $('timerDisplay').classList.remove('timer-warning');
+        } else if (timeLeft > 5) {
+            $('progressBar').className = 'progress-bar h-full bg-yellow-500 rounded-full';
+        }
+        
+        saveGameData(); // Guardar el cambio de dinero
+        playSound('money'); // Sonido de transacción
+        
+        // Mostrar feedback visual
+        $('timerDisplay').classList.add('pulse');
+        setTimeout(() => $('timerDisplay').classList.remove('pulse'), 500);
+    }
 }
 
 // Función para reintentar el nivel manteniendo la posición de la casa
@@ -1686,10 +1744,30 @@ function gameLoop() {
         const exits = conn & ~entry;
         let exitDir = 0;
         
-        if (exits & car.dir) exitDir = car.dir;
-        else [DIR.N, DIR.E, DIR.S, DIR.W].forEach(d => { if (!exitDir && (exits & d)) exitDir = d; });
+        // MEJORADO: Para piezas con múltiples salidas (T_JUNCTION, CROSS)
+        // Permite elegir CUALQUIER salida disponible
         
-        if (!exitDir) { crash('¡Callejón sin salida!'); return; }
+        // Recopilar todas las salidas disponibles
+        const availableExits = [];
+        [DIR.N, DIR.E, DIR.S, DIR.W].forEach(d => { 
+            if (exits & d) availableExits.push(d); 
+        });
+        
+        if (availableExits.length === 0) {
+            crash('¡Callejón sin salida!'); 
+            return;
+        } else if (availableExits.length === 1) {
+            // Solo una salida disponible
+            exitDir = availableExits[0];
+        } else {
+            // Múltiples salidas: priorizar seguir recto si es posible
+            if (exits & car.dir) {
+                exitDir = car.dir;
+            } else {
+                // Si no puede seguir recto, elegir ALEATORIAMENTE entre las salidas disponibles
+                exitDir = availableExits[Math.floor(Math.random() * availableExits.length)];
+            }
+        }
         
         const d = DIR_DELTA[exitDir];
         const nc = car.col + d.dc, nr = car.row + d.dr;
@@ -1907,13 +1985,13 @@ function drawTile(tile) {
         ctx.save();
         
         // Dibujar flechas en las 4 direcciones con colores
-        const arrowSize = TILE_SIZE * 0.12;
-        const arrowDist = TILE_SIZE * 0.35;
+        const arrowSize = TILE_SIZE * 0.07;
+        const arrowDist = TILE_SIZE * 0.28;
         
         // Fondo del indicador central
-        ctx.fillStyle = 'rgba(59, 130, 246, 0.3)';
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.2)';
         ctx.beginPath();
-        ctx.arc(cx, cy, TILE_SIZE * 0.18, 0, Math.PI * 2);
+        ctx.arc(cx, cy, TILE_SIZE * 0.12, 0, Math.PI * 2);
         ctx.fill();
         
         // Dibujar cruz con flechas direccionales
@@ -1955,10 +2033,62 @@ function drawTile(tile) {
         
         // Símbolo de cruce en el centro
         ctx.fillStyle = '#ffffff';
-        ctx.font = `bold ${TILE_SIZE * 0.18}px sans-serif`;
+        ctx.font = `bold ${TILE_SIZE * 0.12}px sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('+', cx, cy);
+        
+        ctx.restore();
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(tile.rotation * Math.PI / 2);
+    }
+    
+    // Indicador visual para T_JUNCTION mostrando las 3 salidas disponibles
+    if (tile.type === TILE_TYPES.T_JUNCTION && gameState === 'EDITING') {
+        ctx.restore();
+        ctx.save();
+        
+        const arrowSize = TILE_SIZE * 0.06;
+        const arrowDist = TILE_SIZE * 0.28;
+        
+        // Determinar qué direcciones tiene la T según su rotación
+        const baseConn = tile.type.base; // N, E, S por defecto
+        let directions = [];
+        
+        // Calcular las conexiones rotadas
+        const conn = tile.getConnections();
+        if (conn & DIR.N) directions.push({ x: cx, y: cy - arrowDist, angle: -90 });
+        if (conn & DIR.E) directions.push({ x: cx + arrowDist, y: cy, angle: 0 });
+        if (conn & DIR.S) directions.push({ x: cx, y: cy + arrowDist, angle: 90 });
+        if (conn & DIR.W) directions.push({ x: cx - arrowDist, y: cy, angle: 180 });
+        
+        // Dibujar flechas en las 3 direcciones de la T
+        ctx.fillStyle = '#10b981';
+        directions.forEach(dir => {
+            ctx.save();
+            ctx.translate(dir.x, dir.y);
+            ctx.rotate(dir.angle * Math.PI / 180);
+            ctx.beginPath();
+            ctx.moveTo(arrowSize, 0);
+            ctx.lineTo(-arrowSize, -arrowSize);
+            ctx.lineTo(-arrowSize, arrowSize);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        });
+        
+        // Círculo central indicando múltiples salidas
+        ctx.fillStyle = 'rgba(16, 185, 129, 0.2)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, TILE_SIZE * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `bold ${TILE_SIZE * 0.12}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('3', cx, cy);
         
         ctx.restore();
         ctx.save();
