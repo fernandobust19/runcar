@@ -394,7 +394,7 @@
         </div>
         
         <div id="overlay" class="hidden absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-20 rounded-xl p-3">
-            <img id="overlayImage" src="" alt="" class="hidden w-24 h-24 object-cover rounded-full border-4 border-emerald-400 mb-2 shadow-2xl">
+            <img id="overlayImage" src="" alt="" class="hidden w-48 h-48 object-cover rounded-2xl border-4 border-emerald-400 mb-3 shadow-2xl">
             <div class="text-5xl mb-2 animate-bounce" id="overlayIcon">🏆</div>
             <h2 class="text-xl font-bold mb-1 text-white text-center" id="overlayTitle"></h2>
             <p class="text-slate-300 text-xs mb-1 text-center" id="overlaySubtitle"></p>
@@ -2145,7 +2145,7 @@ function drawTile(tile) {
     const rw = TILE_SIZE * 0.45, h = rw / 2;
     
     ctx.save();
-    ctx.fillStyle = '#334155';
+    ctx.fillStyle = '#1a3a1a'; // Verde oscuro como césped/terreno
     ctx.fillRect(x + 1, y + 1, TILE_SIZE - 2, TILE_SIZE - 2);
     
     if (tile.type === TILE_TYPES.BLOCKED) {
@@ -2192,19 +2192,66 @@ function drawTile(tile) {
     ctx.translate(cx, cy);
     ctx.rotate(tile.rotation * Math.PI / 2);
     
-    let color = tile.isDeadEnd ? (tile.powered ? '#65a30d' : '#525252') : 
+    // Colores mejorados: asfalto gris para calles activas
+    let color = tile.isDeadEnd ? (tile.powered ? '#65a30d' : '#3a3a3a') : 
                 tile.type === TILE_TYPES.START ? '#10b981' : 
-                tile.powered ? '#4ade80' : '#64748b';
+                tile.powered ? '#5a5a5a' : '#4a4a4a';
     
     ctx.fillStyle = color;
     const conn = tile.type.base, s = TILE_SIZE;
     
+    // Dibujar calles
     if (conn & DIR.N) ctx.fillRect(-h, -s/2, rw, s/2 + h);
     if (conn & DIR.S) ctx.fillRect(-h, -h, rw, s/2 + h);
     if (conn & DIR.E) ctx.fillRect(-h, -h, s/2 + h, rw);
     if (conn & DIR.W) ctx.fillRect(-s/2, -h, s/2 + h, rw);
     
     ctx.beginPath(); ctx.arc(0, 0, h, 0, Math.PI * 2); ctx.fill();
+    
+    // Agregar veredas (bordes blancos delgados)
+    ctx.strokeStyle = '#d4d4d4';
+    ctx.lineWidth = 1.5;
+    
+    if (conn & DIR.N) {
+        ctx.beginPath();
+        ctx.moveTo(-h, -s/2);
+        ctx.lineTo(-h, 0);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(h, -s/2);
+        ctx.lineTo(h, 0);
+        ctx.stroke();
+    }
+    if (conn & DIR.S) {
+        ctx.beginPath();
+        ctx.moveTo(-h, s/2);
+        ctx.lineTo(-h, 0);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(h, s/2);
+        ctx.lineTo(h, 0);
+        ctx.stroke();
+    }
+    if (conn & DIR.E) {
+        ctx.beginPath();
+        ctx.moveTo(s/2, -h);
+        ctx.lineTo(0, -h);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(s/2, h);
+        ctx.lineTo(0, h);
+        ctx.stroke();
+    }
+    if (conn & DIR.W) {
+        ctx.beginPath();
+        ctx.moveTo(-s/2, -h);
+        ctx.lineTo(0, -h);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-s/2, h);
+        ctx.lineTo(0, h);
+        ctx.stroke();
+    }
     
     if (!tile.isDeadEnd && !tile.type.noArrows) {
         ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 2]);
@@ -2223,123 +2270,6 @@ function drawTile(tile) {
         }
         
         ctx.setLineDash([]);
-    }
-    
-    // Dibujar indicador de dirección en piezas CROSS (cruz) para mostrar hacia dónde irá el carro
-    if (tile.type === TILE_TYPES.CROSS && gameState === 'EDITING') {
-        ctx.restore();
-        ctx.save();
-        
-        // Dibujar flechas en las 4 direcciones con colores
-        const arrowSize = TILE_SIZE * 0.07;
-        const arrowDist = TILE_SIZE * 0.28;
-        
-        // Fondo del indicador central
-        ctx.fillStyle = 'rgba(59, 130, 246, 0.2)';
-        ctx.beginPath();
-        ctx.arc(cx, cy, TILE_SIZE * 0.12, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Dibujar cruz con flechas direccionales
-        ctx.strokeStyle = '#60a5fa';
-        ctx.lineWidth = 2;
-        ctx.fillStyle = '#60a5fa';
-        
-        // Flecha Norte
-        ctx.beginPath();
-        ctx.moveTo(cx, cy - arrowDist + arrowSize);
-        ctx.lineTo(cx - arrowSize, cy - arrowDist + arrowSize * 2);
-        ctx.lineTo(cx + arrowSize, cy - arrowDist + arrowSize * 2);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Flecha Sur
-        ctx.beginPath();
-        ctx.moveTo(cx, cy + arrowDist - arrowSize);
-        ctx.lineTo(cx - arrowSize, cy + arrowDist - arrowSize * 2);
-        ctx.lineTo(cx + arrowSize, cy + arrowDist - arrowSize * 2);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Flecha Este
-        ctx.beginPath();
-        ctx.moveTo(cx + arrowDist - arrowSize, cy);
-        ctx.lineTo(cx + arrowDist - arrowSize * 2, cy - arrowSize);
-        ctx.lineTo(cx + arrowDist - arrowSize * 2, cy + arrowSize);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Flecha Oeste
-        ctx.beginPath();
-        ctx.moveTo(cx - arrowDist + arrowSize, cy);
-        ctx.lineTo(cx - arrowDist + arrowSize * 2, cy - arrowSize);
-        ctx.lineTo(cx - arrowDist + arrowSize * 2, cy + arrowSize);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Símbolo de cruce en el centro
-        ctx.fillStyle = '#ffffff';
-        ctx.font = `bold ${TILE_SIZE * 0.12}px sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('+', cx, cy);
-        
-        ctx.restore();
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate(tile.rotation * Math.PI / 2);
-    }
-    
-    // Indicador visual para T_JUNCTION mostrando las 3 salidas disponibles
-    if (tile.type === TILE_TYPES.T_JUNCTION && gameState === 'EDITING') {
-        ctx.restore();
-        ctx.save();
-        
-        const arrowSize = TILE_SIZE * 0.06;
-        const arrowDist = TILE_SIZE * 0.28;
-        
-        // Determinar qué direcciones tiene la T según su rotación
-        const baseConn = tile.type.base; // N, E, S por defecto
-        let directions = [];
-        
-        // Calcular las conexiones rotadas
-        const conn = tile.getConnections();
-        if (conn & DIR.N) directions.push({ x: cx, y: cy - arrowDist, angle: -90 });
-        if (conn & DIR.E) directions.push({ x: cx + arrowDist, y: cy, angle: 0 });
-        if (conn & DIR.S) directions.push({ x: cx, y: cy + arrowDist, angle: 90 });
-        if (conn & DIR.W) directions.push({ x: cx - arrowDist, y: cy, angle: 180 });
-        
-        // Dibujar flechas en las 3 direcciones de la T
-        ctx.fillStyle = '#10b981';
-        directions.forEach(dir => {
-            ctx.save();
-            ctx.translate(dir.x, dir.y);
-            ctx.rotate(dir.angle * Math.PI / 180);
-            ctx.beginPath();
-            ctx.moveTo(arrowSize, 0);
-            ctx.lineTo(-arrowSize, -arrowSize);
-            ctx.lineTo(-arrowSize, arrowSize);
-            ctx.closePath();
-            ctx.fill();
-            ctx.restore();
-        });
-        
-        // Círculo central indicando múltiples salidas
-        ctx.fillStyle = 'rgba(16, 185, 129, 0.2)';
-        ctx.beginPath();
-        ctx.arc(cx, cy, TILE_SIZE * 0.1, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.fillStyle = '#ffffff';
-        ctx.font = `bold ${TILE_SIZE * 0.12}px sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('3', cx, cy);
-        
-        ctx.restore();
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate(tile.rotation * Math.PI / 2);
     }
     
     if (tile.type === TILE_TYPES.START) {
