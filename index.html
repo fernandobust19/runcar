@@ -313,7 +313,7 @@
                     <p class="text-yellow-400 text-xs text-center mt-3 mb-2">⭐ Vehículos Premium</p>
                     <div class="flex justify-center gap-3">
                         <button onclick="selectPremiumMoto()" id="btn-motoa" class="vehicle-btn bg-slate-700 rounded-xl relative">
-                            <img src="motoa.png" alt="Moto Premium" class="w-10 h-10 object-contain mx-auto">
+                            <img src="motoa.gif" alt="Moto Premium" class="w-10 h-10 object-contain mx-auto">
                             <p class="text-xs text-yellow-400 mt-1">Premium</p>
                             <span id="motoLock" class="absolute -top-2 -right-2 text-lg">🔒</span>
                             <span id="motoPrice" class="absolute -bottom-2 left-0 right-0 text-[9px] text-yellow-300 bg-slate-900/90 rounded-full py-0.5">$2,000</span>
@@ -428,7 +428,7 @@
                 <!-- Moto Premium -->
                 <div id="shopMoto" class="flex items-center justify-between bg-slate-700 p-3 rounded-xl border-2 border-transparent hover:border-yellow-400 cursor-pointer transition-all" onclick="buyVehicle('motoa')">
                     <div class="flex items-center gap-3">
-                        <img src="motoa.png" alt="Moto Premium" class="w-12 h-12 object-contain">
+                        <img src="motoa.gif" alt="Moto Premium" class="w-12 h-12 object-contain">
                         <div>
                             <p class="text-white font-bold">Moto Premium</p>
                             <p class="text-yellow-400 text-sm" id="shopMotoStatus">$2,000</p>
@@ -497,7 +497,7 @@ const vehicleEmojis = {
 
 // Imagen de moto premium
 let premiumMotoImage = new Image();
-premiumMotoImage.src = 'motoa.png';
+premiumMotoImage.src = 'motoa.gif';
 
 // Imagen de camioneta premium
 let premiumTruckImage = new Image();
@@ -821,7 +821,7 @@ function startGame() {
     $('driverDisplay').textContent = driverName;
     // Mostrar icono o imagen del vehículo
     if (selectedVehicle === 'motoa') {
-        $('vehicleIcon').innerHTML = '<img src="motoa.png" alt="Moto Premium" style="width:20px;height:20px;display:inline;vertical-align:middle;">';
+        $('vehicleIcon').innerHTML = '<img src="motoa.gif" alt="Moto Premium" style="width:20px;height:20px;display:inline;vertical-align:middle;">';
     } else if (selectedVehicle === 'trucka') {
         $('vehicleIcon').innerHTML = '<img src="camionetaa.png" alt="Camioneta Premium" style="width:20px;height:20px;display:inline;vertical-align:middle;">';
     } else {
@@ -1784,7 +1784,7 @@ function win() {
         
         // Actualizar icono del vehículo si cambió (por compra)
         if (selectedVehicle === 'motoa') {
-            $('vehicleIcon').innerHTML = '<img src="motoa.png" alt="Moto Premium" style="width:20px;height:20px;display:inline;vertical-align:middle;">';
+            $('vehicleIcon').innerHTML = '<img src="motoa.gif" alt="Moto Premium" style="width:20px;height:20px;display:inline;vertical-align:middle;">';
         } else if (selectedVehicle === 'trucka') {
             $('vehicleIcon').innerHTML = '<img src="camionetaa.png" alt="Camioneta Premium" style="width:20px;height:20px;display:inline;vertical-align:middle;">';
         } else {
@@ -2330,7 +2330,7 @@ function drawCar() {
         ctx.textAlign = 'center';
         ctx.fillText('DELIVERY', 0, -8);
     } else if (selectedVehicle === 'motoa') {
-        // Moto Premium - usando imagen motoa.png
+        // Moto Premium - usando imagen motoa.gif
         const companyColor = companyColors[selectedCompany] || '#ef4444';
         
         // Sombra del vehículo
