@@ -317,6 +317,12 @@
             display: inline-block;
             animation: iconBounce 0.6s ease-in-out;
         }
+        .game-modal-icon img {
+            width: 120px;
+            height: 120px;
+            object-fit: contain;
+            image-rendering: auto;
+        }
         @keyframes iconBounce {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-10px); }
@@ -553,6 +559,7 @@
             <p class="text-slate-300 text-xs mb-1 text-center" id="overlaySubtitle"></p>
             <p class="text-yellow-400 text-[10px] mb-3" id="overlayBonus"></p>
             <button id="overlayBtn" class="bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-2 px-6 rounded-full shadow-lg btn-game text-sm">Siguiente</button>
+            <p class="text-white text-xs mt-3 opacity-90" id="overlayFooter"></p>
         </div>
     </div>
 
@@ -690,8 +697,15 @@ function showGameModal(options) {
     const message = $('gameModalMessage');
     const buttons = $('gameModalButtons');
     
-    // Configurar contenido
-    icon.textContent = options.icon || '🎮';
+    // Configurar icono o imagen
+    if (options.iconImage) {
+        // Mostrar imagen en lugar de emoji
+        icon.innerHTML = `<img src="${options.iconImage}" alt="Vehículo">`;
+    } else {
+        // Mostrar emoji
+        icon.textContent = options.icon || '🎮';
+    }
+    
     title.textContent = options.title || 'Notificación';
     message.innerHTML = options.message || '';
     
@@ -822,7 +836,7 @@ function selectPremiumMoto() {
                     selectVehicle('motoa');
                     playSound('money');
                     showGameModal({
-                        icon: '🎉',
+                        iconImage: 'motoa.gif',
                         title: '¡Compra Exitosa!',
                         message: '<strong>🏍️ Moto Premium desbloqueada!</strong><br>¡Ahora eres un repartidor de élite!',
                         type: 'success'
@@ -863,7 +877,7 @@ function selectPremiumTruck() {
                     selectVehicle('trucka');
                     playSound('money');
                     showGameModal({
-                        icon: '🎉',
+                        iconImage: 'camionetaa.png',
                         title: '¡Compra Exitosa!',
                         message: '<strong>🚚 Camioneta Premium desbloqueada!</strong><br>¡Máxima capacidad de carga!',
                         type: 'success'
@@ -969,7 +983,7 @@ function buyVehicle(vehicleType) {
                     updateShopUI();
                     saveGameData();
                     showGameModal({
-                        icon: '🎉',
+                        iconImage: 'motoa.gif',
                         title: '¡Compra Exitosa!',
                         message: '<strong>🏍️ Moto Premium desbloqueada!</strong><br>⚡ ¡Aparecerá en el siguiente nivel!',
                         type: 'success'
@@ -1016,7 +1030,7 @@ function buyVehicle(vehicleType) {
                     updateShopUI();
                     saveGameData();
                     showGameModal({
-                        icon: '🎉',
+                        iconImage: 'camionetaa.png',
                         title: '¡Compra Exitosa!',
                         message: '<strong>🚚 Camioneta Premium desbloqueada!</strong><br>⚡ ¡Aparecerá en el siguiente nivel!',
                         type: 'success'
@@ -2316,6 +2330,7 @@ function timeExpired() {
     $('overlaySubtitle').textContent = 'El cliente canceló el pedido';
     $('overlayBonus').innerHTML = `<span class="text-red-400 text-lg">💸 Penalización: -$${penalty}</span><br><span class="text-lg mt-2 block">💰 Total: $${totalMoney}</span>`;
     $('overlayBtn').textContent = '🔄 Reintentar';
+    $('overlayFooter').textContent = '';
     $('overlayBtn').onclick = retryLevel;
     $('overlay').classList.remove('hidden');
 }
@@ -2544,9 +2559,10 @@ function crash(msg) {
     $('overlay').classList.add('failure-bg');
     
     $('overlayTitle').textContent = '¡CHOQUE! 💥';
-    $('overlaySubtitle').textContent = msg;
-    $('overlayBonus').textContent = '🏠 El cliente aún espera su pedido...';
-    $('overlayBtn').textContent = 'Reintentar';
+    $('overlaySubtitle').textContent = '';
+    $('overlayBonus').textContent = '';
+    $('overlayBtn').textContent = '🔄 Reintentar';
+    $('overlayFooter').textContent = '🏠 El cliente aún espera su pedido...';
     $('overlayBtn').onclick = retryLevel; // Reintentar mismo nivel, misma casa
     $('overlay').classList.remove('hidden');
 }
@@ -2596,6 +2612,7 @@ function win() {
     // Ocultar el emoji y mostrar la imagen, quitar fondo de fallo
     $('overlayIcon').classList.add('hidden');
     $('overlay').classList.remove('failure-bg');
+    $('overlayFooter').textContent = '';
     
     $('overlayTitle').textContent = '¡ENTREGA #' + level + ' COMPLETADA!';
     $('overlaySubtitle').textContent = `⭐⭐⭐⭐⭐ ${speedMessage}`;
@@ -2765,48 +2782,112 @@ function drawTile(tile) {
     
     ctx.beginPath(); ctx.arc(0, 0, h, 0, Math.PI * 2); ctx.fill();
     
-    // Agregar veredas (bordes blancos delgados)
-    ctx.strokeStyle = '#d4d4d4';
-    ctx.lineWidth = 1.5;
+    // Agregar veredas (bordes grises que cierran completamente la calle)
+    ctx.strokeStyle = '#9ca3af';
+    ctx.lineWidth = 1.2;
+    ctx.lineCap = 'square';
     
     if (conn & DIR.N) {
+        // Vereda izquierda Norte
         ctx.beginPath();
         ctx.moveTo(-h, -s/2);
         ctx.lineTo(-h, 0);
         ctx.stroke();
+        // Vereda derecha Norte
         ctx.beginPath();
         ctx.moveTo(h, -s/2);
         ctx.lineTo(h, 0);
         ctx.stroke();
+        // Cierre superior
+        if (!(conn & DIR.N)) {
+            ctx.beginPath();
+            ctx.moveTo(-h, -s/2);
+            ctx.lineTo(h, -s/2);
+            ctx.stroke();
+        }
+    } else {
+        // Si no hay conexión al Norte, dibujar línea horizontal de cierre
+        ctx.beginPath();
+        ctx.moveTo(-h, -h);
+        ctx.lineTo(h, -h);
+        ctx.stroke();
     }
+    
     if (conn & DIR.S) {
+        // Vereda izquierda Sur
         ctx.beginPath();
         ctx.moveTo(-h, s/2);
         ctx.lineTo(-h, 0);
         ctx.stroke();
+        // Vereda derecha Sur
         ctx.beginPath();
         ctx.moveTo(h, s/2);
         ctx.lineTo(h, 0);
         ctx.stroke();
+        // Cierre inferior
+        if (!(conn & DIR.S)) {
+            ctx.beginPath();
+            ctx.moveTo(-h, s/2);
+            ctx.lineTo(h, s/2);
+            ctx.stroke();
+        }
+    } else {
+        // Si no hay conexión al Sur, dibujar línea horizontal de cierre
+        ctx.beginPath();
+        ctx.moveTo(-h, h);
+        ctx.lineTo(h, h);
+        ctx.stroke();
     }
+    
     if (conn & DIR.E) {
+        // Vereda superior Este
         ctx.beginPath();
         ctx.moveTo(s/2, -h);
         ctx.lineTo(0, -h);
         ctx.stroke();
+        // Vereda inferior Este
         ctx.beginPath();
         ctx.moveTo(s/2, h);
         ctx.lineTo(0, h);
         ctx.stroke();
+        // Cierre derecho
+        if (!(conn & DIR.E)) {
+            ctx.beginPath();
+            ctx.moveTo(s/2, -h);
+            ctx.lineTo(s/2, h);
+            ctx.stroke();
+        }
+    } else {
+        // Si no hay conexión al Este, dibujar línea vertical de cierre
+        ctx.beginPath();
+        ctx.moveTo(h, -h);
+        ctx.lineTo(h, h);
+        ctx.stroke();
     }
+    
     if (conn & DIR.W) {
+        // Vereda superior Oeste
         ctx.beginPath();
         ctx.moveTo(-s/2, -h);
         ctx.lineTo(0, -h);
         ctx.stroke();
+        // Vereda inferior Oeste
         ctx.beginPath();
         ctx.moveTo(-s/2, h);
         ctx.lineTo(0, h);
+        ctx.stroke();
+        // Cierre izquierdo
+        if (!(conn & DIR.W)) {
+            ctx.beginPath();
+            ctx.moveTo(-s/2, -h);
+            ctx.lineTo(-s/2, h);
+            ctx.stroke();
+        }
+    } else {
+        // Si no hay conexión al Oeste, dibujar línea vertical de cierre
+        ctx.beginPath();
+        ctx.moveTo(-h, -h);
+        ctx.lineTo(-h, h);
         ctx.stroke();
     }
     
