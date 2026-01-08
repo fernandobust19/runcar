@@ -232,6 +232,146 @@
             from { transform: translateX(-5px); }
             to { transform: translateX(5px); }
         }
+        
+        /* Overlay con imagen de fondo de fallo */
+        #overlay.failure-bg {
+            background-image: url('fallo.jpeg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        #overlay.failure-bg::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(15, 23, 42, 0.85));
+            border-radius: 0.75rem;
+            backdrop-filter: blur(2px);
+        }
+        #overlay.failure-bg > * {
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+        }
+        #overlay.failure-bg #overlayTitle {
+            color: #fbbf24;
+            font-size: 2rem;
+            font-weight: 900;
+            text-shadow: 0 0 20px rgba(251, 191, 36, 0.5), 0 2px 8px rgba(0, 0, 0, 0.9);
+        }
+        #overlay.failure-bg #overlaySubtitle {
+            font-size: 1.1rem;
+            color: #fecaca;
+        }
+        #overlay.failure-bg #overlayBtn {
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+        }
+        
+        /* Modal de notificación personalizado */
+        .game-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            animation: fadeIn 0.2s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .game-modal-content {
+            background: linear-gradient(135deg, #1e293b, #334155);
+            border: 3px solid #10b981;
+            border-radius: 20px;
+            padding: 25px 30px;
+            max-width: 90%;
+            width: 400px;
+            box-shadow: 0 10px 40px rgba(16, 185, 129, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
+            animation: modalPop 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            text-align: center;
+        }
+        @keyframes modalPop {
+            0% { transform: scale(0.5) translateY(-50px); opacity: 0; }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        .game-modal-icon {
+            font-size: 60px;
+            margin-bottom: 15px;
+            display: inline-block;
+            animation: iconBounce 0.6s ease-in-out;
+        }
+        @keyframes iconBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .game-modal-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #fbbf24;
+            margin-bottom: 12px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        .game-modal-message {
+            font-size: 16px;
+            color: #e2e8f0;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        .game-modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        .game-modal-btn {
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.3);
+        }
+        .game-modal-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
+        }
+        .game-modal-btn-primary {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+        .game-modal-btn-primary:hover {
+            background: linear-gradient(135deg, #059669, #047857);
+        }
+        .game-modal-btn-secondary {
+            background: linear-gradient(135deg, #64748b, #475569);
+            color: white;
+        }
+        .game-modal-btn-secondary:hover {
+            background: linear-gradient(135deg, #475569, #334155);
+        }
+        .game-modal.error .game-modal-content {
+            border-color: #ef4444;
+            box-shadow: 0 10px 40px rgba(239, 68, 68, 0.4);
+        }
+        .game-modal.error .game-modal-title {
+            color: #fca5a5;
+        }
+        .game-modal.success .game-modal-content {
+            border-color: #10b981;
+            box-shadow: 0 10px 40px rgba(16, 185, 129, 0.5);
+        }
+        .game-modal.warning .game-modal-content {
+            border-color: #f59e0b;
+            box-shadow: 0 10px 40px rgba(245, 158, 11, 0.4);
+        }
+        .game-modal.warning .game-modal-title {
+            color: #fbbf24;
+        }
     </style>
 </head>
 <body class="h-screen w-screen flex flex-col items-center justify-center overflow-hidden">
@@ -415,7 +555,7 @@
 
     <!-- Controls -->
     <div class="absolute bottom-2 w-full flex justify-center gap-1 px-2 z-10">
-        <button onclick="resetLevel()" class="btn-game bg-slate-600 hover:bg-slate-500 text-white p-2 rounded-lg shadow-md border-b-2 border-slate-800 text-sm" title="Reiniciar ($10)">🔄</button>
+        <button onclick="resetLevel()" class="btn-game bg-slate-600 hover:bg-slate-500 text-white p-2 rounded-lg shadow-md border-b-2 border-slate-800 text-sm" title="Reiniciar ($100)">🔄</button>
         <button onclick="instantDeliver()" class="btn-game bg-pink-600 hover:bg-pink-500 text-white p-2 rounded-lg shadow-md border-b-2 border-pink-800 text-xs" title="Entregar Ya ($50)">⚡</button>
         <button onclick="addExtraTime()" class="btn-game bg-orange-600 hover:bg-orange-500 text-white p-2 rounded-lg shadow-md border-b-2 border-orange-800 text-xs" title="+5 seg ($5)">⏱️+5</button>
         <button onclick="toggleBridgeMode()" id="btnBridge" class="btn-game bg-purple-600 hover:bg-purple-500 text-white p-2 rounded-lg shadow-md border-b-2 border-purple-800 relative text-sm" title="Puente">
@@ -425,6 +565,16 @@
         <button onclick="toggleSound()" class="btn-game bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-lg shadow-md border-b-2 border-blue-800 text-sm"><span id="soundIcon">🔊</span></button>
         <button onclick="openShop()" class="btn-game bg-yellow-600 hover:bg-yellow-500 text-white p-2 rounded-lg shadow-md border-b-2 border-yellow-800 text-sm">🛍️</button>
         <button onclick="showMenu()" class="btn-game bg-purple-600 hover:bg-purple-500 text-white p-2 rounded-lg shadow-md border-b-2 border-purple-800 text-sm">☰</button>
+    </div>
+
+    <!-- MODAL DE NOTIFICACIÓN PERSONALIZADO -->
+    <div id="gameModal" class="game-modal hidden">
+        <div class="game-modal-content">
+            <div class="game-modal-icon" id="gameModalIcon">🎮</div>
+            <div class="game-modal-title" id="gameModalTitle">Título</div>
+            <div class="game-modal-message" id="gameModalMessage">Mensaje</div>
+            <div class="game-modal-buttons" id="gameModalButtons"></div>
+        </div>
     </div>
 
     <!-- TIENDA / SHOP MODAL -->
@@ -519,6 +669,78 @@ const vehicleEmojis = {
     trucka: '🚚'  // Camioneta premium
 };
 
+// ============ SISTEMA DE MODALES PERSONALIZADOS ============
+function showGameModal(options) {
+    const modal = $('gameModal');
+    const icon = $('gameModalIcon');
+    const title = $('gameModalTitle');
+    const message = $('gameModalMessage');
+    const buttons = $('gameModalButtons');
+    
+    // Configurar contenido
+    icon.textContent = options.icon || '🎮';
+    title.textContent = options.title || 'Notificación';
+    message.innerHTML = options.message || '';
+    
+    // Configurar tipo (success, error, warning)
+    modal.className = 'game-modal';
+    if (options.type) modal.classList.add(options.type);
+    
+    // Configurar botones
+    buttons.innerHTML = '';
+    if (options.buttons) {
+        options.buttons.forEach(btn => {
+            const button = document.createElement('button');
+            button.className = `game-modal-btn ${btn.primary ? 'game-modal-btn-primary' : 'game-modal-btn-secondary'}`;
+            button.textContent = btn.text;
+            button.onclick = () => {
+                hideGameModal();
+                if (btn.onClick) btn.onClick();
+            };
+            buttons.appendChild(button);
+        });
+    } else {
+        // Botón por defecto
+        const button = document.createElement('button');
+        button.className = 'game-modal-btn game-modal-btn-primary';
+        button.textContent = 'OK';
+        button.onclick = hideGameModal;
+        buttons.appendChild(button);
+    }
+    
+    // Mostrar modal
+    modal.classList.remove('hidden');
+    playSound('warning');
+}
+
+function hideGameModal() {
+    $('gameModal').classList.add('hidden');
+}
+
+function showConfirmModal(options) {
+    return new Promise((resolve) => {
+        showGameModal({
+            icon: options.icon || '❓',
+            title: options.title || 'Confirmar',
+            message: options.message || '¿Estás seguro?',
+            type: options.type || 'warning',
+            buttons: [
+                {
+                    text: options.cancelText || 'Cancelar',
+                    primary: false,
+                    onClick: () => resolve(false)
+                },
+                {
+                    text: options.confirmText || 'Confirmar',
+                    primary: true,
+                    onClick: () => resolve(true)
+                }
+            ]
+        });
+    });
+}
+
+
 // Imagen de moto premium
 let premiumMotoImage = new Image();
 premiumMotoImage.src = 'motoa.gif';
@@ -569,19 +791,38 @@ function selectPremiumMoto() {
     } else {
         // Mostrar opción de compra
         if (totalMoney >= PREMIUM_MOTO_PRICE) {
-            if (confirm(`¿Comprar Moto Premium por $${PREMIUM_MOTO_PRICE}?\n\nTu dinero: $${totalMoney}`)) {
-                totalMoney -= PREMIUM_MOTO_PRICE;
-                premiumMotoUnlocked = true;
-                $('moneyDisplay').textContent = totalMoney;
-                $('motoLock').textContent = '⭐';
-                $('motoPrice').textContent = 'TUYA';
-                $('motoPrice').classList.add('text-emerald-400');
-                selectVehicle('motoa');
-                playSound('money');
-                alert('🎉 ¡Moto Premium desbloqueada! ¡Ahora eres un repartidor de élite!');
-            }
+            showConfirmModal({
+                icon: '🏍️',
+                title: 'Moto Premium',
+                message: `<strong>¿Comprar Moto Premium por $${PREMIUM_MOTO_PRICE}?</strong><br><br>💰 Tu dinero: <span style="color:#fbbf24">$${totalMoney}</span><br>⚡ ¡Velocidad máxima!`,
+                type: 'warning',
+                confirmText: '🛒 Comprar',
+                cancelText: '❌ Cancelar'
+            }).then(confirmed => {
+                if (confirmed) {
+                    totalMoney -= PREMIUM_MOTO_PRICE;
+                    premiumMotoUnlocked = true;
+                    $('moneyDisplay').textContent = totalMoney;
+                    $('motoLock').textContent = '⭐';
+                    $('motoPrice').textContent = 'TUYA';
+                    $('motoPrice').classList.add('text-emerald-400');
+                    selectVehicle('motoa');
+                    playSound('money');
+                    showGameModal({
+                        icon: '🎉',
+                        title: '¡Compra Exitosa!',
+                        message: '<strong>🏍️ Moto Premium desbloqueada!</strong><br>¡Ahora eres un repartidor de élite!',
+                        type: 'success'
+                    });
+                }
+            });
         } else {
-            alert(`💰 Necesitas $${PREMIUM_MOTO_PRICE} para comprar la Moto Premium.\n\nTu dinero actual: $${totalMoney}\nTe faltan: $${PREMIUM_MOTO_PRICE - totalMoney}`);
+            showGameModal({
+                icon: '💸',
+                title: 'Dinero Insuficiente',
+                message: `<strong>Necesitas $${PREMIUM_MOTO_PRICE} para la Moto Premium</strong><br><br>💰 Tu dinero: <span style="color:#fbbf24">$${totalMoney}</span><br>🚫 Te faltan: <span style="color:#ef4444">$${PREMIUM_MOTO_PRICE - totalMoney}</span>`,
+                type: 'error'
+            });
         }
     }
 }
@@ -591,19 +832,38 @@ function selectPremiumTruck() {
         selectVehicle('trucka');
     } else {
         if (totalMoney >= PREMIUM_TRUCK_PRICE) {
-            if (confirm(`¿Comprar Camioneta Premium por $${PREMIUM_TRUCK_PRICE}?\n\nTu dinero: $${totalMoney}`)) {
-                totalMoney -= PREMIUM_TRUCK_PRICE;
-                premiumTruckUnlocked = true;
-                $('moneyDisplay').textContent = totalMoney;
-                $('truckLock').textContent = '⭐';
-                $('truckPrice').textContent = 'TUYA';
-                $('truckPrice').classList.add('text-emerald-400');
-                selectVehicle('trucka');
-                playSound('money');
-                alert('🎉 ¡Camioneta Premium desbloqueada! ¡Máxima capacidad de carga!');
-            }
+            showConfirmModal({
+                icon: '🚚',
+                title: 'Camioneta Premium',
+                message: `<strong>¿Comprar Camioneta Premium por $${PREMIUM_TRUCK_PRICE}?</strong><br><br>💰 Tu dinero: <span style="color:#fbbf24">$${totalMoney}</span><br>📦 ¡Máxima capacidad!`,
+                type: 'warning',
+                confirmText: '🛒 Comprar',
+                cancelText: '❌ Cancelar'
+            }).then(confirmed => {
+                if (confirmed) {
+                    totalMoney -= PREMIUM_TRUCK_PRICE;
+                    premiumTruckUnlocked = true;
+                    $('moneyDisplay').textContent = totalMoney;
+                    $('truckLock').textContent = '⭐';
+                    $('truckPrice').textContent = 'TUYA';
+                    $('truckPrice').classList.add('text-emerald-400');
+                    selectVehicle('trucka');
+                    playSound('money');
+                    showGameModal({
+                        icon: '🎉',
+                        title: '¡Compra Exitosa!',
+                        message: '<strong>🚚 Camioneta Premium desbloqueada!</strong><br>¡Máxima capacidad de carga!',
+                        type: 'success'
+                    });
+                }
+            });
         } else {
-            alert(`💰 Necesitas $${PREMIUM_TRUCK_PRICE} para comprar la Camioneta Premium.\n\nTu dinero actual: $${totalMoney}\nTe faltan: $${PREMIUM_TRUCK_PRICE - totalMoney}`);
+            showGameModal({
+                icon: '💸',
+                title: 'Dinero Insuficiente',
+                message: `<strong>Necesitas $${PREMIUM_TRUCK_PRICE} para la Camioneta Premium</strong><br><br>💰 Tu dinero: <span style="color:#fbbf24">$${totalMoney}</span><br>🚫 Te faltan: <span style="color:#ef4444">$${PREMIUM_TRUCK_PRICE - totalMoney}</span>`,
+                type: 'error'
+            });
         }
     }
 }
@@ -666,72 +926,140 @@ function updateShopUI() {
 function buyVehicle(vehicleType) {
     if (vehicleType === 'motoa') {
         if (premiumMotoUnlocked) {
-            alert('🏍️ ¡Ya tienes la Moto Premium! Selecciónala desde el menú principal.');
+            showGameModal({
+                icon: '🏍️',
+                title: 'Ya Comprada',
+                message: '<strong>¡Ya tienes la Moto Premium!</strong><br>Selecciónala desde el menú principal',
+                type: 'success'
+            });
         } else if (totalMoney >= PREMIUM_MOTO_PRICE) {
-            if (confirm(`¿Comprar Moto Premium por $${PREMIUM_MOTO_PRICE}?\n\n¡Aparecerá automáticamente en el siguiente nivel!`)) {
-                totalMoney -= PREMIUM_MOTO_PRICE;
-                premiumMotoUnlocked = true;
-                selectedVehicle = 'motoa'; // ¡Activar inmediatamente!
-                $('moneyDisplay').textContent = totalMoney;
-                $('shopMoney').textContent = totalMoney;
-                if ($('motoLock')) $('motoLock').textContent = '⭐';
-                if ($('motoPrice')) {
-                    $('motoPrice').textContent = 'TUYA';
-                    $('motoPrice').classList.add('text-emerald-400');
+            showConfirmModal({
+                icon: '🏍️',
+                title: 'Moto Premium',
+                message: `<strong>¿Comprar Moto Premium por $${PREMIUM_MOTO_PRICE}?</strong><br><br>⚡ ¡Aparecerá en el siguiente nivel!<br>💰 Tu dinero: <span style="color:#fbbf24">$${totalMoney}</span>`,
+                type: 'warning',
+                confirmText: '🛒 Comprar',
+                cancelText: '❌ Cancelar'
+            }).then(confirmed => {
+                if (confirmed) {
+                    totalMoney -= PREMIUM_MOTO_PRICE;
+                    premiumMotoUnlocked = true;
+                    selectedVehicle = 'motoa';
+                    $('moneyDisplay').textContent = totalMoney;
+                    $('shopMoney').textContent = totalMoney;
+                    if ($('motoLock')) $('motoLock').textContent = '⭐';
+                    if ($('motoPrice')) {
+                        $('motoPrice').textContent = 'TUYA';
+                        $('motoPrice').classList.add('text-emerald-400');
+                    }
+                    playSound('money');
+                    updateShopUI();
+                    saveGameData();
+                    showGameModal({
+                        icon: '🎉',
+                        title: '¡Compra Exitosa!',
+                        message: '<strong>🏍️ Moto Premium desbloqueada!</strong><br>⚡ ¡Aparecerá en el siguiente nivel!',
+                        type: 'success'
+                    });
                 }
-                playSound('money');
-                updateShopUI();
-                saveGameData(); // Guardar después de comprar
-                alert('🎉 ¡Moto Premium desbloqueada!\n⚡ ¡Aparecerá en el siguiente nivel!');
-            }
+            });
         } else {
-            alert(`💰 Te faltan $${PREMIUM_MOTO_PRICE - totalMoney} para comprar la Moto Premium.`);
+            showGameModal({
+                icon: '💸',
+                title: 'Dinero Insuficiente',
+                message: `<strong>Te faltan $${PREMIUM_MOTO_PRICE - totalMoney}</strong><br><br>🎯 Necesitas: <span style="color:#fbbf24">$${PREMIUM_MOTO_PRICE}</span><br>💰 Tu dinero: $${totalMoney}`,
+                type: 'error'
+            });
         }
     } else if (vehicleType === 'trucka') {
         if (premiumTruckUnlocked) {
-            alert('🚚 ¡Ya tienes la Camioneta Premium! Selecciónala desde el menú principal.');
+            showGameModal({
+                icon: '🚚',
+                title: 'Ya Comprada',
+                message: '<strong>¡Ya tienes la Camioneta Premium!</strong><br>Selecciónala desde el menú principal',
+                type: 'success'
+            });
         } else if (totalMoney >= PREMIUM_TRUCK_PRICE) {
-            if (confirm(`¿Comprar Camioneta Premium por $${PREMIUM_TRUCK_PRICE}?\n\n¡Aparecerá automáticamente en el siguiente nivel!`)) {
-                totalMoney -= PREMIUM_TRUCK_PRICE;
-                premiumTruckUnlocked = true;
-                selectedVehicle = 'trucka'; // ¡Activar inmediatamente!
-                $('moneyDisplay').textContent = totalMoney;
-                $('shopMoney').textContent = totalMoney;
-                if ($('truckLock')) $('truckLock').textContent = '⭐';
-                if ($('truckPrice')) {
-                    $('truckPrice').textContent = 'TUYA';
-                    $('truckPrice').classList.add('text-emerald-400');
+            showConfirmModal({
+                icon: '🚚',
+                title: 'Camioneta Premium',
+                message: `<strong>¿Comprar Camioneta Premium por $${PREMIUM_TRUCK_PRICE}?</strong><br><br>📦 ¡Aparecerá en el siguiente nivel!<br>💰 Tu dinero: <span style="color:#fbbf24">$${totalMoney}</span>`,
+                type: 'warning',
+                confirmText: '🛒 Comprar',
+                cancelText: '❌ Cancelar'
+            }).then(confirmed => {
+                if (confirmed) {
+                    totalMoney -= PREMIUM_TRUCK_PRICE;
+                    premiumTruckUnlocked = true;
+                    selectedVehicle = 'trucka';
+                    $('moneyDisplay').textContent = totalMoney;
+                    $('shopMoney').textContent = totalMoney;
+                    if ($('truckLock')) $('truckLock').textContent = '⭐';
+                    if ($('truckPrice')) {
+                        $('truckPrice').textContent = 'TUYA';
+                        $('truckPrice').classList.add('text-emerald-400');
+                    }
+                    playSound('money');
+                    updateShopUI();
+                    saveGameData();
+                    showGameModal({
+                        icon: '🎉',
+                        title: '¡Compra Exitosa!',
+                        message: '<strong>🚚 Camioneta Premium desbloqueada!</strong><br>⚡ ¡Aparecerá en el siguiente nivel!',
+                        type: 'success'
+                    });
                 }
-                playSound('money');
-                updateShopUI();
-                saveGameData(); // Guardar después de comprar
-                alert('🎉 ¡Camioneta Premium desbloqueada!\n⚡ ¡Aparecerá en el siguiente nivel!');
-            }
+            });
         } else {
-            alert(`💰 Te faltan $${PREMIUM_TRUCK_PRICE - totalMoney} para comprar la Camioneta Premium.`);
+            showGameModal({
+                icon: '💸',
+                title: 'Dinero Insuficiente',
+                message: `<strong>Te faltan $${PREMIUM_TRUCK_PRICE - totalMoney}</strong><br><br>🎯 Necesitas: <span style="color:#fbbf24">$${PREMIUM_TRUCK_PRICE}</span><br>💰 Tu dinero: $${totalMoney}`,
+                type: 'error'
+            });
         }
     }
 }
 
 function buyBridge() {
     if (totalMoney >= BRIDGE_PRICE) {
-        if (confirm(`🌉 ¿Comprar Puente por $${BRIDGE_PRICE}?\n\nPermite conectar piezas sin importar sus salidas\nUso: Click en botón 🌉 y luego en una pieza`)) {
-            totalMoney -= BRIDGE_PRICE;
-            bridgesOwned++;
-            $('moneyDisplay').textContent = totalMoney;
-            $('shopMoney').textContent = totalMoney;
-            if ($('bridgeCount')) $('bridgeCount').textContent = bridgesOwned;
-            playSound('money');
-            updateShopUI();
-            saveGameData();
-            alert('✅ ¡Puente comprado!\n\n👉 Ahora tienes ' + bridgesOwned + ' puente(s)\n💡 Usa el botón 🌉 en el juego para colocarlo');
-        }
+        showConfirmModal({
+            icon: '🌉',
+            title: 'Comprar Puente',
+            message: `<strong>¿Comprar Puente por $${BRIDGE_PRICE}?</strong><br><br>🔗 Permite conectar piezas sin importar sus salidas<br>🎮 Uso: Click en botón 🌉 y luego en una pieza<br><br>💰 Tu dinero: <span style="color:#fbbf24">$${totalMoney}</span>`,
+            type: 'warning',
+            confirmText: '🛒 Comprar',
+            cancelText: '❌ Cancelar'
+        }).then(confirmed => {
+            if (confirmed) {
+                totalMoney -= BRIDGE_PRICE;
+                bridgesOwned++;
+                $('moneyDisplay').textContent = totalMoney;
+                $('shopMoney').textContent = totalMoney;
+                if ($('bridgeCount')) $('bridgeCount').textContent = bridgesOwned;
+                playSound('money');
+                updateShopUI();
+                saveGameData();
+                showGameModal({
+                    icon: '✅',
+                    title: '¡Puente Comprado!',
+                    message: `<strong>🌉 Ahora tienes ${bridgesOwned} puente(s)</strong><br><br>💡 Usa el botón 🌉 en el juego para colocarlo`,
+                    type: 'success'
+                });
+            }
+        });
     } else {
-        alert('💰 Te faltan $' + (BRIDGE_PRICE - totalMoney) + ' para comprar un Puente.');
+        showGameModal({
+            icon: '💸',
+            title: 'Dinero Insuficiente',
+            message: `<strong>Te faltan $${BRIDGE_PRICE - totalMoney}</strong><br><br>🎯 Necesitas: <span style="color:#fbbf24">$${BRIDGE_PRICE}</span><br>💰 Tu dinero: $${totalMoney}`,
+            type: 'error'
+        });
     }
 }
 
 function updatePremiumMotoUI() {
+    // Moto Premium
     if (premiumMotoUnlocked) {
         if ($('motoLock')) $('motoLock').textContent = '⭐';
         if ($('motoPrice')) {
@@ -739,7 +1067,22 @@ function updatePremiumMotoUI() {
             $('motoPrice').classList.remove('text-yellow-300');
             $('motoPrice').classList.add('text-emerald-400');
         }
+        // Tienda
+        if ($('shopMotoIcon')) $('shopMotoIcon').textContent = '✅';
+        if ($('shopMotoStatus')) $('shopMotoStatus').textContent = 'Desbloqueada';
+    } else {
+        if ($('motoLock')) $('motoLock').textContent = '🔒';
+        if ($('motoPrice')) {
+            $('motoPrice').textContent = '$2,000';
+            $('motoPrice').classList.remove('text-emerald-400');
+            $('motoPrice').classList.add('text-yellow-300');
+        }
+        // Tienda
+        if ($('shopMotoIcon')) $('shopMotoIcon').textContent = '🔒';
+        if ($('shopMotoStatus')) $('shopMotoStatus').textContent = '$2,000';
     }
+    
+    // Camioneta Premium
     if (premiumTruckUnlocked) {
         if ($('truckLock')) $('truckLock').textContent = '⭐';
         if ($('truckPrice')) {
@@ -747,6 +1090,19 @@ function updatePremiumMotoUI() {
             $('truckPrice').classList.remove('text-yellow-300');
             $('truckPrice').classList.add('text-emerald-400');
         }
+        // Tienda
+        if ($('shopTruckIcon')) $('shopTruckIcon').textContent = '✅';
+        if ($('shopTruckStatus')) $('shopTruckStatus').textContent = 'Desbloqueada';
+    } else {
+        if ($('truckLock')) $('truckLock').textContent = '🔒';
+        if ($('truckPrice')) {
+            $('truckPrice').textContent = '$4,000';
+            $('truckPrice').classList.remove('text-emerald-400');
+            $('truckPrice').classList.add('text-yellow-300');
+        }
+        // Tienda
+        if ($('shopTruckIcon')) $('shopTruckIcon').textContent = '🔒';
+        if ($('shopTruckStatus')) $('shopTruckStatus').textContent = '$4,000';
     }
 }
 
@@ -845,7 +1201,7 @@ const PREMIUM_TRUCK_PRICE = 4000; // Precio de la camioneta premium
 let deliveryStartTime = 0; // Tiempo cuando comenzó la entrega
 let deliveryTimer = null; // Timer para la entrega
 let bridgesOwned = 0; // Número de puentes que tiene el jugador
-const BRIDGE_PRICE = 100; // Precio de cada puente
+const BRIDGE_PRICE = 500; // Precio de cada puente
 
 const $ = id => document.getElementById(id);
 
@@ -1036,7 +1392,61 @@ function showPlayersList() {
 function loadPlayerData(playerName) {
     loadGameData(playerName);
     updatePremiumMotoUI();
+    updateBridgeDisplay();
     $('driverName').value = playerName;
+}
+
+function checkPlayerChange() {
+    const newName = $('driverName').value.trim();
+    if (!newName || newName === driverName) return;
+    
+    // Verificar si el jugador existe
+    const playerKey = 'deliveryRush_' + newName.toLowerCase().replace(/\s+/g, '_');
+    const saved = localStorage.getItem(playerKey);
+    
+    if (saved) {
+        // Jugador existente - cargar sus datos
+        loadGameData(newName);
+        // Mostrar mensaje de bienvenida
+        $('welcomeBack').innerHTML = `¡Bienvenido de nuevo, ${newName}! 👋`;
+        $('welcomeBack').classList.remove('hidden');
+        setTimeout(() => {
+            $('welcomeBack').innerHTML = `<button onclick="showPlayersList()" class="text-xs text-yellow-400 underline">Cambiar jugador</button>`;
+        }, 2000);
+    } else {
+        // Jugador nuevo - resetear todo a valores por defecto
+        driverName = newName;
+        level = 1;
+        totalMoney = 0;
+        premiumMotoUnlocked = false;
+        premiumTruckUnlocked = false;
+        bridgesOwned = 0;
+        
+        // Actualizar UI
+        $('moneyDisplay').textContent = totalMoney;
+        $('savedMoneyDisplay').classList.add('hidden');
+        $('welcomeBack').innerHTML = `¡Nuevo jugador: ${newName}! 🎮`;
+        $('welcomeBack').classList.remove('hidden');
+        setTimeout(() => {
+            $('welcomeBack').classList.add('hidden');
+        }, 2000);
+        
+        // Resetear selección de vehículo si era premium
+        if (selectedVehicle === 'motoa' || selectedVehicle === 'trucka') {
+            selectedVehicle = 'moto';
+            document.querySelectorAll('.vehicle-btn').forEach(btn => btn.classList.remove('selected'));
+            const motoBtn = document.getElementById('btn-moto');
+            if (motoBtn) motoBtn.classList.add('selected');
+        }
+    }
+    
+    updatePremiumMotoUI();
+    updateBridgeDisplay();
+}
+
+function updateBridgeDisplay() {
+    if ($('bridgeCount')) $('bridgeCount').textContent = bridgesOwned;
+    if ($('shopBridgeOwned')) $('shopBridgeOwned').textContent = `Tienes: ${bridgesOwned}`;
 }
 
 function clearGameData() {
@@ -1047,16 +1457,25 @@ function clearGameData() {
 }
 
 function showMenu() {
-    if (confirm('¿Volver al menú?')) {
-        cancelAnimationFrame(animationId);
-        clearInterval(countdownTimer);
-        clearInterval(engineSoundInterval);
-        $('startScreen').classList.remove('hidden');
-        updatePremiumMotoUI(); // Actualizar UI de moto premium
-        gameState = 'START';
-        bridgeModeActive = false;
-        if ($('btnBridge')) $('btnBridge').classList.remove('ring-4', 'ring-yellow-400');
-    }
+    showConfirmModal({
+        icon: '☰',
+        title: 'Volver al Menú',
+        message: '<strong>¿Volver al menú principal?</strong><br><br>⚠️ Se perderá el progreso del nivel actual',
+        type: 'warning',
+        confirmText: '✅ Volver',
+        cancelText: '❌ Cancelar'
+    }).then(confirmed => {
+        if (confirmed) {
+            cancelAnimationFrame(animationId);
+            clearInterval(countdownTimer);
+            clearInterval(engineSoundInterval);
+            $('startScreen').classList.remove('hidden');
+            updatePremiumMotoUI(); // Actualizar UI de moto premium
+            gameState = 'START';
+            bridgeModeActive = false;
+            if ($('btnBridge')) $('btnBridge').classList.remove('ring-4', 'ring-yellow-400');
+        }
+    });
 }
 
 // Variables para modo puente
@@ -1064,12 +1483,60 @@ let bridgeModeActive = false;
 
 function toggleBridgeMode() {
     if (bridgesOwned <= 0) {
-        alert('🌉 No tienes puentes disponibles\n\n💡 Cómpralos en la tienda (🛍️) por $100 cada uno');
+        // Ofrecer compra directa de puentes
+        if (totalMoney >= BRIDGE_PRICE) {
+            showConfirmModal({
+                icon: '🌉',
+                title: 'Comprar Puente',
+                message: `<strong>No tienes puentes disponibles</strong><br><br>¿Comprar un puente por $${BRIDGE_PRICE}?<br><br>🔗 Permite conectar piezas sin importar sus salidas<br>💰 Tu dinero: <span style="color:#fbbf24">$${totalMoney}</span>`,
+                type: 'warning',
+                confirmText: '🛒 Comprar Ahora',
+                cancelText: '❌ Cancelar'
+            }).then(confirmed => {
+                if (confirmed) {
+                    totalMoney -= BRIDGE_PRICE;
+                    bridgesOwned++;
+                    $('moneyDisplay').textContent = totalMoney;
+                    if ($('bridgeCount')) $('bridgeCount').textContent = bridgesOwned;
+                    if ($('shopMoney')) $('shopMoney').textContent = totalMoney;
+                    if ($('shopBridgeOwned')) $('shopBridgeOwned').textContent = `Tienes: ${bridgesOwned}`;
+                    playSound('money');
+                    saveGameData();
+                    
+                    // Activar modo puente automáticamente
+                    if (gameState === 'EDITING') {
+                        bridgeModeActive = true;
+                        const btn = $('btnBridge');
+                        btn.classList.add('ring-4', 'ring-yellow-400');
+                        $('levelHint').textContent = '🌉 MODO PUENTE: Click en una pieza para convertirla en puente';
+                    }
+                    
+                    showGameModal({
+                        icon: '✅',
+                        title: '¡Puente Comprado!',
+                        message: `<strong>🌉 Ahora tienes ${bridgesOwned} puente(s)</strong><br><br>💡 Click en una pieza para colocarlo`,
+                        type: 'success'
+                    });
+                }
+            });
+        } else {
+            showGameModal({
+                icon: '💸',
+                title: 'Dinero Insuficiente',
+                message: `<strong>No tienes suficiente dinero para comprar un puente</strong><br><br>🎯 Necesitas: <span style="color:#fbbf24">$${BRIDGE_PRICE}</span><br>💰 Tu dinero: $${totalMoney}<br>🚫 Te faltan: <span style="color:#ef4444">$${BRIDGE_PRICE - totalMoney}</span>`,
+                type: 'error'
+            });
+        }
         return;
     }
     
     if (gameState !== 'EDITING') {
-        alert('⚠️ Solo puedes colocar puentes durante la preparación');
+        showGameModal({
+            icon: '⚠️',
+            title: 'Modo No Disponible',
+            message: '<strong>Solo puedes colocar puentes durante la preparación</strong><br><br>📝 Prepárate antes de comenzar la entrega',
+            type: 'warning'
+        });
         return;
     }
     
@@ -1088,7 +1555,15 @@ function init() {
     resize();
     loadGameData(); // Cargar datos guardados al iniciar
     updatePremiumMotoUI(); // Actualizar estado de moto premium al iniciar
-    if ($('bridgeCount')) $('bridgeCount').textContent = bridgesOwned;
+    updateBridgeDisplay();
+    
+    // Listener para detectar cambios en el nombre del jugador
+    const driverNameInput = $('driverName');
+    if (driverNameInput) {
+        driverNameInput.addEventListener('blur', checkPlayerChange);
+        driverNameInput.addEventListener('change', checkPlayerChange);
+    }
+    
     window.addEventListener('resize', () => { if (gameState !== 'START') { resize(); draw(); } });
     canvas.addEventListener('pointerdown', handleClick);
 }
@@ -1119,29 +1594,43 @@ function handleClick(e) {
         // Modo puente: convertir pieza en puente
         if (bridgeModeActive && tile && !tile.locked && tile.type !== TILE_TYPES.BLOCKED) {
             if (tile.type === TILE_TYPES.BRIDGE) {
-                alert('🌉 Esta pieza ya es un puente');
+                showGameModal({
+                    icon: '🌉',
+                    title: 'Puente Existente',
+                    message: '<strong>Esta pieza ya es un puente</strong><br>🔗 Conecta con cualquier pieza',
+                    type: 'warning'
+                });
                 return;
             }
             
-            if (confirm('🌉 ¿Convertir esta pieza en puente?\n\nConectará con cualquier pieza sin importar las salidas')) {
-                const oldType = tile.type;
-                tile.type = TILE_TYPES.BRIDGE;
-                tile.isBridge = true;
-                bridgesOwned--;
-                $('bridgeCount').textContent = bridgesOwned;
-                saveGameData();
-                playSound('money');
-                
-                // Desactivar modo puente si no quedan más puentes
-                if (bridgesOwned <= 0) {
-                    bridgeModeActive = false;
-                    $('btnBridge').classList.remove('ring-4', 'ring-yellow-400');
-                    $('levelHint').textContent = `📦 Pedido #${level} | 👆 Prepara la ruta de entrega`;
+            showConfirmModal({
+                icon: '🌉',
+                title: 'Colocar Puente',
+                message: '<strong>¿Convertir esta pieza en puente?</strong><br><br>🔗 Conectará con cualquier pieza<br>sin importar las salidas',
+                type: 'warning',
+                confirmText: '✅ Colocar',
+                cancelText: '❌ Cancelar'
+            }).then(confirmed => {
+                if (confirmed) {
+                    const oldType = tile.type;
+                    tile.type = TILE_TYPES.BRIDGE;
+                    tile.isBridge = true;
+                    bridgesOwned--;
+                    $('bridgeCount').textContent = bridgesOwned;
+                    saveGameData();
+                    playSound('money');
+                    
+                    // Desactivar modo puente si no quedan más puentes
+                    if (bridgesOwned <= 0) {
+                        bridgeModeActive = false;
+                        $('btnBridge').classList.remove('ring-4', 'ring-yellow-400');
+                        $('levelHint').textContent = `📦 Pedido #${level} | 👆 Prepara la ruta de entrega`;
+                    }
+                    
+                    checkConnections();
+                    draw();
                 }
-                
-                checkConnections();
-                draw();
-            }
+            });
         } else if (!bridgeModeActive && tile && !tile.locked && tile.type !== TILE_TYPES.BLOCKED) {
             // Modo normal: rotar pieza
             tile.rotation = (tile.rotation + 1) % 4;
@@ -1168,28 +1657,42 @@ function rotateCar() {
 }
 
 function resetLevel() {
-    // Cobrar $10 por usar el botón de reinicio
-    const RESET_COST = 10;
+    // Cobrar $100 por usar el botón de reinicio
+    const RESET_COST = 100;
     
     if (totalMoney < RESET_COST) {
-        alert('💰 No tienes suficiente dinero para reiniciar\n\nNecesitas: $' + RESET_COST + '\nTu dinero: $' + totalMoney + '\n\n💡 Continúa jugando para ganar más dinero');
+        showGameModal({
+            icon: '💸',
+            title: 'Dinero Insuficiente',
+            message: `<strong>No tienes suficiente dinero para reiniciar</strong><br><br>🎯 Necesitas: <span style="color:#fbbf24">$${RESET_COST}</span><br>💰 Tu dinero: $${totalMoney}<br><br>💡 Continúa jugando para ganar más dinero`,
+            type: 'error'
+        });
         return;
     }
     
-    if (confirm('🔄 ¿Reiniciar el nivel?\n\nCosto: $' + RESET_COST + '\nTu dinero actual: $' + totalMoney)) {
-        totalMoney -= RESET_COST;
-        $('moneyDisplay').textContent = totalMoney;
-        saveGameData(); // Guardar el cambio de dinero
+    showConfirmModal({
+        icon: '🔄',
+        title: 'Reiniciar Nivel',
+        message: `<strong>¿Reiniciar el nivel?</strong><br><br>💸 Costo: <span style="color:#fbbf24">$${RESET_COST}</span><br>💰 Tu dinero: $${totalMoney}`,
+        type: 'warning',
+        confirmText: '🔄 Reiniciar',
+        cancelText: '❌ Cancelar'
+    }).then(confirmed => {
+        if (confirmed) {
+            totalMoney -= RESET_COST;
+            $('moneyDisplay').textContent = totalMoney;
+            saveGameData(); // Guardar el cambio de dinero
+            
+            cancelAnimationFrame(animationId);
+            clearInterval(countdownTimer);
+            clearInterval(engineSoundInterval);
+            stopPrepAnimation();
+            $('orderReady').classList.add('hidden');
         
-        cancelAnimationFrame(animationId);
-        clearInterval(countdownTimer);
-        clearInterval(engineSoundInterval);
-        stopPrepAnimation();
-        $('orderReady').classList.add('hidden');
-        
-        playSound('rotate'); // Sonido de confirmación
-        retryLevel(); // Reintentar manteniendo la posición de la casa
-    }
+            playSound('rotate'); // Sonido de confirmación
+            retryLevel(); // Reintentar manteniendo la posición de la casa
+        }
+    });
 }
 
 function addExtraTime() {
@@ -1198,65 +1701,103 @@ function addExtraTime() {
     const EXTRA_SECONDS = 5;
     
     if (gameState !== 'EDITING' && gameState !== 'RUNNING') {
-        alert('⚠️ Solo puedes agregar tiempo durante la preparación o entrega');
+        showGameModal({
+            icon: '⚠️',
+            title: 'Modo No Disponible',
+            message: '<strong>Solo puedes agregar tiempo durante la preparación o entrega</strong>',
+            type: 'warning'
+        });
         return;
     }
     
     if (totalMoney < TIME_COST) {
-        alert('💰 No tienes suficiente dinero\n\nNecesitas: $' + TIME_COST + '\nTu dinero: $' + totalMoney);
+        showGameModal({
+            icon: '💸',
+            title: 'Dinero Insuficiente',
+            message: `<strong>No tienes suficiente dinero</strong><br><br>🎯 Necesitas: <span style="color:#fbbf24">$${TIME_COST}</span><br>💰 Tu dinero: $${totalMoney}`,
+            type: 'error'
+        });
         return;
     }
     
-    if (confirm('⏱️ ¿Agregar ' + EXTRA_SECONDS + ' segundos?\n\nCosto: $' + TIME_COST + '\nTu dinero actual: $' + totalMoney)) {
-        totalMoney -= TIME_COST;
-        timeLeft += EXTRA_SECONDS;
-        maxTime += EXTRA_SECONDS; // También aumentar el máximo para el porcentaje
-        
-        $('moneyDisplay').textContent = totalMoney;
-        $('timerDisplay').textContent = `⏱️ ${timeLeft}`;
-        $('progressBar').style.width = `${(timeLeft / maxTime) * 100}%`;
-        
-        // Cambiar color de la barra si estaba en advertencia
-        if (timeLeft > 10) {
-            $('progressBar').className = 'progress-bar h-full bg-emerald-500 rounded-full';
-            $('timerDisplay').classList.remove('timer-warning');
-        } else if (timeLeft > 5) {
-            $('progressBar').className = 'progress-bar h-full bg-yellow-500 rounded-full';
+    showConfirmModal({
+        icon: '⏱️',
+        title: 'Agregar Tiempo',
+        message: `<strong>¿Agregar ${EXTRA_SECONDS} segundos?</strong><br><br>💸 Costo: <span style="color:#fbbf24">$${TIME_COST}</span><br>💰 Tu dinero: $${totalMoney}`,
+        type: 'warning',
+        confirmText: '⏱️ Agregar',
+        cancelText: '❌ Cancelar'
+    }).then(confirmed => {
+        if (confirmed) {
+            totalMoney -= TIME_COST;
+            timeLeft += EXTRA_SECONDS;
+            maxTime += EXTRA_SECONDS; // También aumentar el máximo para el porcentaje
+            
+            $('moneyDisplay').textContent = totalMoney;
+            $('timerDisplay').textContent = `⏱️ ${timeLeft}`;
+            $('progressBar').style.width = `${(timeLeft / maxTime) * 100}%`;
+            
+            // Cambiar color de la barra si estaba en advertencia
+            if (timeLeft > 10) {
+                $('progressBar').className = 'progress-bar h-full bg-emerald-500 rounded-full';
+                $('timerDisplay').classList.remove('timer-warning');
+            } else if (timeLeft > 5) {
+                $('progressBar').className = 'progress-bar h-full bg-yellow-500 rounded-full';
+            }
+            
+            saveGameData(); // Guardar el cambio de dinero
+            playSound('money'); // Sonido de transacción
+            
+            // Mostrar feedback visual
+            $('timerDisplay').classList.add('pulse');
+            setTimeout(() => $('timerDisplay').classList.remove('pulse'), 500);
         }
-        
-        saveGameData(); // Guardar el cambio de dinero
-        playSound('money'); // Sonido de transacción
-        
-        // Mostrar feedback visual
-        $('timerDisplay').classList.add('pulse');
-        setTimeout(() => $('timerDisplay').classList.remove('pulse'), 500);
-    }
+    });
 }
 
 function instantDeliver() {
     const INSTANT_DELIVER_COST = 50;
     
     if (gameState !== 'EDITING') {
-        alert('⚠️ Solo puedes usar entrega instantánea antes de iniciar');
+        showGameModal({
+            icon: '⚠️',
+            title: 'Modo No Disponible',
+            message: '<strong>Solo puedes usar entrega instantánea antes de iniciar</strong>',
+            type: 'warning'
+        });
         return;
     }
     
     if (totalMoney < INSTANT_DELIVER_COST) {
-        alert('💰 No tienes suficiente dinero\n\nNecesitas: $' + INSTANT_DELIVER_COST + '\nTu dinero: $' + totalMoney);
+        showGameModal({
+            icon: '💸',
+            title: 'Dinero Insuficiente',
+            message: `<strong>No tienes suficiente dinero</strong><br><br>🎯 Necesitas: <span style="color:#fbbf24">$${INSTANT_DELIVER_COST}</span><br>💰 Tu dinero: $${totalMoney}`,
+            type: 'error'
+        });
         return;
     }
     
-    if (confirm('⚡ ¿Entregar instantáneamente?\n\nCosto: $' + INSTANT_DELIVER_COST + '\n\n¡Ganarás el nivel al instante!')) {
-        totalMoney -= INSTANT_DELIVER_COST;
-        $('moneyDisplay').textContent = totalMoney;
-        playSound('money');
-        saveGameData();
-        
-        // Entregar instantáneamente
-        setTimeout(() => {
-            win();
-        }, 300);
-    }
+    showConfirmModal({
+        icon: '⚡',
+        title: 'Entrega Instantánea',
+        message: `<strong>¿Entregar instantáneamente?</strong><br><br>💸 Costo: <span style="color:#fbbf24">$${INSTANT_DELIVER_COST}</span><br><br>🏆 ¡Ganarás el nivel al instante!`,
+        type: 'warning',
+        confirmText: '⚡ Entregar',
+        cancelText: '❌ Cancelar'
+    }).then(confirmed => {
+        if (confirmed) {
+            totalMoney -= INSTANT_DELIVER_COST;
+            $('moneyDisplay').textContent = totalMoney;
+            playSound('money');
+            saveGameData();
+            
+            // Entregar instantáneamente
+            setTimeout(() => {
+                win();
+            }, 300);
+        }
+    });
 }
 
 // Función para reintentar el nivel manteniendo la posición de la casa
@@ -1264,6 +1805,7 @@ function retryLevel() {
     const config = LEVEL_CONFIG[Math.min(level - 1, 39)];
     gameState = 'EDITING';
     $('overlay').classList.add('hidden');
+    $('overlay').classList.remove('failure-bg');
     $('btnStart').classList.remove('opacity-50', 'pointer-events-none');
     
     maxTime = config.time; timeLeft = maxTime;
@@ -1298,6 +1840,7 @@ function generateLevel() {
     const config = LEVEL_CONFIG[Math.min(level - 1, 39)];
     gameState = 'EDITING';
     $('overlay').classList.add('hidden');
+    $('overlay').classList.remove('failure-bg');
     $('btnStart').classList.remove('opacity-50', 'pointer-events-none');
     
     // Si cambió el nivel, limpiar la posición guardada de la casa
@@ -1751,13 +2294,13 @@ function timeExpired() {
     $('gameContainer').classList.add('shake');
     setTimeout(() => $('gameContainer').classList.remove('shake'), 500);
     
-    // Asegurar que muestra icono y no imagen
+    // Ocultar icono e imagen, usar fondo
     $('overlayImage').classList.add('hidden');
-    $('overlayIcon').classList.remove('hidden');
+    $('overlayIcon').classList.add('hidden');
+    $('overlay').classList.add('failure-bg');
     
-    $('overlayIcon').textContent = '⏰😫';
     $('overlayTitle').textContent = '¡TIEMPO AGOTADO!';
-    $('overlaySubtitle').textContent = 'El cliente canceló el pedido';
+    $('overlaySubtitle').textContent = 'El cliente canceló el pedido ⏰';
     $('overlayBonus').innerHTML = `<span class="text-red-400">💸 Penalización: -$${penalty}</span><br><span>💰 Total: $${totalMoney}</span>`;
     $('overlayBtn').textContent = 'Reintentar';
     $('overlayBtn').onclick = retryLevel;
@@ -1982,12 +2525,12 @@ function crash(msg) {
     $('gameContainer').classList.add('shake');
     setTimeout(() => $('gameContainer').classList.remove('shake'), 500);
     
-    // Asegurar que muestra icono y no imagen
+    // Ocultar icono e imagen, usar fondo
     $('overlayImage').classList.add('hidden');
-    $('overlayIcon').classList.remove('hidden');
+    $('overlayIcon').classList.add('hidden');
+    $('overlay').classList.add('failure-bg');
     
-    $('overlayIcon').textContent = '💥';
-    $('overlayTitle').textContent = '¡CHOQUE!';
+    $('overlayTitle').textContent = '¡CHOQUE! 💥';
     $('overlaySubtitle').textContent = msg;
     $('overlayBonus').textContent = '🏠 El cliente aún espera su pedido...';
     $('overlayBtn').textContent = 'Reintentar';
@@ -2037,8 +2580,9 @@ function win() {
     overlayImage.src = 'repartidor.jpeg';
     overlayImage.classList.remove('hidden');
     
-    // Ocultar el emoji y mostrar la imagen
+    // Ocultar el emoji y mostrar la imagen, quitar fondo de fallo
     $('overlayIcon').classList.add('hidden');
+    $('overlay').classList.remove('failure-bg');
     
     $('overlayTitle').textContent = '¡ENTREGA #' + level + ' COMPLETADA!';
     $('overlaySubtitle').textContent = `⭐⭐⭐⭐⭐ ${speedMessage}`;
@@ -2192,7 +2736,7 @@ function drawTile(tile) {
     ctx.translate(cx, cy);
     ctx.rotate(tile.rotation * Math.PI / 2);
     
-    // Colores mejorados: asfalto gris para calles activas
+    // Colores mejorados: asfalto  gris para calles activas
     let color = tile.isDeadEnd ? (tile.powered ? '#65a30d' : '#3a3a3a') : 
                 tile.type === TILE_TYPES.START ? '#10b981' : 
                 tile.powered ? '#5a5a5a' : '#4a4a4a';
