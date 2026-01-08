@@ -244,27 +244,40 @@
             content: '';
             position: absolute;
             inset: 0;
-            background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(15, 23, 42, 0.85));
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(15, 23, 42, 0.5));
             border-radius: 0.75rem;
-            backdrop-filter: blur(2px);
+            backdrop-filter: blur(1px);
         }
         #overlay.failure-bg > * {
             position: relative;
             z-index: 1;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+            text-shadow: 0 3px 10px rgba(0, 0, 0, 0.95), 0 0 5px rgba(0, 0, 0, 1);
         }
         #overlay.failure-bg #overlayTitle {
             color: #fbbf24;
-            font-size: 2rem;
+            font-size: 2.5rem;
             font-weight: 900;
-            text-shadow: 0 0 20px rgba(251, 191, 36, 0.5), 0 2px 8px rgba(0, 0, 0, 0.9);
+            text-shadow: 0 0 30px rgba(251, 191, 36, 0.8), 0 3px 10px rgba(0, 0, 0, 1), 0 0 10px rgba(0, 0, 0, 1);
+            letter-spacing: 1px;
+            margin-bottom: 20px;
         }
         #overlay.failure-bg #overlaySubtitle {
+            font-size: 1.3rem;
+            color: #ffffff;
+            font-weight: 700;
+            margin-bottom: 15px;
+            text-shadow: 0 3px 10px rgba(0, 0, 0, 1), 0 0 8px rgba(0, 0, 0, 1);
+        }
+        #overlay.failure-bg #overlayBonus {
             font-size: 1.1rem;
-            color: #fecaca;
+            margin-top: 20px;
+            font-weight: 600;
         }
         #overlay.failure-bg #overlayBtn {
-            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.5);
+            font-size: 1.2rem;
+            padding: 14px 32px;
+            margin-top: 10px;
         }
         
         /* Modal de notificación personalizado */
@@ -2300,9 +2313,9 @@ function timeExpired() {
     $('overlay').classList.add('failure-bg');
     
     $('overlayTitle').textContent = '¡TIEMPO AGOTADO!';
-    $('overlaySubtitle').textContent = 'El cliente canceló el pedido ⏰';
-    $('overlayBonus').innerHTML = `<span class="text-red-400">💸 Penalización: -$${penalty}</span><br><span>💰 Total: $${totalMoney}</span>`;
-    $('overlayBtn').textContent = 'Reintentar';
+    $('overlaySubtitle').textContent = 'El cliente canceló el pedido';
+    $('overlayBonus').innerHTML = `<span class="text-red-400 text-lg">💸 Penalización: -$${penalty}</span><br><span class="text-lg mt-2 block">💰 Total: $${totalMoney}</span>`;
+    $('overlayBtn').textContent = '🔄 Reintentar';
     $('overlayBtn').onclick = retryLevel;
     $('overlay').classList.remove('hidden');
 }
