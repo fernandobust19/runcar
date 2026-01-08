@@ -414,6 +414,8 @@
                     <label class="block text-slate-300 mb-2 text-sm font-medium">👤 Nombre del Repartidor</label>
                     <input type="text" id="driverName" placeholder="Ingresa tu nombre" maxlength="12" autocomplete="off">
                     <p id="welcomeBack" class="text-emerald-400 text-xs mt-1 hidden">¡Bienvenido de nuevo!</p>
+                    <p id="levelInfo" class="text-blue-400 text-xs mt-1 hidden">Nivel actual: <span id="currentLevel">1</span></p>
+                    <button onclick="resetPlayerProgress()" id="resetProgressBtn" class="text-red-400 text-xs mt-1 underline hover:text-red-300 hidden">🔄 Reiniciar desde nivel 1</button>
                 </div>
                 
                 <!-- Dinero guardado -->
@@ -1272,7 +1274,12 @@ function startGame() {
     }
     $('companyLogo').src = companyLogos[selectedCompany] || 'LOGO-RAPPI.png';
     $('startScreen').classList.add('hidden');
-    level = 1; $('levelDisplay').textContent = level;
+    // Mantener el nivel guardado (ya cargado por loadGameData)
+    // Solo reiniciar a nivel 1 si es un jugador completamente nuevo
+    if (level === undefined || level === null) {
+        level = 1;
+    }
+    $('levelDisplay').textContent = level;
     generateLevel();
 }
 
@@ -1343,6 +1350,12 @@ function loadGameData(playerName) {
             // Cargar nivel
             if (gameData.level !== undefined) {
                 level = gameData.level;
+                // Mostrar nivel actual en el menú
+                if (level > 1) {
+                    $('levelInfo').classList.remove('hidden');
+                    $('currentLevel').textContent = level;
+                    $('resetProgressBtn').classList.remove('hidden');
+                }
             }
             
             // Cargar dinero
@@ -1421,6 +1434,35 @@ function loadPlayerData(playerName) {
     updatePremiumMotoUI();
     updateBridgeDisplay();
     $('driverName').value = playerName;
+    
+    // Mostrar nivel actual si no es nivel 1
+    if (level > 1) {
+        $('levelInfo').classList.remove('hidden');
+        $('currentLevel').textContent = level;
+        $('resetProgressBtn').classList.remove('hidden');
+    } else {
+        $('levelInfo').classList.add('hidden');
+        $('resetProgressBtn').classList.add('hidden');
+    }
+}
+
+function resetPlayerProgress() {
+    if (!confirm('¿Estás seguro de reiniciar tu progreso desde el nivel 1? Esta acción no se puede deshacer.')) {
+        return;
+    }
+    
+    level = 1;
+    saveGameData();
+    
+    $('levelInfo').classList.add('hidden');
+    $('resetProgressBtn').classList.add('hidden');
+    $('currentLevel').textContent = 1;
+    
+    showGameModal({
+        title: '✅ Progreso Reiniciado',
+        message: 'Tu progreso ha sido reiniciado. Comenzarás desde el nivel 1.',
+        confirmText: 'OK'
+    });
 }
 
 function checkPlayerChange() {
@@ -1946,6 +1988,10 @@ function placeEnd() {
 
 function placeObstacles(count) {
     let placed = 0, attempts = 0;
+    // Aumentar obstáculos en niveles más altos
+    const extraObstacles = Math.floor(level / 3);
+    count += extraObstacles;
+    
     while (placed < count && attempts < 200) {
         attempts++;
         const col = 1 + Math.floor(Math.random() * (COLS - 2));
@@ -1955,7 +2001,11 @@ function placeObstacles(count) {
         grid[row * COLS + col] = new Tile(col, row, TILE_TYPES.BLOCKED);
         if (!canReachEnd()) { grid[row * COLS + col] = null; continue; }
         
-        grid[row * COLS + col].special = ['broken', 'tree', 'construction'][Math.floor(Math.random() * 3)];
+        // Más tipos de obstáculos en niveles altos
+        const obstacleTypes = level >= 5 
+            ? ['broken', 'tree', 'construction', 'bridge_broken']
+            : ['broken', 'tree', 'construction'];
+        grid[row * COLS + col].special = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
         placed++;
     }
 }
@@ -2176,9 +2226,16 @@ function checkConnections() {
                     if (neighbor && !neighbor.powered && neighbor.type !== TILE_TYPES.BLOCKED) {
                         const isNeighborBridge = neighbor.type === TILE_TYPES.BRIDGE || neighbor.isBridge;
                         const isNeighborMultiWay = neighbor.type === TILE_TYPES.CROSS || neighbor.type === TILE_TYPES.T_JUNCTION;
+                        const neighborConn = neighbor.getConnections();
                         
-                        // Conectar si hay puente, multi-vía, o conexión válida normal
-                        if (isCurrBridge || isNeighborBridge || isCurrMultiWay || isNeighborMultiWay || (neighbor.getConnections() & OPPOSITE[dir])) {
+                        // Conectar si:
+                        // 1. Hay un puente en cualquiera de los dos lados
+                        // 2. La pieza actual es multi-vía (T o Cruz)
+                        // 3. El vecino es multi-vía (T o Cruz)
+                        // 4. Hay una conexión bidireccional válida normal
+                        if (isCurrBridge || isNeighborBridge || 
+                            isCurrMultiWay || isNeighborMultiWay || 
+                            (neighborConn & OPPOSITE[dir])) {
                             neighbor.powered = true;
                             queue.push(neighbor);
                         }
@@ -2327,10 +2384,10 @@ function timeExpired() {
     $('overlay').classList.add('failure-bg');
     
     $('overlayTitle').textContent = '¡TIEMPO AGOTADO!';
-    $('overlaySubtitle').textContent = 'El cliente canceló el pedido';
-    $('overlayBonus').innerHTML = `<span class="text-red-400 text-lg">💸 Penalización: -$${penalty}</span><br><span class="text-lg mt-2 block">💰 Total: $${totalMoney}</span>`;
+    $('overlaySubtitle').textContent = '';
+    $('overlayBonus').textContent = '';
     $('overlayBtn').textContent = '🔄 Reintentar';
-    $('overlayFooter').textContent = '';
+    $('overlayFooter').innerHTML = `<span class="block mb-1">⏰ El cliente canceló el pedido</span><span class="text-red-400 block">💸 Penalización: -$${penalty}</span><span class="block mt-1">💰 Total: $${totalMoney}</span>`;
     $('overlayBtn').onclick = retryLevel;
     $('overlay').classList.remove('hidden');
 }
@@ -2723,11 +2780,11 @@ function drawTile(tile) {
     ctx.fillRect(x + 1, y + 1, TILE_SIZE - 2, TILE_SIZE - 2);
     
     if (tile.type === TILE_TYPES.BLOCKED) {
-        ctx.fillStyle = tile.special === 'tree' ? '#166534' : tile.special === 'broken' ? '#4b5563' : '#ea580c';
+        ctx.fillStyle = tile.special === 'tree' ? '#166534' : tile.special === 'bridge_broken' ? '#78350f' : tile.special === 'broken' ? '#4b5563' : '#ea580c';
         ctx.fillRect(x + 4, y + 4, TILE_SIZE - 8, TILE_SIZE - 8);
-        ctx.font = `${TILE_SIZE * 0.4}px sans-serif`;
+        ctx.font = `${tile.special === 'tree' ? TILE_SIZE * 0.25 : TILE_SIZE * 0.4}px sans-serif`;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(tile.special === 'tree' ? '🌳' : tile.special === 'broken' ? '⚠️' : '🚧', cx, cy);
+        ctx.fillText(tile.special === 'tree' ? '🌳' : tile.special === 'bridge_broken' ? '🌉' : tile.special === 'broken' ? '⚠️' : '🚧', cx, cy);
         ctx.restore(); return;
     }
     
@@ -2772,7 +2829,7 @@ function drawTile(tile) {
                 tile.powered ? '#5a5a5a' : '#4a4a4a';
     
     ctx.fillStyle = color;
-    const conn = tile.type.base, s = TILE_SIZE;
+    const conn = tile.getConnections(), s = TILE_SIZE;
     
     // Dibujar calles
     if (conn & DIR.N) ctx.fillRect(-h, -s/2, rw, s/2 + h);
@@ -2891,12 +2948,35 @@ function drawTile(tile) {
         ctx.stroke();
     }
     
-    if (!tile.isDeadEnd && !tile.type.noArrows) {
-        ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 2]);
+    // Líneas amarillas entrecortadas en el centro de las calles - SOLO cuando está conectada
+    if (!tile.isDeadEnd && !tile.type.noArrows && tile.isPowered) {
+        ctx.strokeStyle = 'rgba(251, 191, 36, 0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([6, 8]);
+        
+        // Para T_JUNCTION y CROSS, dibujar líneas en todas direcciones
+        if (tile.type === TILE_TYPES.T_JUNCTION || tile.type === TILE_TYPES.CROSS) {
+            if (conn & DIR.N) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -s/2); ctx.stroke(); }
+            if (conn & DIR.S) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, s/2); ctx.stroke(); }
+            if (conn & DIR.E) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(s/2, 0); ctx.stroke(); }
+            if (conn & DIR.W) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-s/2, 0); ctx.stroke(); }
+        } else {
+            if ((conn & DIR.N) && (conn & DIR.S)) { ctx.beginPath(); ctx.moveTo(0, -s/2); ctx.lineTo(0, s/2); ctx.stroke(); }
+            if ((conn & DIR.E) && (conn & DIR.W)) { ctx.beginPath(); ctx.moveTo(-s/2, 0); ctx.lineTo(s/2, 0); ctx.stroke(); }
+        }
+        ctx.setLineDash([]);
+    }
+    
+    // Dibujar líneas de guía de circulación SOLO cuando la pieza está conectada
+    if (!tile.isDeadEnd && !tile.type.noArrows && tile.isPowered) {
+        // Línea azul sólida para mostrar camino disponible
+        ctx.strokeStyle = 'rgba(59, 130, 246, 0.8)'; // Azul
+        ctx.lineWidth = 2;
+        ctx.setLineDash([]);
         
         // Para T_JUNCTION y CROSS, dibujar líneas para TODAS las salidas
         if (tile.type === TILE_TYPES.T_JUNCTION || tile.type === TILE_TYPES.CROSS) {
-            // Dibujar líneas amarillas en todas las direcciones que tienen conexión
+            // Dibujar líneas azules en todas las direcciones que tienen conexión
             if (conn & DIR.N) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -s/2); ctx.stroke(); }
             if (conn & DIR.S) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, s/2); ctx.stroke(); }
             if (conn & DIR.E) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(s/2, 0); ctx.stroke(); }
@@ -2906,8 +2986,6 @@ function drawTile(tile) {
             if ((conn & DIR.N) && (conn & DIR.S)) { ctx.beginPath(); ctx.moveTo(0, -s/2); ctx.lineTo(0, s/2); ctx.stroke(); }
             if ((conn & DIR.E) && (conn & DIR.W)) { ctx.beginPath(); ctx.moveTo(-s/2, 0); ctx.lineTo(s/2, 0); ctx.stroke(); }
         }
-        
-        ctx.setLineDash([]);
     }
     
     if (tile.type === TILE_TYPES.START) {
