@@ -235,49 +235,39 @@
         
         /* Overlay con imagen de fondo de fallo */
         #overlay.failure-bg {
-            background-image: url('fallo.jpeg');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
+            background: rgba(0, 0, 0, 0.95);
         }
-        #overlay.failure-bg::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(15, 23, 42, 0.5));
-            border-radius: 0.75rem;
-            backdrop-filter: blur(1px);
-        }
-        #overlay.failure-bg > * {
-            position: relative;
-            z-index: 1;
-            text-shadow: 0 3px 10px rgba(0, 0, 0, 0.95), 0 0 5px rgba(0, 0, 0, 1);
-        }
-        #overlay.failure-bg #overlayTitle {
-            color: #fbbf24;
-            font-size: 2.5rem;
-            font-weight: 900;
-            text-shadow: 0 0 30px rgba(251, 191, 36, 0.8), 0 3px 10px rgba(0, 0, 0, 1), 0 0 10px rgba(0, 0, 0, 1);
-            letter-spacing: 1px;
+        #overlay.failure-bg #overlayImage {
+            width: 100%;
+            max-width: 450px;
+            height: auto;
+            border: none;
+            border-radius: 0;
             margin-bottom: 20px;
-        }
-        #overlay.failure-bg #overlaySubtitle {
-            font-size: 1.3rem;
-            color: #ffffff;
-            font-weight: 700;
-            margin-bottom: 15px;
-            text-shadow: 0 3px 10px rgba(0, 0, 0, 1), 0 0 8px rgba(0, 0, 0, 1);
-        }
-        #overlay.failure-bg #overlayBonus {
-            font-size: 1.1rem;
-            margin-top: 20px;
-            font-weight: 600;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
         }
         #overlay.failure-bg #overlayBtn {
-            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.5);
-            font-size: 1.2rem;
-            padding: 14px 32px;
-            margin-top: 10px;
+            background: #ef4444;
+            font-size: 1.3rem;
+            padding: 16px 48px;
+            font-weight: 800;
+            margin-top: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.6);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        #overlay.failure-bg #overlayBtn:hover {
+            background: #dc2626;
+            transform: scale(1.05);
+            box-shadow: 0 6px 25px rgba(239, 68, 68, 0.8);
+        }
+        #overlay.failure-bg #overlayFooter {
+            font-size: 0.95rem;
+            color: #fbbf24;
+            font-weight: 700;
+            margin-top: 5px;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
         }
         
         /* Modal de notificación personalizado */
@@ -316,12 +306,18 @@
             margin-bottom: 15px;
             display: inline-block;
             animation: iconBounce 0.6s ease-in-out;
+            background: transparent; /* Sin círculo de fondo */
         }
         .game-modal-icon img {
-            width: 120px;
-            height: 120px;
+            width: 180px; /* Más grande */
+            height: 180px;
             object-fit: contain;
             image-rendering: auto;
+            animation: vehicleFloat 2s ease-in-out infinite; /* Movimiento constante */
+        }
+        @keyframes vehicleFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
         }
         @keyframes iconBounce {
             0%, 100% { transform: translateY(0); }
@@ -1992,6 +1988,37 @@ function placeObstacles(count) {
     const extraObstacles = Math.floor(level / 3);
     count += extraObstacles;
     
+    const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
+    const endTile = grid.find(t => t && t.type === TILE_TYPES.END);
+    
+    // Colocar algunos obstáculos en el camino directo para evitar rutas fáciles
+    if (startTile && endTile) {
+        const directPathObstacles = Math.min(3, Math.floor(count / 2));
+        for (let i = 0; i < directPathObstacles && attempts < 100; i++) {
+            attempts++;
+            // Calcular posiciones en el camino directo
+            const t = (i + 1) / (directPathObstacles + 1);
+            const col = Math.round(startTile.col + (endTile.col - startTile.col) * t);
+            const row = Math.round(startTile.row + (endTile.row - startTile.row) * t);
+            
+            if (col === startTile.col && row === startTile.row) continue;
+            if (col === endTile.col && row === endTile.row) continue;
+            if (grid[row * COLS + col]) continue;
+            
+            grid[row * COLS + col] = new Tile(col, row, TILE_TYPES.BLOCKED);
+            if (!canReachEnd()) { 
+                grid[row * COLS + col] = null; 
+                continue; 
+            }
+            
+            const obstacleTypes = level >= 5 
+                ? ['broken', 'tree', 'construction', 'bridge_broken']
+                : ['broken', 'tree', 'construction'];
+            grid[row * COLS + col].special = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
+            placed++;
+        }
+    }
+    
     while (placed < count && attempts < 200) {
         attempts++;
         const col = 1 + Math.floor(Math.random() * (COLS - 2));
@@ -2063,26 +2090,27 @@ function fillEmpty(deadEndCount) {
         }
         
         const rand = Math.random();
-        let type = rand < 0.35 ? TILE_TYPES.STRAIGHT : rand < 0.7 ? TILE_TYPES.CURVE : rand < 0.88 ? TILE_TYPES.T_JUNCTION : TILE_TYPES.CROSS;
+        // Curvas (45%), Rectas (30%), T_JUNCTION (15%), CROSS (10%)
+        let type = rand < 0.30 ? TILE_TYPES.STRAIGHT : rand < 0.75 ? TILE_TYPES.CURVE : rand < 0.90 ? TILE_TYPES.T_JUNCTION : TILE_TYPES.CROSS;
         grid[idx] = new Tile(col, row, type);
     }
 }
 
 function randomizeRotations() {
-    // Primero generar un camino garantizado desde START hasta END
-    const guaranteedPath = generateGuaranteedPath();
-    
-    // Orientar las piezas del camino garantizado correctamente
-    if (guaranteedPath.length > 0) {
-        orientPathTiles(guaranteedPath);
-    }
-    
-    // Aleatorizar las demás piezas
+    // ALEATORIZAR TODAS LAS PIEZAS - El jugador debe armar la ruta
+    // NO pre-orientar piezas - esto elimina el desafío del juego
     grid.forEach(tile => {
-        if (tile && !tile.locked && tile.type !== TILE_TYPES.BLOCKED && !tile.isOnPath) {
+        if (tile && !tile.locked && tile.type !== TILE_TYPES.BLOCKED) {
             tile.rotation = Math.floor(Math.random() * 4);
         }
     });
+    
+    // Verificar que sea posible llegar a la meta (aunque las piezas estén desordenadas)
+    // El jugador debe armarlas correctamente
+    if (!canReachEnd()) {
+        // Si no es posible ni rotando, regenerar el nivel
+        console.warn("Nivel imposible generado, se requiere regeneración");
+    }
 }
 
 // Función para generar un camino garantizado usando BFS
@@ -2133,7 +2161,8 @@ function generateGuaranteedPath() {
 }
 
 // Función para orientar las piezas del camino correctamente
-// Las piezas con 3+ salidas (T_JUNCTION, CROSS) siempre quedan transitables por TODAS sus salidas
+// Las piezas CROSS siempre quedan transitables por TODAS sus salidas
+// GARANTIZA que siempre haya un camino válido a la meta
 function orientPathTiles(path) {
     for (let i = 0; i < path.length; i++) {
         const curr = path[i];
@@ -2163,9 +2192,8 @@ function orientPathTiles(path) {
             else if (next.row > curr.row) neededConnections.push(DIR.S);
         }
         
-        // Encontrar la rotación que conecte las direcciones necesarias
-        // Para T_JUNCTION y CROSS, cualquier rotación que cumpla con las conexiones necesarias es válida
-        // Esto permite que TODAS las salidas de estas piezas sean transitables
+        // GARANTIZAR que la pieza tenga la rotación correcta
+        let foundValidRotation = false;
         for (let rot = 0; rot < 4; rot++) {
             tile.rotation = rot;
             const conn = tile.getConnections();
@@ -2177,10 +2205,15 @@ function orientPathTiles(path) {
                 }
             }
             if (allConnected) {
-                // Si es T_JUNCTION o CROSS, dejar esta rotación
-                // Así TODAS sus salidas quedan desbloqueadas
+                foundValidRotation = true;
                 break;
             }
+        }
+        
+        // Si no se encontró rotación válida, forzar pieza CROSS que conecta en todas direcciones
+        if (!foundValidRotation && tile.type !== TILE_TYPES.START && tile.type !== TILE_TYPES.END) {
+            tile.type = TILE_TYPES.CROSS;
+            tile.rotation = 0;
         }
     }
 }
@@ -2230,8 +2263,8 @@ function checkConnections() {
                         
                         // Conectar si:
                         // 1. Hay un puente en cualquiera de los dos lados
-                        // 2. La pieza actual es multi-vía (T o Cruz)
-                        // 3. El vecino es multi-vía (T o Cruz)
+                        // 2. La pieza actual es multi-vía (Cruz o T)
+                        // 3. El vecino es multi-vía (Cruz o T)
                         // 4. Hay una conexión bidireccional válida normal
                         if (isCurrBridge || isNeighborBridge || 
                             isCurrMultiWay || isNeighborMultiWay || 
@@ -2253,10 +2286,13 @@ function calculatePreviewPath() {
     plannedRoute = []; // Resetear la ruta planificada
     if (!car) return;
     
+    const endTile = grid.find(t => t && t.isEnd);
+    const startPos = { col: car.col, row: car.row, dir: car.dir };
+    
+    // Solo seguir piezas que estén CONECTADAS (powered = true)
     let col = car.col, row = car.row, dir = car.dir;
     const visited = new Set();
-    
-    previewPath.push({ x: col * TILE_SIZE + TILE_SIZE / 2, y: row * TILE_SIZE + TILE_SIZE / 2 });
+    const mainPath = [{ x: col * TILE_SIZE + TILE_SIZE / 2, y: row * TILE_SIZE + TILE_SIZE / 2 }];
     
     for (let steps = 0; steps < 100; steps++) {
         const key = `${col},${row},${dir}`;
@@ -2266,26 +2302,102 @@ function calculatePreviewPath() {
         const tile = grid[row * COLS + col];
         if (!tile) break;
         
+        // SOLO seguir piezas que estén conectadas (powered)
+        if (!tile.powered && !tile.locked) break;
+        
         if (tile.isEnd) {
-            previewPath[previewPath.length - 1].isEnd = true;
+            mainPath[mainPath.length - 1].isEnd = true;
             break;
         }
         
         const conn = tile.getConnections();
         const entry = OPPOSITE[dir];
+        const isCross = tile.type === TILE_TYPES.CROSS;
+        const isTJunction = tile.type === TILE_TYPES.T_JUNCTION;
+        const isBridge = tile.type === TILE_TYPES.BRIDGE || tile.isBridge;
         
-        if (!tile.locked && !(conn & entry) && steps > 0) break;
+        // CROSS, T_JUNCTION y BRIDGE no validan entrada estricta
+        if (!tile.locked && !isCross && !isTJunction && !isBridge && !(conn & entry) && steps > 0) break;
         
+        // Para CROSS y T_JUNCTION, elegir la mejor salida conectada
+        if (isCross || isTJunction) {
+            const availableExits = [];
+            [DIR.N, DIR.E, DIR.S, DIR.W].forEach(d => { 
+                if (conn & d) {
+                    const delta = DIR_DELTA[d];
+                    const nc = col + delta.dc, nr = row + delta.dr;
+                    
+                    if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS) {
+                        const next = grid[nr * COLS + nc];
+                        // SOLO incluir si la siguiente pieza está conectada (powered)
+                        if (next && next.powered && next.type !== TILE_TYPES.BLOCKED) {
+                            const nextIsCross = next.type === TILE_TYPES.CROSS;
+                            const nextIsBridge = next.type === TILE_TYPES.BRIDGE || next.isBridge;
+                            
+                            // Verificar si hay conexión válida
+                            if (nextIsCross || nextIsBridge || (next.getConnections() & OPPOSITE[d])) {
+                                availableExits.push({ dir: d, col: nc, row: nr });
+                            }
+                        }
+                    }
+                }
+            });
+            
+            if (availableExits.length === 0) break;
+            
+            // Elegir la mejor salida para continuar (sin dibujar ramas)
+            let bestExit = availableExits[0];
+            if (endTile) {
+                let minDist = Infinity;
+                availableExits.forEach(exit => {
+                    const dist = Math.abs(exit.col - endTile.col) + Math.abs(exit.row - endTile.row);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        bestExit = exit;
+                    }
+                });
+            }
+            
+            col = bestExit.col;
+            row = bestExit.row;
+            dir = bestExit.dir;
+            
+            // Guardar en plannedRoute
+            if (steps === 0) {
+                plannedRoute.push({ col: startPos.col, row: startPos.row, dir: bestExit.dir });
+            }
+            
+            // Agregar solo el punto de la mejor salida al camino
+            mainPath.push({ x: col * TILE_SIZE + TILE_SIZE / 2, y: row * TILE_SIZE + TILE_SIZE / 2 });
+            
+            continue;
+        }
+        
+        // Para piezas normales (no CROSS)
         const exits = conn & ~entry;
         let exitDir = 0;
         
-        if (exits & dir) exitDir = dir;
-        else [DIR.N, DIR.E, DIR.S, DIR.W].forEach(d => { if (!exitDir && (exits & d)) exitDir = d; });
+        // Elegir salida
+        const availableExits = [];
+        [DIR.N, DIR.E, DIR.S, DIR.W].forEach(d => { 
+            if (exits & d) availableExits.push(d); 
+        });
+        
+        if (availableExits.length === 0) break;
+        
+        if (availableExits.length === 1) {
+            exitDir = availableExits[0];
+        } else {
+            // Priorizar seguir recto
+            exitDir = (exits & dir) ? dir : availableExits[0];
+        }
         
         if (!exitDir) break;
         
-        // Guardar la dirección planificada para esta posición
-        plannedRoute.push({ col, row, dir: exitDir });
+        // Guardar dirección para el primer paso
+        if (steps === 0) {
+            plannedRoute.push({ col: startPos.col, row: startPos.row, dir: exitDir });
+        }
         
         const d = DIR_DELTA[exitDir];
         const nc = col + d.dc, nr = row + d.dr;
@@ -2294,12 +2406,22 @@ function calculatePreviewPath() {
         
         const next = grid[nr * COLS + nc];
         if (!next || next.type === TILE_TYPES.BLOCKED) break;
-        if (!(next.getConnections() & OPPOSITE[exitDir])) break;
         
-        previewPath.push({ x: nc * TILE_SIZE + TILE_SIZE / 2, y: nr * TILE_SIZE + TILE_SIZE / 2 });
+        // SOLO continuar si la siguiente pieza está conectada (powered)
+        if (!next.powered && !next.locked) break;
+        
+        const nextIsCross = next.type === TILE_TYPES.CROSS;
+        const nextIsBridge = next.type === TILE_TYPES.BRIDGE || next.isBridge;
+        
+        // CROSS y BRIDGE siempre permiten entrada
+        if (!nextIsCross && !nextIsBridge && !(next.getConnections() & OPPOSITE[exitDir])) break;
+        
+        mainPath.push({ x: nc * TILE_SIZE + TILE_SIZE / 2, y: nr * TILE_SIZE + TILE_SIZE / 2 });
         
         col = nc; row = nr; dir = exitDir;
     }
+    
+    previewPath = mainPath;
 }
 
 function startCountdown() {
@@ -2530,20 +2652,28 @@ function gameLoop() {
         // PUENTE: Los puentes ignoran las validaciones de conexión
         const isBridge = tile?.type === TILE_TYPES.BRIDGE || tile?.isBridge;
         
-        if (!isBridge && !tile?.locked && !(conn & entry)) { crash('¡Sin entrada!'); return; }
+        // PIEZAS MULTI-VÍA: CROSS (4 salidas) y T_JUNCTION (3 salidas)
+        const isMultiWay = tile?.type === TILE_TYPES.CROSS || tile?.type === TILE_TYPES.T_JUNCTION;
         
-        const exits = conn & ~entry;
+        if (!isBridge && !tile?.locked && !isMultiWay && !(conn & entry)) { crash('¡Sin entrada!'); return; }
+        
+        // Para CROSS y T_JUNCTION, todas las direcciones son salidas válidas
+        const exits = isMultiWay ? conn : (conn & ~entry);
         let exitDir = 0;
         
-        // SEGUIR LA RUTA PLANIFICADA: Buscar la dirección planificada para esta posición
+        // SEGUIR LA RUTA PLANIFICADA: Si hay guía amarilla, DEBE seguirla sin desviarse
         const plannedMove = plannedRoute.find(r => r.col === car.col && r.row === car.row);
         
         if (plannedMove && (exits & plannedMove.dir)) {
-            // Usar la dirección planificada si está disponible
+            // OBLIGATORIO: Usar la dirección planificada - NO puede desviarse
             exitDir = plannedMove.dir;
+        } else if (plannedMove) {
+            // Si existe ruta planificada pero la dirección no está disponible = error
+            crash('¡Ruta incorrecta!');
+            return;
         } else {
-            // Fallback: lógica anterior si no hay ruta planificada
-            // Recopilar todas las salidas disponibles
+            // SOLO si NO hay ruta planificada, permitir elegir dirección
+            // Esto significa que el jugador aún no ha armado completamente la ruta
             const availableExits = [];
             [DIR.N, DIR.E, DIR.S, DIR.W].forEach(d => { 
                 if (exits & d) availableExits.push(d); 
@@ -2556,12 +2686,37 @@ function gameLoop() {
                 // Solo una salida disponible
                 exitDir = availableExits[0];
             } else {
-                // Múltiples salidas: priorizar seguir recto si es posible
-                if (exits & car.dir) {
-                    exitDir = car.dir;
+                // Múltiples salidas: PARA MULTI-WAY, elegir la mejor dirección hacia la meta
+                if (isMultiWay) {
+                    const endTile = grid.find(t => t && t.isEnd);
+                    if (endTile) {
+                        // Calcular qué dirección acerca más a la meta
+                        let bestDir = availableExits[0];
+                        let minDist = Infinity;
+                        
+                        availableExits.forEach(d => {
+                            const delta = DIR_DELTA[d];
+                            const nextCol = car.col + delta.dc;
+                            const nextRow = car.row + delta.dr;
+                            const dist = Math.abs(nextCol - endTile.col) + Math.abs(nextRow - endTile.row);
+                            if (dist < minDist) {
+                                minDist = dist;
+                                bestDir = d;
+                            }
+                        });
+                        
+                        exitDir = bestDir;
+                    } else {
+                        // Si no hay meta, seguir recto si es posible
+                        exitDir = (exits & car.dir) ? car.dir : availableExits[0];
+                    }
                 } else {
-                    // Si no puede seguir recto, elegir la primera disponible
-                    exitDir = availableExits[0];
+                    // Para otras piezas: priorizar seguir recto si es posible
+                    if (exits & car.dir) {
+                        exitDir = car.dir;
+                    } else {
+                        exitDir = availableExits[0];
+                    }
                 }
             }
         }
@@ -2579,14 +2734,20 @@ function gameLoop() {
         const next = grid[nr * COLS + nc];
         if (!next || next.type === TILE_TYPES.BLOCKED) { crash('¡Bloqueado!'); return; }
         
+        // VALIDAR que la siguiente pieza esté CONECTADA (powered) - el carro no puede ir por calles no armadas
+        if (!next.powered && !next.locked) { 
+            crash('¡Calle no conectada!'); 
+            return; 
+        }
+        
         // PUENTE: Si la pieza actual o la siguiente es un puente, NO validar conexiones
         const nextIsBridge = next.type === TILE_TYPES.BRIDGE || next.isBridge;
         
-        // PIEZAS MULTI-VÍA: Si la pieza actual es CROSS o T_JUNCTION, puede conectarse con cualquier pieza que tenga al menos una vía
-        const isMultiWay = tile?.type === TILE_TYPES.CROSS || tile?.type === TILE_TYPES.T_JUNCTION;
+        // PIEZAS MULTI-VÍA: Si la siguiente pieza es CROSS o T_JUNCTION, puede conectarse con cualquier dirección
         const nextIsMultiWay = next.type === TILE_TYPES.CROSS || next.type === TILE_TYPES.T_JUNCTION;
         
-        // Solo validar conexión si NO hay puentes ni piezas multi-vía involucradas
+        // CROSS siempre permite pasar - no validar conexión de entrada
+        // Solo validar conexión si NO hay puentes ni piezas CROSS involucradas
         if (!isBridge && !nextIsBridge && !isMultiWay && !nextIsMultiWay && !(next.getConnections() & OPPOSITE[exitDir])) { 
             crash('¡Choque!'); 
             return; 
@@ -2610,17 +2771,32 @@ function crash(msg) {
     $('gameContainer').classList.add('shake');
     setTimeout(() => $('gameContainer').classList.remove('shake'), 500);
     
-    // Ocultar icono e imagen, usar fondo
-    $('overlayImage').classList.add('hidden');
-    $('overlayIcon').classList.add('hidden');
-    $('overlay').classList.add('failure-bg');
+    // Mostrar SOLO imagen de fallo clara y grande
+    const overlayImage = $('overlayImage');
+    overlayImage.src = 'fallo.jpeg';
+    overlayImage.classList.remove('hidden');
     
-    $('overlayTitle').textContent = '¡CHOQUE! 💥';
+    // Ocultar iconos y textos no necesarios
+    $('overlayIcon').classList.add('hidden');
+    $('overlayTitle').textContent = '';
     $('overlaySubtitle').textContent = '';
     $('overlayBonus').textContent = '';
-    $('overlayBtn').textContent = '🔄 Reintentar';
-    $('overlayFooter').textContent = '🏠 El cliente aún espera su pedido...';
-    $('overlayBtn').onclick = retryLevel; // Reintentar mismo nivel, misma casa
+    
+    // Aplicar fondo de fallo
+    $('overlay').classList.add('failure-bg');
+    
+    // Botón REINTENTAR prominente
+    $('overlayBtn').textContent = 'Reintentar';
+    $('overlayBtn').onclick = retryLevel;
+    
+    // Mensaje de pérdida abajo
+    $('overlayFooter').textContent = `💸 Perdiste $50 por el choque • ${msg}`;
+    
+    // Descontar dinero por el choque
+    totalMoney = Math.max(0, totalMoney - 50);
+    $('moneyDisplay').textContent = totalMoney;
+    saveGameData();
+    
     $('overlay').classList.remove('hidden');
 }
 
@@ -2720,8 +2896,10 @@ function draw() {
 }
 
 function drawPreviewPath() {
+    if (previewPath.length < 2) return;
     ctx.save();
     
+    // Dibujar solo la línea amarilla principal - SOLO LÍNEAS RECTAS
     // Sombra
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
     ctx.lineWidth = 6;
@@ -2731,7 +2909,20 @@ function drawPreviewPath() {
     ctx.beginPath();
     ctx.moveTo(previewPath[0].x, previewPath[0].y);
     for (let i = 1; i < previewPath.length; i++) {
-        ctx.lineTo(previewPath[i].x, previewPath[i].y);
+        // Solo dibujar líneas rectas (sin diagonales)
+        const prevX = previewPath[i-1].x;
+        const prevY = previewPath[i-1].y;
+        const currX = previewPath[i].x;
+        const currY = previewPath[i].y;
+        
+        // Si hay desplazamiento diagonal, dibujar en dos segmentos
+        if (prevX !== currX && prevY !== currY) {
+            // Primero horizontal, luego vertical
+            ctx.lineTo(currX, prevY);
+            ctx.lineTo(currX, currY);
+        } else {
+            ctx.lineTo(currX, currY);
+        }
     }
     ctx.stroke();
     
@@ -2741,7 +2932,18 @@ function drawPreviewPath() {
     ctx.beginPath();
     ctx.moveTo(previewPath[0].x, previewPath[0].y);
     for (let i = 1; i < previewPath.length; i++) {
-        ctx.lineTo(previewPath[i].x, previewPath[i].y);
+        const prevX = previewPath[i-1].x;
+        const prevY = previewPath[i-1].y;
+        const currX = previewPath[i].x;
+        const currY = previewPath[i].y;
+        
+        // Si hay desplazamiento diagonal, dibujar en dos segmentos
+        if (prevX !== currX && prevY !== currY) {
+            ctx.lineTo(currX, prevY);
+            ctx.lineTo(currX, currY);
+        } else {
+            ctx.lineTo(currX, currY);
+        }
     }
     ctx.stroke();
     ctx.setLineDash([]);
@@ -2838,23 +3040,23 @@ function drawTile(tile) {
     
     ctx.beginPath(); ctx.arc(0, 0, h, 0, Math.PI * 2); ctx.fill();
     
-    // Agregar veredas (bordes grises que cierran completamente la calle)
-    ctx.strokeStyle = '#9ca3af';
-    ctx.lineWidth = 1.2;
-    ctx.lineCap = 'square';
+    // Agregar veredas (bordes grises que NO se cruzan entre calles)
+    ctx.strokeStyle = '#6b7280'; // Gris oscuro
+    ctx.lineWidth = 1.5;
+    ctx.lineCap = 'butt'; // Bordes rectos para evitar cruces
     
     if (conn & DIR.N) {
-        // Vereda izquierda Norte
+        // Vereda izquierda Norte - solo vertical, no cruza
         ctx.beginPath();
         ctx.moveTo(-h, -s/2);
         ctx.lineTo(-h, 0);
         ctx.stroke();
-        // Vereda derecha Norte
+        // Vereda derecha Norte - solo vertical, no cruza
         ctx.beginPath();
         ctx.moveTo(h, -s/2);
         ctx.lineTo(h, 0);
         ctx.stroke();
-        // Cierre superior
+        // Cierre superior solo si NO hay conexión
         if (!(conn & DIR.N)) {
             ctx.beginPath();
             ctx.moveTo(-h, -s/2);
@@ -2862,7 +3064,7 @@ function drawTile(tile) {
             ctx.stroke();
         }
     } else {
-        // Si no hay conexión al Norte, dibujar línea horizontal de cierre
+        // Si no hay conexión al Norte, cerrar con línea horizontal
         ctx.beginPath();
         ctx.moveTo(-h, -h);
         ctx.lineTo(h, -h);
@@ -2947,24 +3149,7 @@ function drawTile(tile) {
         ctx.stroke();
     }
     
-    // Líneas amarillas entrecortadas en el centro de las calles - SIEMPRE visibles
-    if (!tile.isDeadEnd && !tile.type.noArrows) {
-        ctx.strokeStyle = 'rgba(251, 191, 36, 0.9)';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([8, 10]);
-        
-        // Para T_JUNCTION y CROSS, dibujar líneas en todas direcciones
-        if (tile.type === TILE_TYPES.T_JUNCTION || tile.type === TILE_TYPES.CROSS) {
-            if (conn & DIR.N) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -s/2); ctx.stroke(); }
-            if (conn & DIR.S) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, s/2); ctx.stroke(); }
-            if (conn & DIR.E) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(s/2, 0); ctx.stroke(); }
-            if (conn & DIR.W) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-s/2, 0); ctx.stroke(); }
-        } else {
-            if ((conn & DIR.N) && (conn & DIR.S)) { ctx.beginPath(); ctx.moveTo(0, -s/2); ctx.lineTo(0, s/2); ctx.stroke(); }
-            if ((conn & DIR.E) && (conn & DIR.W)) { ctx.beginPath(); ctx.moveTo(-s/2, 0); ctx.lineTo(s/2, 0); ctx.stroke(); }
-        }
-        ctx.setLineDash([]);
-    }
+    // Líneas amarillas eliminadas según solicitud del usuario
     
     // Dibujar líneas de guía de circulación SOLO cuando la pieza está conectada
     if (!tile.isDeadEnd && !tile.type.noArrows && tile.isPowered) {
@@ -2973,8 +3158,8 @@ function drawTile(tile) {
         ctx.lineWidth = 2;
         ctx.setLineDash([]);
         
-        // Para T_JUNCTION y CROSS, dibujar líneas para TODAS las salidas
-        if (tile.type === TILE_TYPES.T_JUNCTION || tile.type === TILE_TYPES.CROSS) {
+        // Para CROSS y T_JUNCTION, dibujar líneas para TODAS las salidas
+        if (tile.type === TILE_TYPES.CROSS || tile.type === TILE_TYPES.T_JUNCTION) {
             // Dibujar líneas azules en todas las direcciones que tienen conexión
             if (conn & DIR.N) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -s/2); ctx.stroke(); }
             if (conn & DIR.S) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, s/2); ctx.stroke(); }
@@ -3417,12 +3602,6 @@ function drawCar() {
             ctx.textBaseline = 'middle';
             ctx.fillText('⭐', 0, -4);
         }
-        
-        // Efecto de brillo premium
-        ctx.fillStyle = 'rgba(251, 191, 36, 0.3)';
-        ctx.beginPath();
-        ctx.arc(0, 0, 18, 0, Math.PI * 2);
-        ctx.fill();
     } else if (selectedVehicle === 'trucka') {
         // Camioneta Premium - usando imagen camionetaa.png
         
