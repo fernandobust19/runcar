@@ -1984,51 +1984,36 @@ function placeEnd() {
 
 function placeObstacles(count) {
     let placed = 0, attempts = 0;
-    // Aumentar obstáculos en niveles más altos
-    const extraObstacles = Math.floor(level / 3);
-    count += extraObstacles;
+    // Reducir obstáculos para asegurar jugabilidad
+    const extraObstacles = Math.max(0, Math.floor(level / 5));
+    count = Math.min(count + extraObstacles, Math.floor((COLS * ROWS) / 8));
     
     const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
     const endTile = grid.find(t => t && t.type === TILE_TYPES.END);
     
-    // Colocar algunos obstáculos en el camino directo para evitar rutas fáciles
-    if (startTile && endTile) {
-        const directPathObstacles = Math.min(3, Math.floor(count / 2));
-        for (let i = 0; i < directPathObstacles && attempts < 100; i++) {
-            attempts++;
-            // Calcular posiciones en el camino directo
-            const t = (i + 1) / (directPathObstacles + 1);
-            const col = Math.round(startTile.col + (endTile.col - startTile.col) * t);
-            const row = Math.round(startTile.row + (endTile.row - startTile.row) * t);
-            
-            if (col === startTile.col && row === startTile.row) continue;
-            if (col === endTile.col && row === endTile.row) continue;
-            if (grid[row * COLS + col]) continue;
-            
-            grid[row * COLS + col] = new Tile(col, row, TILE_TYPES.BLOCKED);
-            if (!canReachEnd()) { 
-                grid[row * COLS + col] = null; 
-                continue; 
-            }
-            
-            const obstacleTypes = level >= 5 
-                ? ['broken', 'tree', 'construction', 'bridge_broken']
-                : ['broken', 'tree', 'construction'];
-            grid[row * COLS + col].special = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
-            placed++;
-        }
-    }
+    // NO colocar obstáculos en el camino directo - solo en posiciones aleatorias
+    // Esto garantiza que siempre hay al menos una ruta posible
     
-    while (placed < count && attempts < 200) {
+    while (placed < count && attempts < 300) {
         attempts++;
-        const col = 1 + Math.floor(Math.random() * (COLS - 2));
-        const row = 1 + Math.floor(Math.random() * (ROWS - 2));
+        const col = Math.floor(Math.random() * COLS);
+        const row = Math.floor(Math.random() * ROWS);
+        
+        // No colocar en start, end, o celdas ya ocupadas
         if (grid[row * COLS + col]) continue;
         
-        grid[row * COLS + col] = new Tile(col, row, TILE_TYPES.BLOCKED);
-        if (!canReachEnd()) { grid[row * COLS + col] = null; continue; }
+        // No colocar adyacente al start o end
+        if (startTile && Math.abs(col - startTile.col) <= 1 && Math.abs(row - startTile.row) <= 1) continue;
+        if (endTile && Math.abs(col - endTile.col) <= 1 && Math.abs(row - endTile.row) <= 1) continue;
         
-        // Más tipos de obstáculos en niveles altos
+        // Colocar obstáculo temporal y verificar conectividad
+        grid[row * COLS + col] = new Tile(col, row, TILE_TYPES.BLOCKED);
+        if (!canReachEnd()) { 
+            grid[row * COLS + col] = null; 
+            continue; 
+        }
+        
+        // Tipos de obstáculos
         const obstacleTypes = level >= 5 
             ? ['broken', 'tree', 'construction', 'bridge_broken']
             : ['broken', 'tree', 'construction'];
@@ -2069,6 +2054,8 @@ function fillEmpty(deadEndCount) {
     for (let i = 0; i < COLS * ROWS; i++) if (!grid[i]) empty.push(i);
     empty.sort(() => Math.random() - 0.5);
     
+    // Reducir calles trampa a máximo 2 para evitar confusión
+    deadEndCount = Math.min(deadEndCount, 2);
     let deadPlaced = 0;
     const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
     const endTile = grid.find(t => t && t.type === TILE_TYPES.END);
@@ -2077,10 +2064,11 @@ function fillEmpty(deadEndCount) {
         const idx = empty[i];
         const col = idx % COLS, row = Math.floor(idx / COLS);
         
+        // Reducir calles trampa
         if (deadPlaced < deadEndCount && startTile && endTile) {
             const dStart = Math.abs(col - startTile.col) + Math.abs(row - startTile.row);
             const dEnd = Math.abs(col - endTile.col) + Math.abs(row - endTile.row);
-            if (dStart >= 2 && dEnd >= 2) {
+            if (dStart >= 3 && dEnd >= 3 && Math.random() < 0.3) {
                 const deadType = Math.random() > 0.5 ? TILE_TYPES.DEAD_STRAIGHT : TILE_TYPES.DEAD_CURVE;
                 grid[idx] = new Tile(col, row, deadType);
                 grid[idx].isDeadEnd = true;
@@ -2090,8 +2078,8 @@ function fillEmpty(deadEndCount) {
         }
         
         const rand = Math.random();
-        // Curvas (45%), Rectas (30%), T_JUNCTION (15%), CROSS (10%)
-        let type = rand < 0.30 ? TILE_TYPES.STRAIGHT : rand < 0.75 ? TILE_TYPES.CURVE : rand < 0.90 ? TILE_TYPES.T_JUNCTION : TILE_TYPES.CROSS;
+        // Más curvas y rectas, menos cruces complejos: Curvas (40%), Rectas (35%), T_JUNCTION (15%), CROSS (10%)
+        let type = rand < 0.35 ? TILE_TYPES.STRAIGHT : rand < 0.75 ? TILE_TYPES.CURVE : rand < 0.90 ? TILE_TYPES.T_JUNCTION : TILE_TYPES.CROSS;
         grid[idx] = new Tile(col, row, type);
     }
 }
@@ -2358,14 +2346,12 @@ function calculatePreviewPath() {
                 });
             }
             
+            // GUARDAR en plannedRoute la dirección que debe tomar en esta posición
+            plannedRoute.push({ col: col, row: row, dir: bestExit.dir });
+            
             col = bestExit.col;
             row = bestExit.row;
             dir = bestExit.dir;
-            
-            // Guardar en plannedRoute
-            if (steps === 0) {
-                plannedRoute.push({ col: startPos.col, row: startPos.row, dir: bestExit.dir });
-            }
             
             // Agregar solo el punto de la mejor salida al camino
             mainPath.push({ x: col * TILE_SIZE + TILE_SIZE / 2, y: row * TILE_SIZE + TILE_SIZE / 2 });
@@ -2394,10 +2380,8 @@ function calculatePreviewPath() {
         
         if (!exitDir) break;
         
-        // Guardar dirección para el primer paso
-        if (steps === 0) {
-            plannedRoute.push({ col: startPos.col, row: startPos.row, dir: exitDir });
-        }
+        // GUARDAR en plannedRoute para TODAS las posiciones del camino
+        plannedRoute.push({ col: col, row: row, dir: exitDir });
         
         const d = DIR_DELTA[exitDir];
         const nc = col + d.dc, nr = row + d.dr;
@@ -2661,64 +2645,25 @@ function gameLoop() {
         const exits = isMultiWay ? conn : (conn & ~entry);
         let exitDir = 0;
         
-        // SEGUIR LA RUTA PLANIFICADA: Si hay guía amarilla, DEBE seguirla sin desviarse
+        // OBLIGATORIO: SEGUIR SOLO LA RUTA PLANIFICADA (línea amarilla)
+        // El vehículo NO puede desviarse por otras salidas aunque existan
         const plannedMove = plannedRoute.find(r => r.col === car.col && r.row === car.row);
         
-        if (plannedMove && (exits & plannedMove.dir)) {
-            // OBLIGATORIO: Usar la dirección planificada - NO puede desviarse
-            exitDir = plannedMove.dir;
-        } else if (plannedMove) {
-            // Si existe ruta planificada pero la dirección no está disponible = error
-            crash('¡Ruta incorrecta!');
-            return;
-        } else {
-            // SOLO si NO hay ruta planificada, permitir elegir dirección
-            // Esto significa que el jugador aún no ha armado completamente la ruta
-            const availableExits = [];
-            [DIR.N, DIR.E, DIR.S, DIR.W].forEach(d => { 
-                if (exits & d) availableExits.push(d); 
-            });
-            
-            if (availableExits.length === 0) {
-                crash('¡Callejón sin salida!'); 
-                return;
-            } else if (availableExits.length === 1) {
-                // Solo una salida disponible
-                exitDir = availableExits[0];
+        if (plannedMove) {
+            // Si hay ruta planificada, DEBE usarla obligatoriamente
+            if (exits & plannedMove.dir) {
+                // La dirección planificada está disponible - seguirla
+                exitDir = plannedMove.dir;
             } else {
-                // Múltiples salidas: PARA MULTI-WAY, elegir la mejor dirección hacia la meta
-                if (isMultiWay) {
-                    const endTile = grid.find(t => t && t.isEnd);
-                    if (endTile) {
-                        // Calcular qué dirección acerca más a la meta
-                        let bestDir = availableExits[0];
-                        let minDist = Infinity;
-                        
-                        availableExits.forEach(d => {
-                            const delta = DIR_DELTA[d];
-                            const nextCol = car.col + delta.dc;
-                            const nextRow = car.row + delta.dr;
-                            const dist = Math.abs(nextCol - endTile.col) + Math.abs(nextRow - endTile.row);
-                            if (dist < minDist) {
-                                minDist = dist;
-                                bestDir = d;
-                            }
-                        });
-                        
-                        exitDir = bestDir;
-                    } else {
-                        // Si no hay meta, seguir recto si es posible
-                        exitDir = (exits & car.dir) ? car.dir : availableExits[0];
-                    }
-                } else {
-                    // Para otras piezas: priorizar seguir recto si es posible
-                    if (exits & car.dir) {
-                        exitDir = car.dir;
-                    } else {
-                        exitDir = availableExits[0];
-                    }
-                }
+                // La dirección planificada NO está disponible = pieza mal orientada
+                crash('¡Ruta incorrecta! Pieza mal armada');
+                return;
             }
+        } else {
+            // Si NO hay ruta planificada para esta posición
+            // El jugador no armó bien la ruta - ERROR
+            crash('¡Sin ruta planificada! Debes armar el camino antes');
+            return;
         }
         
         if (!exitDir) {
