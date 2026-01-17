@@ -527,7 +527,7 @@
             <img id="companyLogo" src="LOGO-RAPPI.png" alt="Empresa" class="w-8 h-8 rounded-md object-contain bg-white p-0.5">
             <div>
                 <p class="text-emerald-400 font-bold text-xs"><span id="vehicleIcon">🏍️</span> <span id="driverDisplay">Repartidor</span></p>
-                <p class="text-[10px] text-slate-400">Pedido <span id="levelDisplay">1</span>/40</p>
+                <p class="text-[10px] text-slate-400">Pedido <span id="levelDisplay">1</span>/100</p>
                 <p class="text-yellow-400 font-bold text-xs">💰 $<span id="moneyDisplay">0</span></p>
             </div>
         </div>
@@ -1224,17 +1224,35 @@ function playSound(type) {
 }
 function toggleSound() { soundEnabled = !soundEnabled; document.getElementById('soundIcon').textContent = soundEnabled ? '🔊' : '🔇'; }
 
-// Configuración de niveles - MAPAS MÁS GRANDES
+// Configuración de niveles - MAPAS MÁS GRANDES - SEMÁFOROS Y PUENTES
 const LEVEL_CONFIG = [];
-for (let i = 1; i <= 40; i++) {
+for (let i = 1; i <= 100; i++) {
+    // Niveles avanzados (>60) son más difíciles: más obstáculos, más calles ciegas
+    const isHard = i > 60;
+    
     LEVEL_CONFIG.push({
-        cols: Math.min(5 + Math.floor(i / 4), 9),
-        rows: Math.min(6 + Math.floor(i / 3), 11),
-        time: 45 + i * 3,
-        speed: 2.0 + i * 0.08,
-        obstacles: Math.min(Math.floor(i / 5), 5),
-        deadEnds: Math.min(2 + Math.floor(i / 4), 8),
-        features: i >= 10 ? (i >= 18 ? (i >= 26 ? ['semaphore','puddle','boost'] : ['semaphore','puddle']) : ['semaphore']) : []
+        // Aumentar tamaño progresivamente
+        cols: Math.min(5 + Math.floor(i / 5), 9), 
+        rows: Math.min(6 + Math.floor(i / 4), 11),
+        
+        // Tiempo ajustado
+        time: 40 + i * 2 + (isHard ? 0 : 10), 
+        
+        // Velocidad aumenta
+        speed: Math.min(2.0 + i * 0.05, 5.0),
+        
+        // Obstáculos y callejones sin salida aumentan drásticamente en niveles altos
+        obstacles: Math.min(Math.floor(i / 4) + (isHard ? 3 : 0), 12),
+        deadEnds: Math.min(2 + Math.floor(i / 3) + (isHard ? 4 : 0), 15),
+        
+        // Características acumulativas
+        features: i >= 5 ? 
+            (i >= 15 ? 
+                (i >= 25 ? 
+                    (i >= 40 ? ['semaphore','puddle','boost','bridge_broken'] : ['semaphore','puddle','boost']) 
+                : ['semaphore','puddle']) 
+            : ['semaphore']) 
+        : []
     });
 }
 
@@ -1469,13 +1487,73 @@ function showPlayersList() {
         if (playersList.length > 0) {
             let playersHTML = '<div class="mt-2 p-2 bg-slate-700 rounded-lg"><p class="text-xs text-slate-300 mb-2">Jugadores guardados:</p>';
             playersList.forEach(player => {
-                playersHTML += `<button onclick="loadPlayerData('${player}')" class="block w-full text-left px-3 py-1 mb-1 bg-slate-600 hover:bg-slate-500 rounded text-sm text-white">👤 ${player}</button>`;
+                playersHTML += `
+                <div class="flex gap-1 mb-1">
+                    <button onclick="loadPlayerData('${player}')" class="flex-1 text-left px-3 py-1 bg-slate-600 hover:bg-slate-500 rounded text-sm text-white transition-colors">👤 ${player}</button>
+                    <button onclick="deletePlayer('${player}')" class="px-2 py-1 bg-red-900/50 hover:bg-red-600 rounded text-sm text-red-200 hover:text-white transition-colors border border-red-800" title="Borrar jugador">🗑️</button>
+                </div>`;
             });
             playersHTML += '</div>';
             $('welcomeBack').innerHTML = playersHTML;
             $('welcomeBack').classList.remove('hidden');
+        } else {
+             $('welcomeBack').classList.add('hidden');
         }
     } catch(e) {}
+}
+
+function deletePlayer(playerName) {
+    showConfirmModal({
+        icon: '🗑️',
+        title: 'Borrar Jugador',
+        message: `<strong>¿Estás seguro de borrar a "${playerName}"?</strong><br><br>⚠️ Se perderá todo su progreso y dinero.<br>Esta acción no se puede deshacer.`,
+        type: 'error', // Estilo rojo
+        confirmText: '🗑️ Sí, borrar',
+        cancelText: 'Cancelar'
+    }).then(confirmed => {
+        if (confirmed) {
+            try {
+                // 1. Borrar datos específicos del jugador
+                const playerKey = 'deliveryRush_' + playerName.toLowerCase().replace(/\s+/g, '_');
+                localStorage.removeItem(playerKey);
+                
+                // 2. Borrar de la lista de jugadores
+                let playersList = JSON.parse(localStorage.getItem('deliveryRushPlayers') || '[]');
+                playersList = playersList.filter(p => p !== playerName);
+                localStorage.setItem('deliveryRushPlayers', JSON.stringify(playersList));
+                
+                // 3. Si era el último jugador activo, limpiar esa referencia
+                if (localStorage.getItem('deliveryRushLastPlayer') === playerName) {
+                    localStorage.removeItem('deliveryRushLastPlayer');
+                    
+                    // Si el input tenía este nombre, limpiarlo
+                    if ($('driverName').value === playerName) {
+                        $('driverName').value = '';
+                        level = 1;
+                        totalMoney = 0;
+                        premiumMotoUnlocked = false;
+                        premiumTruckUnlocked = false;
+                        bridgesOwned = 0;
+                        $('moneyDisplay').textContent = '0';
+                    }
+                }
+                
+                playSound('crash'); // Sonido de borrado
+                
+                // 4. Actualizar la lista visualmente
+                showPlayersList();
+                
+                showGameModal({
+                    title: 'Jugador Eliminado',
+                    message: `El jugador <strong>${playerName}</strong> ha sido eliminado.`,
+                    type: 'success'
+                });
+                
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    });
 }
 
 function loadPlayerData(playerName) {
@@ -1687,7 +1765,7 @@ function init() {
 }
 
 function resize() {
-    const config = LEVEL_CONFIG[Math.min(level - 1, 39)];
+    const config = LEVEL_CONFIG[Math.min(level - 1, 99)];
     COLS = config.cols; ROWS = config.rows;
     const maxW = innerWidth - 8, maxH = innerHeight - 130;
     TILE_SIZE = Math.min(Math.floor(maxW / COLS), Math.floor(maxH / ROWS), 60);
@@ -1920,7 +1998,7 @@ function instantDeliver() {
 
 // Función para reintentar el nivel manteniendo la posición de la casa
 function retryLevel() {
-    const config = LEVEL_CONFIG[Math.min(level - 1, 39)];
+    const config = LEVEL_CONFIG[Math.min(level - 1, 99)];
     gameState = 'EDITING';
     $('overlay').classList.add('hidden');
     $('overlay').classList.remove('failure-bg');
@@ -1955,7 +2033,7 @@ function retryLevel() {
 }
 
 function generateLevel() {
-    const config = LEVEL_CONFIG[Math.min(level - 1, 39)];
+    const config = LEVEL_CONFIG[Math.min(level - 1, 99)];
     gameState = 'EDITING';
     $('overlay').classList.add('hidden');
     $('overlay').classList.remove('failure-bg');
@@ -2698,34 +2776,11 @@ function stopPrepAnimation() {
     $('statusContainer').classList.remove('hidden');
 }
 
-// Función para manejar tiempo expirado
+// Función para manejar tiempo expirado - Unificada con crash
 function timeExpired() {
-    gameState = 'TIMEOUT';
-    clearInterval(countdownTimer);
-    clearInterval(engineSoundInterval);
-    playSound('crash');
-    
-    // Descontar $100 de las propinas
-    const penalty = 100;
-    totalMoney = Math.max(0, totalMoney - penalty);
-    $('moneyDisplay').textContent = totalMoney;
-    saveGameData(); // Guardar datos después de la penalización
-    
-    $('gameContainer').classList.add('shake');
-    setTimeout(() => $('gameContainer').classList.remove('shake'), 500);
-    
-    // Ocultar icono e imagen, usar fondo
-    $('overlayImage').classList.add('hidden');
-    $('overlayIcon').classList.add('hidden');
-    $('overlay').classList.add('failure-bg');
-    
-    $('overlayTitle').textContent = '¡TIEMPO AGOTADO!';
-    $('overlaySubtitle').textContent = '';
-    $('overlayBonus').textContent = '';
-    $('overlayBtn').textContent = '🔄 Reintentar';
-    $('overlayFooter').innerHTML = `<span class="block mb-1">⏰ El cliente canceló el pedido</span><span class="text-red-400 block">💸 Penalización: -$${penalty}</span><span class="block mt-1">💰 Total: $${totalMoney}</span>`;
-    $('overlayBtn').onclick = retryLevel;
-    $('overlay').classList.remove('hidden');
+    // Usamos la misma lógica de "Choque/Fallo" para mantener consistencia
+    // y asegurar que se muestra la imagen correcta y el botón de reinicio funciona.
+    crash('¡El cliente canceló por demora!');
 }
 
 // Función para mostrar mensaje de salida del pedido
@@ -2751,7 +2806,7 @@ function resetCar() {
     let dir = DIR.E;
     [DIR.E, DIR.S, DIR.W, DIR.N].forEach(d => { if (conn & d) dir = d; });
     
-    const config = LEVEL_CONFIG[Math.min(level - 1, 39)];
+    const config = LEVEL_CONFIG[Math.min(level - 1, 99)];
     car = {
         col: start.col, row: start.row,
         x: start.col * TILE_SIZE + TILE_SIZE / 2,
@@ -3085,13 +3140,16 @@ function win() {
     playSound('delivery');
     setTimeout(() => playSound('money'), 400);
     
-    // Pago fijo de $75 por entrega correcta
-    const deliveryPayment = 75;
-    // Bonus por tiempo restante
+    // Pago fijo de $50 por entrega correcta
+    const deliveryPayment = 50;
+    
+    // Bonus por entregar en menos de la mitad del tiempo (+10)
+    const halfTimeBonus = timeUsedRatio <= 0.5 ? 10 : 0;
+    
+    // Bonus por tiempo restante (se mantiene para premiar la rapidez general)
     const timeBonus = Math.floor(timeLeft / 5) * 5;
-    // BONUS ESPECIAL: $50 extra si la entrega es en menos de 10 segundos
-    const speedBonus = deliveryTime < 10 ? 50 : 0;
-    const totalEarned = deliveryPayment + timeBonus + speedBonus;
+    
+    const totalEarned = deliveryPayment + halfTimeBonus + timeBonus;
     totalMoney += totalEarned;
     
     // Actualizar display de dinero
