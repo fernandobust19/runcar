@@ -197,40 +197,55 @@
             50% { box-shadow: 0 0 15px #eab308; }
         }
         
-        /* Mensaje de salida del pedido */
+        /* Mensaje de salida del pedido - ESTILO MODERNO CON IMAGEN */
         .order-ready {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%) scale(0);
-            background: linear-gradient(135deg, #10b981, #059669);
-            padding: 30px 50px;
-            border-radius: 20px;
+            background: transparent;
+            padding: 0;
             z-index: 35;
             text-align: center;
-            box-shadow: 0 10px 40px rgba(16, 185, 129, 0.5);
-            animation: orderPopup 0.5s ease-out forwards;
+            filter: drop-shadow(0 15px 30px rgba(0,0,0,0.5));
+            animation: orderPopup 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            width: 85%;
+            max-width: 380px;
         }
         @keyframes orderPopup {
-            0% { transform: translate(-50%, -50%) scale(0) rotate(-10deg); }
-            50% { transform: translate(-50%, -50%) scale(1.1) rotate(5deg); }
-            100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+            0% { transform: translate(-50%, -50%) scale(0) rotate(-5deg); opacity: 0; }
+            60% { transform: translate(-50%, -50%) scale(1.1) rotate(2deg); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
         }
-        .order-ready h2 {
-            font-size: 28px;
+        .order-ready img {
+            width: 100%;
+            height: auto;
+            border-radius: 60px; /* Recorte agresivo de esquinas */
+            border: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            object-fit: cover;
+            display: block; /* Evita espacios extraños */
+        }
+        /* Eliminados estilos viejos de h2 y emoji */
+
+
+        /* Botón de Constructora */
+        .repair-btn {
+            background: linear-gradient(135deg, #f97316, #ea580c);
             color: white;
-            margin: 0;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            border: none;
+            border-radius: 12px;
+            padding: 8px 12px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 4px 0 #c2410c;
+            transition: all 0.1s;
         }
-        .order-ready .emoji {
-            font-size: 50px;
-            display: block;
-            margin-bottom: 10px;
-            animation: riderGo 0.3s ease-in-out infinite alternate;
-        }
-        @keyframes riderGo {
-            from { transform: translateX(-5px); }
-            to { transform: translateX(5px); }
+        .repair-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #c2410c;
         }
         
         /* Overlay con imagen de fondo de fallo */
@@ -471,13 +486,13 @@
                     <div class="flex justify-center gap-3">
                         <button onclick="selectPremiumMoto()" id="btn-motoa" class="vehicle-btn bg-slate-700 rounded-xl relative">
                             <img src="motoa.gif" alt="Moto Premium" class="w-10 h-10 object-contain mx-auto">
-                            <p class="text-xs text-yellow-400 mt-1">Premium</p>
+                            <p class="text-xs text-yellow-400 mt-1">Moto PRO</p>
                             <span id="motoLock" class="absolute -top-2 -right-2 text-lg">🔒</span>
                             <span id="motoPrice" class="absolute -bottom-2 left-0 right-0 text-[9px] text-yellow-300 bg-slate-900/90 rounded-full py-0.5">$2,000</span>
                         </button>
                         <button onclick="selectPremiumTruck()" id="btn-trucka" class="vehicle-btn bg-slate-700 rounded-xl relative">
                             <img src="camionetaa.png" alt="Camioneta Premium" class="w-10 h-10 object-contain mx-auto">
-                            <p class="text-xs text-yellow-400 mt-1">Premium</p>
+                            <p class="text-xs text-yellow-400 mt-1">Cami. PRO</p>
                             <span id="truckLock" class="absolute -top-2 -right-2 text-lg">🔒</span>
                             <span id="truckPrice" class="absolute -bottom-2 left-0 right-0 text-[9px] text-yellow-300 bg-slate-900/90 rounded-full py-0.5">$4,000</span>
                         </button>
@@ -545,9 +560,7 @@
         
         <!-- Mensaje de salida del pedido -->
         <div id="orderReady" class="order-ready hidden">
-            <span class="emoji" id="orderVehicleEmoji">🛵</span>
-            <span class="emoji" style="font-size: 30px;">💨</span>
-            <h2>¡SALE EL PEDIDO!</h2>
+            <img src="sale.jpg" alt="¡SALE EL PEDIDO!">
         </div>
         
         <div id="overlay" class="hidden absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-20 rounded-xl p-3">
@@ -579,6 +592,10 @@
         <button onclick="toggleBridgeMode()" id="btnBridge" class="btn-game bg-purple-600 hover:bg-purple-500 text-white p-2 rounded-lg shadow-md border-b-2 border-purple-800 relative text-sm" title="Puente">
             🌉
             <span id="bridgeCount" class="absolute -top-1 -right-1 bg-yellow-400 text-black text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">0</span>
+        </button>
+        <button onclick="repairTile()" class="repair-btn btn-game text-xs" title="Constructora">
+            🏗️
+        </button>
         </button>
         <button onclick="toggleSound()" class="btn-game bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-lg shadow-md border-b-2 border-blue-800 text-sm"><span id="soundIcon">🔊</span></button>
         <button onclick="openShop()" class="btn-game bg-yellow-600 hover:bg-yellow-500 text-white p-2 rounded-lg shadow-md border-b-2 border-yellow-800 text-sm">🛍️</button>
@@ -649,6 +666,29 @@
     </div>
 
 <script>
+// Polyfill para roundRect en navegadores antiguos
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+        if (!r) r = 0;
+        if (typeof r === 'number') r = {tl: r, tr: r, br: r, bl: r};
+        else if (Array.isArray(r)) r = {tl: r[0], tr: r[1] || r[0], br: r[2] || r[0], bl: r[3] || r[1] || r[0]};
+        else r = {tl: 0, tr: 0, br: 0, bl: 0}; // Fallback simple
+        
+        this.beginPath();
+        this.moveTo(x + r.tl, y);
+        this.lineTo(x + w - r.tr, y);
+        this.quadraticCurveTo(x + w, y, x + w, y + r.tr);
+        this.lineTo(x + w, y + h - r.br);
+        this.quadraticCurveTo(x + w, y + h, x + w - r.br, y + h);
+        this.lineTo(x + r.bl, y + h);
+        this.quadraticCurveTo(x, y + h, x, y + h - r.bl);
+        this.lineTo(x, y + r.tl);
+        this.quadraticCurveTo(x, y, x + r.tl, y);
+        this.closePath();
+        return this;
+    };
+}
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
@@ -808,6 +848,9 @@ function selectVehicle(type) {
     selectedVehicle = type;
     document.querySelectorAll('.vehicle-btn').forEach(btn => btn.classList.remove('selected'));
     document.getElementById('btn-' + type).classList.add('selected');
+    
+    // Guardar selección inmediatamente para evitar pérdida de estado
+    saveGameData(); 
 }
 
 function selectPremiumMoto() {
@@ -969,7 +1012,7 @@ function buyVehicle(vehicleType) {
                 if (confirmed) {
                     totalMoney -= PREMIUM_MOTO_PRICE;
                     premiumMotoUnlocked = true;
-                    selectedVehicle = 'motoa';
+                    // Actualizar UI y guardar
                     $('moneyDisplay').textContent = totalMoney;
                     $('shopMoney').textContent = totalMoney;
                     if ($('motoLock')) $('motoLock').textContent = '⭐';
@@ -980,6 +1023,8 @@ function buyVehicle(vehicleType) {
                     playSound('money');
                     updateShopUI();
                     saveGameData();
+                    // Seleccionar automáticamente el vehículo comprado
+                    selectVehicle('motoa');
                     showGameModal({
                         iconImage: 'motoa.gif',
                         title: '¡Compra Exitosa!',
@@ -1016,7 +1061,7 @@ function buyVehicle(vehicleType) {
                 if (confirmed) {
                     totalMoney -= PREMIUM_TRUCK_PRICE;
                     premiumTruckUnlocked = true;
-                    selectedVehicle = 'trucka';
+                    // Actualizar UI y guardar
                     $('moneyDisplay').textContent = totalMoney;
                     $('shopMoney').textContent = totalMoney;
                     if ($('truckLock')) $('truckLock').textContent = '⭐';
@@ -1027,6 +1072,8 @@ function buyVehicle(vehicleType) {
                     playSound('money');
                     updateShopUI();
                     saveGameData();
+                    // Seleccionar automáticamente el vehículo comprado
+                    selectVehicle('trucka');
                     showGameModal({
                         iconImage: 'camionetaa.png',
                         title: '¡Compra Exitosa!',
@@ -1213,6 +1260,12 @@ const TILE_TYPES = {
 };
 
 let grid = [], specialTiles = [], car = null, level = 1, driverName = "Repartidor";
+const grassImg = new Image();
+grassImg.src = 'cesped.jpg';
+const carImg = new Image();
+carImg.src = 'carroa.png';
+const pavementImg = new Image();
+pavementImg.src = 'pavimento.jpg';
 let gameState = 'START', animationId, countdownTimer, timeLeft, maxTime, engineSoundInterval;
 let totalMoney = 0; // Dinero acumulado por propinas
 let savedEndPosition = null; // Posición guardada de la casa para reintentos
@@ -1933,6 +1986,7 @@ function generateLevel() {
     placeStart();
     placeEnd();
     placeObstacles(config.obstacles);
+    ensureSolvablePath();
     fillEmpty(config.deadEnds);
     randomizeRotations();
     addSpecials(config.features);
@@ -2101,6 +2155,113 @@ function randomizeRotations() {
     }
 }
 
+function ensureSolvablePath() {
+    const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
+    const endTile = grid.find(t => t && t.type === TILE_TYPES.END);
+    if (!startTile || !endTile) return;
+
+    // A* simple para encontrar camino evitando obstáculos
+    const openSet = [{ c: startTile.col, r: startTile.row, g: 0, f: 0, path: [], parent: null }];
+    const closedSet = new Set();
+    // Mapa para reconstruir el path más fácilmente si es necesario, pero usando parent references es mejor
+    
+    let finalNode = null;
+
+    while (openSet.length > 0) {
+        openSet.sort((a, b) => a.f - b.f);
+        const current = openSet.shift();
+        const key = `${current.c},${current.r}`;
+
+        if (current.c === endTile.col && current.r === endTile.row) {
+            finalNode = current;
+            break;
+        }
+
+        closedSet.add(key);
+
+        const dirs = [DIR.N, DIR.E, DIR.S, DIR.W].sort(() => Math.random() - 0.5);
+
+        for (let dir of dirs) {
+            const delta = DIR_DELTA[dir];
+            const nc = current.c + delta.dc;
+            const nr = current.r + delta.dr;
+
+            if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS) {
+                const nKey = `${nc},${nr}`;
+                if (closedSet.has(nKey)) continue;
+
+                const tile = grid[nr * COLS + nc];
+                // Obstáculos bloquean
+                if (tile && tile.type === TILE_TYPES.BLOCKED) continue;
+
+                const g = current.g + 1;
+                const h = Math.abs(nc - endTile.col) + Math.abs(nr - endTile.row);
+                
+                const existing = openSet.find(n => n.c === nc && n.r === nr);
+                if (existing && existing.g <= g) continue;
+
+                if (!existing) {
+                    openSet.push({
+                        c: nc, r: nr, g: g, f: g + h,
+                        parent: current,
+                        // Dirección desde donde venimos hacia este nodo nuevo 
+                        // (ej. si venimos del N, entramos por N a este nodo? No, 
+                        // si venimos de (0,0) hacia (0,1) S, entramos por N en (0,1))
+                        // dir es direccion de movimiento. OPPOSITE[dir] es lado de entrada.
+                        fromDir: OPPOSITE[dir] 
+                    });
+                } else {
+                    existing.g = g;
+                    existing.f = g + h;
+                    existing.parent = current;
+                    existing.fromDir = OPPOSITE[dir];
+                }
+            }
+        }
+    }
+
+    if (!finalNode) return;
+
+    // Reconstruir camino
+    const path = [];
+    let temp = finalNode;
+    while(temp) {
+        path.unshift(temp);
+        temp = temp.parent;
+    }
+    
+    // Asignar tiles compatibles en el camino (excluyendo start y end)
+    for (let i = 1; i < path.length - 1; i++) {
+        const node = path[i];
+        const nextNode = path[i+1];
+        
+        let toDir;
+        if (nextNode.c > node.c) toDir = DIR.E; // Siguiente a la derecha -> Salida E
+        else if (nextNode.c < node.c) toDir = DIR.W;
+        else if (nextNode.r > node.r) toDir = DIR.S;
+        else toDir = DIR.N;
+        
+        const requiredConn = node.fromDir | toDir;
+        const isStraight = (requiredConn === (DIR.N | DIR.S)) || (requiredConn === (DIR.E | DIR.W));
+        
+        let type;
+        if (isStraight) {
+             type = Math.random() < 0.8 ? TILE_TYPES.STRAIGHT : (Math.random() < 0.5 ? TILE_TYPES.T_JUNCTION : TILE_TYPES.CROSS);
+        } else {
+             type = Math.random() < 0.8 ? TILE_TYPES.CURVE : (Math.random() < 0.5 ? TILE_TYPES.T_JUNCTION : TILE_TYPES.CROSS);
+        }
+        
+        // Sobreescribir tile existente (si lo hubiera, aunque debería ser null o especial no bloqueante)
+        const oldTile = grid[node.r * COLS + node.c];
+        const newTile = new Tile(node.c, node.r, type);
+        
+        // Conservar propiedades especiales si existieran
+        if (oldTile && oldTile.special) newTile.special = oldTile.special;
+        
+        grid[node.r * COLS + node.c] = newTile;
+    }
+}
+
 // Función para generar un camino garantizado usando BFS
 function generateGuaranteedPath() {
     const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
@@ -2236,6 +2397,7 @@ function checkConnections() {
         const conn = curr.getConnections();
         
         const isCurrBridge = curr.type === TILE_TYPES.BRIDGE || curr.isBridge;
+        // Restaurar comportamiento permisivo para T_JUNCTION para facilitar el armado
         const isCurrMultiWay = curr.type === TILE_TYPES.CROSS || curr.type === TILE_TYPES.T_JUNCTION;
         
         [DIR.N, DIR.E, DIR.S, DIR.W].forEach(dir => {
@@ -2246,17 +2408,12 @@ function checkConnections() {
                     const neighbor = grid[nr * COLS + nc];
                     if (neighbor && !neighbor.powered && neighbor.type !== TILE_TYPES.BLOCKED) {
                         const isNeighborBridge = neighbor.type === TILE_TYPES.BRIDGE || neighbor.isBridge;
-                        const isNeighborMultiWay = neighbor.type === TILE_TYPES.CROSS || neighbor.type === TILE_TYPES.T_JUNCTION;
                         const neighborConn = neighbor.getConnections();
+                        // LOGICA RELAJADA: Si la pieza NO está bloqueada y NO está cerrada (locked), aceptamos la conexión.
+                        // Esto permite al usuario ver qué piezas son candidatas a conectarse si se rotan.
+                        const canConnectToNeighbor = !neighbor.locked || (neighborConn & OPPOSITE[dir]) || isNeighborBridge;
                         
-                        // Conectar si:
-                        // 1. Hay un puente en cualquiera de los dos lados
-                        // 2. La pieza actual es multi-vía (Cruz o T)
-                        // 3. El vecino es multi-vía (Cruz o T)
-                        // 4. Hay una conexión bidireccional válida normal
-                        if (isCurrBridge || isNeighborBridge || 
-                            isCurrMultiWay || isNeighborMultiWay || 
-                            (neighborConn & OPPOSITE[dir])) {
+                        if (canConnectToNeighbor) {
                             neighbor.powered = true;
                             queue.push(neighbor);
                         }
@@ -2271,141 +2428,214 @@ function checkConnections() {
 
 function calculatePreviewPath() {
     previewPath = [];
-    plannedRoute = []; // Resetear la ruta planificada
+    plannedRoute = [];
     if (!car) return;
     
+    // --- NUEVO: VALIDACIÓN ESTRICTA DE DIRECCIÓN INICIAL ---
+    // Si la moto no apunta hacia donde puede salir, no hay línea amarilla.
+    
+    // Convertir ángulo de carro a dirección DIR (N, E, S, W)
+    let angle = car.angle; 
+    while (angle > Math.PI) angle -= Math.PI * 2;
+    while (angle <= -Math.PI) angle += Math.PI * 2;
+    
+    let currentFacingDir = null;
+    // Tolerancia pequeña para detectar la dirección
+    if (Math.abs(angle) < 0.1) currentFacingDir = DIR.E;
+    else if (Math.abs(angle - Math.PI/2) < 0.1) currentFacingDir = DIR.S;
+    else if (Math.abs(angle - Math.PI) < 0.1 || Math.abs(angle + Math.PI) < 0.1) currentFacingDir = DIR.W;
+    else if (Math.abs(angle + Math.PI/2) < 0.1) currentFacingDir = DIR.N;
+    
+    // Si no detectamos dirección válida (ej. rotando), no mostramos nada
+    if (currentFacingDir === null) return;
+    
+    // VALIDAR PRIMER PASO FÍSICO
+    // La casilla actual debe tener salida ("connection") en esa direcciónFacing
+    const startTile = grid[car.row * COLS + car.col];
+    if (!startTile) return;
+    
+    // Obtenemos conexiones LÓGICAS de la celda actual (dónde hay asfalto)
+    const startConn = startTile.getConnections();
+    
+    // REGLA DE ORO: Si mi vehículo apunta hacia una pared (no hay conexión en la celda actual),
+    // la línea amarilla NO DEBE APARECER.
+    // Excepción: Puentes y Cruces siempre permiten salida (asumimos, aunque idealmente se valida también)
+    const isStartFree = startTile.type === TILE_TYPES.CROSS || startTile.type === TILE_TYPES.BRIDGE || startTile.isBridge;
+    
+    if (!isStartFree && !(startConn & currentFacingDir)) {
+        // El coche apunta a una pared o borde de la carretera actual.
+        // No hay ruta de preview.
+        return; 
+    }
+    
+    // VALIDAR ENTRADA VECINO
+    // Además, la celda adyacente debe aceptar esa entrada.
+    const delta = DIR_DELTA[currentFacingDir];
+    const nCol = car.col + delta.dc;
+    const nRow = car.row + delta.dr;
+    
+    if (nCol < 0 || nCol >= COLS || nRow < 0 || nRow >= ROWS) return; // Fuera del mapa
+    
+    const nextTile = grid[nRow * COLS + nCol];
+    if (!nextTile || nextTile.type === TILE_TYPES.BLOCKED) return; // Pared o vacío
+    
+    const nextIsPermissive = nextTile.type === TILE_TYPES.CROSS || nextTile.type === TILE_TYPES.BRIDGE || nextTile.isBridge;
+    const nextConn = nextTile.getConnections();
+    const entrieNeeded = OPPOSITE[currentFacingDir];
+    
+    // Si el vecino es un tubo normal, debe tener conexión hacia mí
+    if (!nextIsPermissive && !(nextConn & entrieNeeded)) return;
+    
+    // --- FIN VALIDACIÓN INICIAL ---
+    // Si pasamos aquí, el primer paso es válido y alineado con la moto.
+    // Ahora ejecutamos el buscador, pero FORZANDO el primer movimiento.
+
     const endTile = grid.find(t => t && t.isEnd);
-    const startPos = { col: car.col, row: car.row, dir: car.dir };
     
-    // Solo seguir piezas que estén CONECTADAS (powered = true)
-    let col = car.col, row = car.row, dir = car.dir;
+    const queue = [];
+    
+    // Pre-calculamos el primer paso ya validado
+    const startX = car.col * TILE_SIZE + TILE_SIZE / 2;
+    const startY = car.row * TILE_SIZE + TILE_SIZE / 2;
+    const nextX = nCol * TILE_SIZE + TILE_SIZE / 2;
+    const nextY = nRow * TILE_SIZE + TILE_SIZE / 2;
+    
+    // Iniciamos la cola no en la posición actual, sino YA habiendo dado el primer "paso virtual"
+    // en la dirección de la moto. Esto fuerza a que la ruta siga esa línea.
+    queue.push({ 
+        col: nCol, 
+        row: nRow, 
+        lastDir: currentFacingDir, 
+        pathPoints: [
+            { x: startX, y: startY, isEnd: false },
+            { x: nextX, y: nextY, isEnd: false }
+        ],
+        route: [{ col: car.col, row: car.row, dir: currentFacingDir }] 
+    });
+    
+    let bestPathToDisplay = null;
+    let minDistToGoal = Infinity;
+    let maxPathLength = 0;
+    
     const visited = new Set();
-    const mainPath = [{ x: col * TILE_SIZE + TILE_SIZE / 2, y: row * TILE_SIZE + TILE_SIZE / 2 }];
+    visited.add(`${car.col},${car.row}`);
+    visited.add(`${nCol},${nRow}`);
     
-    for (let steps = 0; steps < 100; steps++) {
-        const key = `${col},${row},${dir}`;
-        if (visited.has(key)) break;
-        visited.add(key);
+    let iterations = 0;
+    
+    while (queue.length > 0 && iterations < 500) {
+        // Ordenar cola: Preferir nodos más cerca de la meta y caminos más largos
+        queue.sort((a, b) => {
+            if (!endTile) return b.pathPoints.length - a.pathPoints.length;
+            const distA = Math.abs(a.col - endTile.col) + Math.abs(a.row - endTile.row);
+            const distB = Math.abs(b.col - endTile.col) + Math.abs(b.row - endTile.row);
+            if (distA !== distB) return distA - distB; // Menor distancia primero
+            return b.pathPoints.length - a.pathPoints.length; // Si igual distancia, camino más largo
+        });
         
-        const tile = grid[row * COLS + col];
-        if (!tile) break;
+        const curr = queue.shift();
+        iterations++;
         
-        // SOLO seguir piezas que estén conectadas (powered)
-        if (!tile.powered && !tile.locked) break;
+        // Evaluar si este camino es el "mejor" hasta ahora para mostrar
+        let isBetter = false;
+        if (endTile) {
+            const dist = Math.abs(curr.col - endTile.col) + Math.abs(curr.row - endTile.row);
+            if (dist < minDistToGoal) {
+                minDistToGoal = dist;
+                isBetter = true;
+            } else if (dist === minDistToGoal && curr.pathPoints.length > maxPathLength) {
+                isBetter = true;
+            }
+        } else {
+             if (curr.pathPoints.length > maxPathLength) isBetter = true;
+        }
+        
+        if (isBetter) {
+            bestPathToDisplay = curr;
+            maxPathLength = curr.pathPoints.length;
+        }
+
+        const tile = grid[curr.row * COLS + curr.col];
+        if (!tile) continue;
         
         if (tile.isEnd) {
-            mainPath[mainPath.length - 1].isEnd = true;
-            break;
+            curr.pathPoints[curr.pathPoints.length - 1].isEnd = true;
+            bestPathToDisplay = curr;
+            break; // Encontramos camino a la meta, detener.
         }
         
         const conn = tile.getConnections();
-        const entry = OPPOSITE[dir];
-        const isCross = tile.type === TILE_TYPES.CROSS;
-        const isTJunction = tile.type === TILE_TYPES.T_JUNCTION;
-        const isBridge = tile.type === TILE_TYPES.BRIDGE || tile.isBridge;
         
-        // CROSS, T_JUNCTION y BRIDGE no validan entrada estricta
-        if (!tile.locked && !isCross && !isTJunction && !isBridge && !(conn & entry) && steps > 0) break;
-        
-        // Para CROSS y T_JUNCTION, elegir la mejor salida conectada
-        if (isCross || isTJunction) {
-            const availableExits = [];
-            [DIR.N, DIR.E, DIR.S, DIR.W].forEach(d => { 
-                if (conn & d) {
-                    const delta = DIR_DELTA[d];
-                    const nc = col + delta.dc, nr = row + delta.dr;
-                    
-                    if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS) {
-                        const next = grid[nr * COLS + nc];
-                        // SOLO incluir si la siguiente pieza está conectada (powered)
-                        if (next && next.powered && next.type !== TILE_TYPES.BLOCKED) {
-                            const nextIsCross = next.type === TILE_TYPES.CROSS;
-                            const nextIsBridge = next.type === TILE_TYPES.BRIDGE || next.isBridge;
-                            
-                            // Verificar si hay conexión válida
-                            if (nextIsCross || nextIsBridge || (next.getConnections() & OPPOSITE[d])) {
-                                availableExits.push({ dir: d, col: nc, row: nr });
-                            }
-                        }
-                    }
-                }
-            });
+        // Explorar 4 direcciones
+        [DIR.N, DIR.E, DIR.S, DIR.W].forEach(outDir => {
+            // No volver atrás inmediatamente (U-turn)
+            if (outDir === OPPOSITE[curr.lastDir]) return;
             
-            if (availableExits.length === 0) break;
+            // Verificar si hay salida física en esa dirección ESTRICTA (visual)
+            let hasExit = false;
+            const isCross = tile.type === TILE_TYPES.CROSS;
+            const isBridge = tile.type === TILE_TYPES.BRIDGE || tile.isBridge;
             
-            // Elegir la mejor salida para continuar (sin dibujar ramas)
-            let bestExit = availableExits[0];
-            if (endTile) {
-                let minDist = Infinity;
-                availableExits.forEach(exit => {
-                    const dist = Math.abs(exit.col - endTile.col) + Math.abs(exit.row - endTile.row);
-                    if (dist < minDist) {
-                        minDist = dist;
-                        bestExit = exit;
-                    }
-                });
+            // CROSS y BRIDGE siempre tienen salidas
+            if (isCross || isBridge) {
+                hasExit = true;
+            } else {
+                // Para las demás, debe coincidir la conexión visual actual
+                hasExit = (conn & outDir);
             }
-            
-            // GUARDAR en plannedRoute la dirección que debe tomar en esta posición
-            plannedRoute.push({ col: col, row: row, dir: bestExit.dir });
-            
-            col = bestExit.col;
-            row = bestExit.row;
-            dir = bestExit.dir;
-            
-            // Agregar solo el punto de la mejor salida al camino
-            mainPath.push({ x: col * TILE_SIZE + TILE_SIZE / 2, y: row * TILE_SIZE + TILE_SIZE / 2 });
-            
-            continue;
-        }
-        
-        // Para piezas normales (no CROSS)
-        const exits = conn & ~entry;
-        let exitDir = 0;
-        
-        // Elegir salida
-        const availableExits = [];
-        [DIR.N, DIR.E, DIR.S, DIR.W].forEach(d => { 
-            if (exits & d) availableExits.push(d); 
+
+            if (hasExit) {
+                const delta = DIR_DELTA[outDir];
+                const nc = curr.col + delta.dc;
+                const nr = curr.row + delta.dr;
+                const neighborKey = `${nc},${nr}`;
+                
+                if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS && !visited.has(neighborKey)) {
+                     const next = grid[nr * COLS + nc];
+                     
+                     // El vecino debe existir y no ser bloqueado
+                     // REMOVIDO: next.powered. Confiamos en la continuidad visual desde el origen.
+                     if(next && next.type !== TILE_TYPES.BLOCKED) {
+                         const nextIsBridge = next.type === TILE_TYPES.BRIDGE || next.isBridge;
+                         const nextIsCross = next.type === TILE_TYPES.CROSS;
+                         const nextConn = next.getConnections();
+                         const entryNeed = OPPOSITE[outDir];
+
+                        // CROSS y BRIDGE son permisivos. T_JUNCTION DEBE RESPETAR SUS CONEXIONES (Strict)
+                        // Para que la linea amarilla solo avance si "se unen las vias"
+                        const isPermissiveEntry = nextIsBridge || nextIsCross;
+                        
+                        // Validar entrada en vecino ESTRICTAMENTE para T-Junctions y rectas/curvas
+                         if (isPermissiveEntry || (nextConn & entryNeed)) {
+                             visited.add(neighborKey);
+                             
+                             const newPathPoints = [...curr.pathPoints, { 
+                                 x: nc * TILE_SIZE + TILE_SIZE / 2, 
+                                 y: nr * TILE_SIZE + TILE_SIZE / 2,
+                                 isEnd: false
+                             }];
+                             
+                             // Guardar la decisión de giro que tomamos en la casilla actual
+                             const newRoute = [...curr.route, { col: curr.col, row: curr.row, dir: outDir }];
+                             
+                             queue.push({
+                                 col: nc,
+                                 row: nr,
+                                 lastDir: outDir,
+                                 pathPoints: newPathPoints,
+                                 route: newRoute
+                             });
+                         }
+                     }
+                }
+            }
         });
-        
-        if (availableExits.length === 0) break;
-        
-        if (availableExits.length === 1) {
-            exitDir = availableExits[0];
-        } else {
-            // Priorizar seguir recto
-            exitDir = (exits & dir) ? dir : availableExits[0];
-        }
-        
-        if (!exitDir) break;
-        
-        // GUARDAR en plannedRoute para TODAS las posiciones del camino
-        plannedRoute.push({ col: col, row: row, dir: exitDir });
-        
-        const d = DIR_DELTA[exitDir];
-        const nc = col + d.dc, nr = row + d.dr;
-        
-        if (nc < 0 || nc >= COLS || nr < 0 || nr >= ROWS) break;
-        
-        const next = grid[nr * COLS + nc];
-        if (!next || next.type === TILE_TYPES.BLOCKED) break;
-        
-        // SOLO continuar si la siguiente pieza está conectada (powered)
-        if (!next.powered && !next.locked) break;
-        
-        const nextIsCross = next.type === TILE_TYPES.CROSS;
-        const nextIsBridge = next.type === TILE_TYPES.BRIDGE || next.isBridge;
-        
-        // CROSS y BRIDGE siempre permiten entrada
-        if (!nextIsCross && !nextIsBridge && !(next.getConnections() & OPPOSITE[exitDir])) break;
-        
-        mainPath.push({ x: nc * TILE_SIZE + TILE_SIZE / 2, y: nr * TILE_SIZE + TILE_SIZE / 2 });
-        
-        col = nc; row = nr; dir = exitDir;
     }
-    
-    previewPath = mainPath;
+
+    if (bestPathToDisplay) {
+        previewPath = bestPathToDisplay.pathPoints;
+        plannedRoute = bestPathToDisplay.route;
+    }
 }
 
 function startCountdown() {
@@ -2500,9 +2730,6 @@ function timeExpired() {
 
 // Función para mostrar mensaje de salida del pedido
 function showOrderReady() {
-    // Actualizar el emoji del vehículo en el mensaje
-    $('orderVehicleEmoji').textContent = vehicleEmojis[selectedVehicle] || '🏍️';
-    
     $('orderReady').classList.remove('hidden');
     $('statusText').textContent = '¡SALE EL PEDIDO!';
     $('statusText').className = 'text-emerald-400 font-bold text-xs pulse';
@@ -2552,12 +2779,12 @@ function startCar() {
 function actuallyStartCar() {
     $('orderReady').classList.add('hidden');
     
+    // --- VALIDACIÓN ESTRICTA ---
+    // Ya no corregimos la dirección automáticamente. 
+    // Si el usuario apunta a la pared, el coche intentará ir a la pared y chocará en el gameLoop.
     const start = grid[car.row * COLS + car.col];
-    const conn = start.getConnections();
-    if (!(conn & car.dir)) {
-        [DIR.E, DIR.S, DIR.N, DIR.W].forEach(dir => { if (conn & dir) car.dir = dir; });
-    }
     
+    // Asegurar que el ángulo visual coincida con la dirección lógica inicial
     car.angle = car.dir === DIR.N ? -Math.PI/2 : car.dir === DIR.E ? 0 : car.dir === DIR.S ? Math.PI/2 : Math.PI;
     
     gameState = 'RUNNING';
@@ -2614,7 +2841,11 @@ function gameLoop() {
     const cy = car.row * TILE_SIZE + TILE_SIZE / 2;
     const dist = Math.sqrt((cx - car.x) ** 2 + (cy - car.y) ** 2);
     
-    if (dist < 4) {
+    // AUMENTADO EL RADIO DE DETECCIÓN para evitar que el coche se salte la verificación (Tunneling)
+    // Antes era 4, ahora depende de la velocidad.
+    const hitRadius = Math.max(5, car.speed * 1.5);
+
+    if (dist < hitRadius) {
         car.x = cx; car.y = cy;
         const tile = grid[car.row * COLS + car.col];
         
@@ -2636,13 +2867,18 @@ function gameLoop() {
         // PUENTE: Los puentes ignoran las validaciones de conexión
         const isBridge = tile?.type === TILE_TYPES.BRIDGE || tile?.isBridge;
         
-        // PIEZAS MULTI-VÍA: CROSS (4 salidas) y T_JUNCTION (3 salidas)
-        const isMultiWay = tile?.type === TILE_TYPES.CROSS || tile?.type === TILE_TYPES.T_JUNCTION;
+        // PIEZAS MULTI-VÍA: CROSS (4 salidas). T_JUNCTION DEBE RESPETAR SUS CONEXIONES.
+        // Ahora somos estrictos: para que el carro pase, debe haber conexión visual.
+        // Esto evita que atraviese la pared de la T.
+        const isMultiWay = tile?.type === TILE_TYPES.CROSS;
         
-        if (!isBridge && !tile?.locked && !isMultiWay && !(conn & entry)) { crash('¡Sin entrada!'); return; }
+        if (!isBridge && !tile?.locked && !isMultiWay && !(conn & entry)) { 
+             crash('¡Sin entrada!'); return; 
+        }
         
-        // Para CROSS y T_JUNCTION, todas las direcciones son salidas válidas
-        const exits = isMultiWay ? conn : (conn & ~entry);
+        // Para CROSS, todas las direcciones son salidas válidas.
+        // Para T_JUNCTION y demás, solo las conexiones reales.
+        const exits = isMultiWay ? (DIR.N | DIR.E | DIR.S | DIR.W) : (conn & ~entry);
         let exitDir = 0;
         
         // OBLIGATORIO: SEGUIR SOLO LA RUTA PLANIFICADA (línea amarilla)
@@ -2716,33 +2952,125 @@ function crash(msg) {
     $('gameContainer').classList.add('shake');
     setTimeout(() => $('gameContainer').classList.remove('shake'), 500);
     
-    // Mostrar SOLO imagen de fallo clara y grande
+    // Configurar layout especial FULL SCREEN (Igual que WIN pero rojo/negro)
+    const overlay = $('overlay');
+    overlay.className = 'fixed inset-0 bg-black z-50 flex flex-col items-center justify-center'; 
+    overlay.style.padding = '0';
+    overlay.style.background = 'black';
+    
+    // Imagen de fallo
     const overlayImage = $('overlayImage');
     overlayImage.src = 'fallo.jpeg';
     overlayImage.classList.remove('hidden');
+    overlayImage.style.width = '100vw'; 
+    overlayImage.style.height = '60vh'; 
+    overlayImage.style.objectFit = 'contain'; // Contain para ver toda la escena de fallo
+    overlayImage.style.borderRadius = '0';
+    overlayImage.style.display = 'block';
     
-    // Ocultar iconos y textos no necesarios
+    // Título Superior "ALGO VA MAL"
+    let titleHeader = $('winTitleHeader'); // Reutilizamos ID o creamos nuevo
+    if (!titleHeader) {
+        titleHeader = document.createElement('div');
+        titleHeader.id = 'winTitleHeader';
+        overlay.appendChild(titleHeader);
+    }
+    // Resetear estilos base
+    titleHeader.style.position = 'absolute';
+    titleHeader.style.top = '20px';
+    titleHeader.style.width = '100%';
+    titleHeader.style.textAlign = 'center';
+    titleHeader.style.zIndex = '60';
+    
+    titleHeader.innerHTML = `
+        <h1 style="
+            color: #ef4444; 
+            font-size: 32px; 
+            font-weight: 900; 
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.9); 
+            letter-spacing: 1px; 
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            text-transform: uppercase;
+        ">¡PEDIDO CANCELADO!</h1>
+        <p style="color:#fca5a5; font-size:14px; text-shadow: 1px 1px 3px black; margin-top:5px;">${msg}</p>
+    `;
+
+    // Footer
+    let footer = $('overlayFooter');
+    if (!footer) {
+         footer = document.createElement('div');
+         footer.id = 'overlayFooter';
+         overlay.appendChild(footer);
+    }
+    
+    footer.style.position = 'absolute';
+    footer.style.bottom = '0';
+    footer.style.left = '0';
+    footer.style.width = '100%';
+    footer.style.height = '40vh'; 
+    footer.style.background = '#1f1212'; // Rojo muy oscuro
+    footer.style.borderTop = '4px solid #7f1d1d';
+    footer.style.display = 'flex';
+    footer.style.flexDirection = 'column';
+    footer.style.alignItems = 'center';
+    footer.style.justifyContent = 'center';
+    footer.style.zIndex = '60';
+    footer.style.padding = '20px';
+    footer.style.boxSizing = 'border-box';
+    
+    // Reutilizamos el botón del footer pero con acción REINTENTAR
+    footer.innerHTML = `
+        <div style="font-size:14px; color:#fca5a5; margin-bottom:20px; display:flex; gap:10px; align-items:center;">
+             <span>💥 Penalización: <b style="color:#ef4444">-$50</b></span>
+             <span>🏦 Total: <b style="color:#ffffff">$${Math.max(0, totalMoney - 50)}</b></span>
+        </div>
+        <button id="retryBtnFooter" style="
+            background: linear-gradient(to right, #f59e0b, #d97706); 
+            border: none; 
+            color: white; 
+            width: 85%; 
+            padding: 18px;
+            border-radius: 50px; 
+            font-weight: 800; 
+            font-size: 20px; 
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); 
+            cursor: pointer; 
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        ">
+            🛵 OTRO PEDIDO
+        </button>
+    `;
+    
+    setTimeout(() => {
+        const btn = document.getElementById('retryBtnFooter');
+        if(btn) btn.onclick = retryLevel;
+    }, 100);
+
+    // Ocultar elementos viejos
     $('overlayIcon').classList.add('hidden');
     $('overlayTitle').textContent = '';
     $('overlaySubtitle').textContent = '';
     $('overlayBonus').textContent = '';
+    $('overlayBtn').style.display = 'none'; 
     
-    // Aplicar fondo de fallo
-    $('overlay').classList.add('failure-bg');
-    
-    // Botón REINTENTAR prominente
-    $('overlayBtn').textContent = 'Reintentar';
-    $('overlayBtn').onclick = retryLevel;
-    
-    // Mensaje de pérdida abajo
-    $('overlayFooter').textContent = `💸 Perdiste $50 por el choque • ${msg}`;
-    
-    // Descontar dinero por el choque
+    // Descontar dinero real
     totalMoney = Math.max(0, totalMoney - 50);
     $('moneyDisplay').textContent = totalMoney;
     saveGameData();
     
     $('overlay').classList.remove('hidden');
+}
+
+function nextLevel() {
+    level++;
+    saveGameData();
+    hideGameModal();
+    generateLevel();
 }
 
 function win() {
@@ -2751,35 +3079,38 @@ function win() {
     
     // Calcular tiempo de entrega en segundos
     const deliveryTime = Math.floor((Date.now() - deliveryStartTime) / 1000);
+    const timeUsedRatio = deliveryTime / maxTime; // Ratio del tiempo usado vs total
     
     // Reproducir sonido de entrega exitosa
     playSound('delivery');
-    // Reproducir sonido de cobrar dinero
     setTimeout(() => playSound('money'), 400);
     
     // Pago fijo de $75 por entrega correcta
     const deliveryPayment = 75;
-    // Bonus por tiempo restante (pequeño extra)
+    // Bonus por tiempo restante
     const timeBonus = Math.floor(timeLeft / 5) * 5;
     // BONUS ESPECIAL: $50 extra si la entrega es en menos de 10 segundos
     const speedBonus = deliveryTime < 10 ? 50 : 0;
     const totalEarned = deliveryPayment + timeBonus + speedBonus;
     totalMoney += totalEarned;
     
-    // Actualizar display de dinero y guardar datos
+    // Actualizar display de dinero
     $('moneyDisplay').textContent = totalMoney;
     saveGameData();
     
-    // Determinar mensaje según velocidad
+    // Determinar mensaje según tiempo
     let speedMessage = '';
-    let emoji = '🎉📦💵';
-    if (deliveryTime < 10) {
-        speedMessage = '🚀 ¡ENTREGA RELÁMPAGO!';
-        emoji = '⚡🎉💰';
-    } else if (deliveryTime < 20) {
-        speedMessage = '🏎️ ¡Muy rápido!';
+    let messageStyle = '';
+    
+    // Umbral de tiempo "Rápido": menos de 15 segundos o menos del 50% del tiempo
+    const isFast = deliveryTime < 15 || timeUsedRatio < 0.5;
+
+    if (isFast) {
+        speedMessage = '🚀 ¡LLEGUÉ MUY RÁPIDO!';
+        messageStyle = 'font-size: 24px; font-weight: 900; color: #fbbf24; text-transform: uppercase; text-shadow: 0 2px 4px rgba(0,0,0,0.5); letter-spacing: 1px;';
     } else {
-        speedMessage = '¡Buen trabajo!';
+        speedMessage = '🐢 Te demoraste mucho. Pero estás a tiempo.';
+        messageStyle = 'font-size: 16px; font-weight: bold; color: #e2e8f0;';
     }
     
     // Mostrar imagen del repartidor
@@ -2787,49 +3118,192 @@ function win() {
     overlayImage.src = 'repartidor.jpeg';
     overlayImage.classList.remove('hidden');
     
-    // Ocultar el emoji y mostrar la imagen, quitar fondo de fallo
-    $('overlayIcon').classList.add('hidden');
-    $('overlay').classList.remove('failure-bg');
-    $('overlayFooter').textContent = '';
+    // Configurar layout especial FULL SCREEN
+    const overlay = $('overlay');
+
+    // Forzar estilo FULL SCREEN al overlay
+    overlay.className = 'fixed inset-0 bg-black z-50 flex flex-col items-center justify-center'; 
+    overlay.style.padding = '0';
+    overlay.style.background = '#000';
     
-    $('overlayTitle').textContent = '¡ENTREGA #' + level + ' COMPLETADA!';
-    $('overlaySubtitle').textContent = `⭐⭐⭐⭐⭐ ${speedMessage}`;
-    
-    let bonusHTML = `<span class="block">📦 Pago entrega: $${deliveryPayment}</span>`;
-    bonusHTML += `<span class="block">⏱️ Bonus tiempo restante: $${timeBonus}</span>`;
-    if (speedBonus > 0) {
-        bonusHTML += `<span class="block text-yellow-300">⚡ BONUS ENTREGA RÁPIDA (<10s): +$${speedBonus}</span>`;
+    // Título Superior "BUEN TRABAJO"
+    let titleHeader = $('winTitleHeader');
+    if (!titleHeader) {
+        titleHeader = document.createElement('div');
+        titleHeader.id = 'winTitleHeader';
+        titleHeader.style.position = 'absolute';
+        titleHeader.style.top = '20px';
+        titleHeader.style.width = '100%';
+        titleHeader.style.textAlign = 'center';
+        titleHeader.style.zIndex = '60';
+        titleHeader.style.pointerEvents = 'none'; // Permitir clicks a través
+        overlay.appendChild(titleHeader);
     }
-    bonusHTML += `<span class="block text-xs text-slate-400">⏱️ Tiempo de entrega: ${deliveryTime}s</span>`;
-    bonusHTML += `<span class="block text-lg mt-1">💰 Total ganado: $${totalEarned}</span>`;
-    bonusHTML += `<span class="block text-xs mt-1 text-slate-300">💳 Total acumulado: $${totalMoney}</span>`;
-    $('overlayBonus').innerHTML = bonusHTML;
-    $('overlayBtn').textContent = level >= 40 ? 'Reiniciar' : 'Siguiente Pedido';
-    $('overlayBtn').onclick = () => {
-        // Ocultar imagen del repartidor y restaurar icono
-        $('overlayImage').classList.add('hidden');
-        $('overlayIcon').classList.remove('hidden');
-        
-        if (level >= 40) level = 0;
-        level++;
-        $('levelDisplay').textContent = level;
-        
-        // Actualizar icono del vehículo si cambió (por compra)
-        if (selectedVehicle === 'motoa') {
-            $('vehicleIcon').innerHTML = '<img src="motoa.gif" alt="Moto Premium" style="width:20px;height:20px;display:inline;vertical-align:middle;">';
-        } else if (selectedVehicle === 'trucka') {
-            $('vehicleIcon').innerHTML = '<img src="camionetaa.png" alt="Camioneta Premium" style="width:20px;height:20px;display:inline;vertical-align:middle;">';
-        } else {
-            $('vehicleIcon').textContent = vehicleEmojis[selectedVehicle] || '🏍️';
-        }
-        
-        generateLevel();
-    };
+    titleHeader.innerHTML = `
+        <h1 style="
+            color: #fbbf24; 
+            font-size: 36px; 
+            font-weight: 900; 
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.9); 
+            letter-spacing: 2px; 
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            text-transform: uppercase;
+        ">¡EXCELENTE TRABAJO!</h1>
+        <p style="color:white; font-size:16px; text-shadow: 1px 1px 3px black; margin-top:5px;">Entrega completada con éxito</p>
+    `;
+
+    // Imagen full screen (AJUSTADO: Más alta)
+    overlayImage.style.width = '100vw'; 
+    overlayImage.style.height = '75vh'; // Aumentado de 60vh a 75vh
+    overlayImage.style.objectFit = 'cover'; // Cover para llenar
+    overlayImage.style.objectPosition = 'top center'; // Enfocar arriba (cara)
+    overlayImage.style.borderRadius = '0';
+    overlayImage.style.margin = '0';
+    overlayImage.style.display = 'block';
+    overlayImage.style.border = 'none'; 
+    
+    // Footer negro abajo con texto
+    let footer = $('overlayFooter');
+    if (!footer) {
+         footer = document.createElement('div');
+         footer.id = 'overlayFooter';
+         overlay.appendChild(footer);
+    }
+    
+    // Estilizar footer (Compacto pero con botón grande)
+    footer.className = ''; 
+    footer.style.position = 'absolute';
+    footer.style.bottom = '0';
+    footer.style.left = '0';
+    footer.style.width = '100%';
+    footer.style.height = '25vh'; 
+    footer.style.background = '#0f172a'; 
+    footer.style.borderTop = '4px solid #334155';
+    footer.style.display = 'flex';
+    footer.style.flexDirection = 'column';
+    footer.style.alignItems = 'center';
+    footer.style.justifyContent = 'space-evenly';
+    footer.style.zIndex = '60';
+    footer.style.padding = '10px 20px'; 
+    footer.style.boxSizing = 'border-box';
+    
+    footer.innerHTML = `
+        <div style="text-align: center; width: 100%;">
+             <div style="${messageStyle} margin-bottom: 5px;">${speedMessage}</div>
+             <div style="font-size: 20px; color: #4ade80; font-weight: bold;">
+                💰 Ganaste: $${totalEarned}
+             </div>
+        </div>
+        <button id="nextLevelBtnFooter" style="
+            background: linear-gradient(to right, #10b981, #059669); 
+            border: none; 
+            color: white; 
+            width: 90%;
+            height: 55px;
+            border-radius: 50px; 
+            font-weight: 800; 
+            font-size: 20px; 
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4); 
+            cursor: pointer; 
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        ">
+            CONTINUAR ➡
+        </button>
+    `;
+        // Asignar evento al botón nuevo del footer DIRECTAMENTE
+        setTimeout(() => {
+            const btn = document.getElementById('nextLevelBtnFooter');
+            if (btn) {
+                btn.onclick = nextLevel; // ARREGLADO: Llamada directa a la función
+            }
+        }, 100);
+    
+    // Ocultar los elementos viejos del overlay que tapan la imagen
+    $('overlayIcon').classList.add('hidden');
+    $('overlayTitle').style.display = 'none'; 
+    $('overlaySubtitle').style.display = 'none'; 
+    $('overlayBonus').style.display = 'none'; 
+    $('overlayBtn').style.display = 'none'; 
+    
+    $('overlay').classList.remove('failure-bg');
     $('overlay').classList.remove('hidden');
 }
 
+// Nueva función de reparación
+function repairTile() {
+    if (gameState !== 'EDITING') return;
+
+    // Buscar si hay un puente roto seleccionado (clickeado recientemente o simplemente buscar el primero)
+    // Para simplificar UX: Si solo hay uno, repararlo. Si hay varios, pedir click.
+    // O mejor: Activar "Modo Reparación".
+    
+    // Implementación simple directa: Buscar obstáculo 'bridge_broken'
+    const brokenBridge = grid.find(t => t && t.special === 'bridge_broken');
+    
+    if (!brokenBridge) {
+        showGameModal({
+            icon: '✅',
+            title: 'Todo en Orden',
+            message: 'No hay puentes rotos para reparar en este momento.',
+            type: 'success'
+        });
+        return;
+    }
+    
+    const REPAIR_COST = 300;
+    
+    if (totalMoney < REPAIR_COST) {
+        showGameModal({
+            icon: '💸',
+            title: 'Dinero Insuficiente',
+            message: `<strong>Reparar cuesta $${REPAIR_COST}</strong><br>Te faltan $${REPAIR_COST - totalMoney}`,
+            type: 'error'
+        });
+        return;
+    }
+    
+    showConfirmModal({
+        icon: '🏗️',
+        title: 'Constructora Vial',
+        message: `<strong>¿Reparar puente roto?</strong><br><br>Costo: <span style="color:#fbbf24">$${REPAIR_COST}</span><br>La pieza se convertirá en un Puente nuevo.`,
+        type: 'warning',
+        confirmText: '🛠️ Reparar',
+        cancelText: 'Cancelar'
+    }).then(confirmed => {
+        if (confirmed) {
+            totalMoney -= REPAIR_COST;
+            $('moneyDisplay').textContent = totalMoney;
+            
+            // Reparar TODOS los puentes rotos o uno? Vamos a reparar uno (el primero encontrado o todos?)
+            // Normalmente uno por pago.
+            // Para mejor UX, como el usuario no selecciona especificamente, reparemos el primero encontrado.
+            
+            brokenBridge.special = null; // Quitar estado especial
+            brokenBridge.type = TILE_TYPES.BRIDGE; // Convertir a puente
+            brokenBridge.isBridge = true;
+            brokenBridge.locked = false; // Desbloquearlo si estaba locked? No, puentes funcionan igual.
+            
+            saveGameData();
+            playSound('money'); // Sonido construcción/dinero
+            checkConnections();
+            draw();
+            
+            showGameModal({icon: '🏗️', title: '¡Reparado!', message: 'El puente ha sido reconstruido.', type: 'success'});
+        }
+    });
+}
+
 function draw() {
-    ctx.fillStyle = '#1e293b';
+    if (grassImg.complete && grassImg.naturalWidth > 0) {
+        ctx.fillStyle = ctx.createPattern(grassImg, 'repeat');
+    } else {
+        ctx.fillStyle = '#166534'; // Verde césped fallback
+    }
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     grid.forEach(t => { if (t) drawTile(t); });
     
@@ -2970,20 +3444,44 @@ function drawTile(tile) {
     ctx.translate(cx, cy);
     ctx.rotate(tile.rotation * Math.PI / 2);
     
-    // Colores mejorados: asfalto gris para calles
-    let color = tile.isDeadEnd ? (tile.powered ? '#65a30d' : '#3a3a3a') : 
-                tile.type === TILE_TYPES.START ? '#10b981' : '#5a5a5a';
+    // PATRÓN DE ASFALTO: Si la imagen cargó, usarla. Si no, gris.
+    let fillStyle = null;
+    if (pavementImg.complete && pavementImg.naturalWidth > 0) {
+        // Truco: Rotar el patrón en sentido opuesto para que siempre quede "alineado al mundo"
+        // o dejarlo que rote con la tile. 
+        // Para pavimento (ruido) no importa que rote. Dejaremos que rote con la tile.
+        // Pero para que no se vea repetitivo, podemos crear el patrón una vez.
+        // Como drawTile se llama mucho, crear patrón aquí es un poco costoso pero aceptable para este juego 2D sencillo.
+        // Mejor opción para rendimiento: crear variable global, pero por simplicidad:
+        const pattern = ctx.createPattern(pavementImg, 'repeat');
+        fillStyle = pattern;
+    } else {
+        // Fallback color
+        fillStyle = tile.isDeadEnd ? (tile.powered ? '#65a30d' : '#3a3a3a') : 
+                   tile.type === TILE_TYPES.START ? '#10b981' : '#5a5a5a';
+    }
     
-    ctx.fillStyle = color;
+    // Si es START/END se superpone un color semitransparente para identificar
+    
+    ctx.fillStyle = fillStyle;
     const conn = tile.type.base, s = TILE_SIZE;
     
-    // Dibujar calles
+    // Dibujar calles (Rectángulos base con la textura)
     if (conn & DIR.N) ctx.fillRect(-h, -s/2, rw, s/2 + h);
     if (conn & DIR.S) ctx.fillRect(-h, -h, rw, s/2 + h);
     if (conn & DIR.E) ctx.fillRect(-h, -h, s/2 + h, rw);
     if (conn & DIR.W) ctx.fillRect(-s/2, -h, s/2 + h, rw);
     
     ctx.beginPath(); ctx.arc(0, 0, h, 0, Math.PI * 2); ctx.fill();
+
+    // Coloreado especial para START y END sobre la textura
+    if (tile.type === TILE_TYPES.START) {
+        ctx.fillStyle = 'rgba(16, 185, 129, 0.7)'; // Verde semitransparente
+        ctx.beginPath(); ctx.arc(0, 0, h*0.8, 0, Math.PI * 2); ctx.fill();
+    } else if (tile.isEnd) {
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.7)'; // Rojo semitransparente para meta (casa)
+        ctx.beginPath(); ctx.arc(0, 0, h*0.8, 0, Math.PI * 2); ctx.fill();
+    }
     
     // Agregar veredas (bordes grises que NO se cruzan entre calles)
     ctx.strokeStyle = '#6b7280'; // Gris oscuro
@@ -3189,470 +3687,327 @@ function drawTile(tile) {
 function drawCar() {
     ctx.save();
     ctx.translate(car.x, car.y);
-    ctx.rotate(car.angle);
-    ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 5;
+    
+    // LÓGICA DE ROTACIÓN VISTA LATERAL (PERFIL):
+    // El usuario quiere ver el LADO del vehículo.
+    // - Derecha (0): Normal
+    // - Izquierda (PI): Espejo (flip horizontal)
+    // - Arriba (-PI/2): Rotar -90 grados
+    // - Abajo (PI/2): Rotar 90 grados
+    
+    // Normalizar ángulo para comparaciones
+    let angle = car.angle; 
+    while (angle > Math.PI) angle -= Math.PI * 2;
+    while (angle <= -Math.PI) angle += Math.PI * 2;
+    
+    // Detectar dirección principal
+    const isLeft = Math.abs(angle - Math.PI) < 0.1 || Math.abs(angle + Math.PI) < 0.1;
+    const isUp = Math.abs(angle + Math.PI/2) < 0.1;
+    const isDown = Math.abs(angle - Math.PI/2) < 0.1;
+    
+    // Aplicar transformaciones según dirección
+    if (isLeft) {
+        ctx.scale(-1, 1); // FLIP HORIZONTAL para ir a la izquierda
+    } else if (isUp) {
+        ctx.rotate(-Math.PI / 2); // Rotar verticalmente
+    } else if (isDown) {
+        ctx.rotate(Math.PI / 2); // Rotar verticalmente
+    }
+    // Si es derecha (0), por defecto.
+    
+    // NOTA: La línea amarilla de "preview" sale del frente del vehículo (eje X positivo después de transformar)
+    // Al usar estas transformaciones, (x>0) siempre es "al frente" del vehículo.
+    
+    ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 4; ctx.shadowOffsetY = 4;
     
     const mainColor = selectedColor;
-    const darkColor = shadeColor(selectedColor, -30);
     const waiting = car.waiting;
-    
-    if (selectedVehicle === 'moto') {
-        // Moto de delivery mejorada
-        const companyColor = companyColors[selectedCompany] || '#ef4444';
+    const wheelColor = '#1f2937';
+    const rimColor = '#9ca3af';
+
+    // Función auxiliar para dibujar ruedas de perfil detalladas
+    const drawSideWheel = (x, y, size) => {
+        ctx.fillStyle = '#171717'; // Caucho
+        ctx.beginPath(); ctx.arc(x, y, size, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#374151'; // Banda lateral
+        ctx.beginPath(); ctx.arc(x, y, size*0.7, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = rimColor; // Rin metálico
+        ctx.beginPath(); ctx.arc(x, y, size*0.5, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#111'; // Eje
+        ctx.beginPath(); ctx.arc(x, y, size*0.15, 0, Math.PI*2); ctx.fill();
         
-        // Sombra del vehículo
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
-        ctx.beginPath(); ctx.ellipse(0, 8, 10, 3, 0, 0, Math.PI * 2); ctx.fill();
-        
-        // Rueda trasera con detalles
-        ctx.fillStyle = '#1a1a1a';
-        ctx.beginPath(); ctx.arc(-7, 4, 5, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#4b5563';
-        ctx.beginPath(); ctx.arc(-7, 4, 3, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#9ca3af';
-        ctx.beginPath(); ctx.arc(-7, 4, 1.5, 0, Math.PI * 2); ctx.fill();
-        
-        // Rueda delantera con detalles
-        ctx.fillStyle = '#1a1a1a';
-        ctx.beginPath(); ctx.arc(9, 4, 5, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#4b5563';
-        ctx.beginPath(); ctx.arc(9, 4, 3, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#9ca3af';
-        ctx.beginPath(); ctx.arc(9, 4, 1.5, 0, Math.PI * 2); ctx.fill();
-        
-        // Chasis/cuerpo de la moto
-        ctx.fillStyle = waiting ? '#6b7280' : mainColor;
-        ctx.beginPath();
-        ctx.moveTo(-10, 2);
-        ctx.lineTo(-5, -4);
-        ctx.lineTo(8, -4);
-        ctx.lineTo(12, 0);
-        ctx.lineTo(10, 4);
-        ctx.lineTo(-8, 4);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Tanque de gasolina
-        ctx.fillStyle = waiting ? '#4b5563' : darkColor;
-        ctx.beginPath(); ctx.roundRect(-3, -6, 8, 4, 2); ctx.fill();
-        
-        // Asiento
-        ctx.fillStyle = '#1f2937';
-        ctx.beginPath(); ctx.roundRect(-8, -7, 10, 3, 1); ctx.fill();
-        
-        // Caja de delivery (sin logo de empresa - solo en header)
-        ctx.fillStyle = waiting ? '#4b5563' : '#ef4444';
-        ctx.beginPath(); ctx.roundRect(-16, -10, 10, 12, 2); ctx.fill();
-        // Borde de la caja
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(-15, -9, 8, 10);
-        // Símbolo de paquete
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 7px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('📦', -11, -4);
-        
-        // Manubrio mejorado
-        ctx.fillStyle = '#374151';
-        ctx.fillRect(7, -8, 5, 2);
-        ctx.fillStyle = '#1f2937';
-        ctx.beginPath(); ctx.arc(7, -7, 1.5, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(12, -7, 1.5, 0, Math.PI * 2); ctx.fill();
-        
-        // Luz delantera
-        ctx.fillStyle = waiting ? '#6b7280' : '#fef08a';
-        ctx.beginPath(); ctx.arc(13, -1, 2.5, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = waiting ? '#9ca3af' : '#fbbf24';
-        ctx.beginPath(); ctx.arc(13, -1, 1.5, 0, Math.PI * 2); ctx.fill();
-        
-        // Luz trasera
-        ctx.fillStyle = '#dc2626';
-        ctx.beginPath(); ctx.roundRect(-12, 1, 3, 2, 1); ctx.fill();
-        
-        // Escape
-        ctx.fillStyle = '#6b7280';
-        ctx.fillRect(-5, 3, 8, 2);
-        ctx.fillStyle = '#9ca3af';
-        ctx.beginPath(); ctx.arc(-5, 4, 1.5, 0, Math.PI * 2); ctx.fill();
-    } else if (selectedVehicle === 'car') {
-        // Carro mejorado estilo sedan
-        const companyColor = companyColors[selectedCompany] || '#ef4444';
-        
-        // Sombra
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
-        ctx.beginPath(); ctx.ellipse(0, 9, 12, 3, 0, 0, Math.PI * 2); ctx.fill();
-        
-        // Ruedas traseras
-        ctx.fillStyle = '#1a1a1a';
-        ctx.beginPath(); ctx.arc(-7, 6, 4, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#4b5563';
-        ctx.beginPath(); ctx.arc(-7, 6, 2.5, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#9ca3af';
-        ctx.beginPath(); ctx.arc(-7, 6, 1, 0, Math.PI * 2); ctx.fill();
-        
-        // Ruedas delanteras
-        ctx.fillStyle = '#1a1a1a';
-        ctx.beginPath(); ctx.arc(7, 6, 4, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#4b5563';
-        ctx.beginPath(); ctx.arc(7, 6, 2.5, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#9ca3af';
-        ctx.beginPath(); ctx.arc(7, 6, 1, 0, Math.PI * 2); ctx.fill();
-        
-        // Cuerpo del carro
-        ctx.fillStyle = waiting ? '#6b7280' : mainColor;
-        ctx.beginPath(); ctx.roundRect(-12, -3, 24, 10, 3); ctx.fill();
-        
-        // Techo/cabina
-        ctx.fillStyle = waiting ? '#4b5563' : darkColor;
-        ctx.beginPath();
-        ctx.moveTo(-6, -3);
-        ctx.lineTo(-4, -8);
-        ctx.lineTo(6, -8);
-        ctx.lineTo(8, -3);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Ventanas
-        ctx.fillStyle = '#1e3a5f';
-        ctx.beginPath();
-        ctx.moveTo(-5, -3);
-        ctx.lineTo(-3, -7);
-        ctx.lineTo(0, -7);
-        ctx.lineTo(0, -3);
-        ctx.closePath();
-        ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(1, -3);
-        ctx.lineTo(1, -7);
-        ctx.lineTo(5, -7);
-        ctx.lineTo(7, -3);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Luces delanteras
-        ctx.fillStyle = waiting ? '#6b7280' : '#fef08a';
-        ctx.beginPath(); ctx.roundRect(10, -1, 3, 3, 1); ctx.fill();
-        ctx.beginPath(); ctx.roundRect(10, 3, 3, 2, 1); ctx.fill();
-        
-        // Luces traseras
-        ctx.fillStyle = '#dc2626';
-        ctx.beginPath(); ctx.roundRect(-13, 0, 2, 4, 1); ctx.fill();
-        
-        // Detalle en el lateral (sin logo de empresa - solo en header)
-        ctx.fillStyle = '#374151';
-        ctx.beginPath(); ctx.roundRect(-2, 1, 4, 3, 1); ctx.fill();
-        
-        // Parachoques
-        ctx.fillStyle = '#374151';
-        ctx.beginPath(); ctx.roundRect(-12, 5, 24, 2, 1); ctx.fill();
-    } else if (selectedVehicle === 'truck') {
-        // Camioneta de reparto mejorada
-        const companyColor = companyColors[selectedCompany] || '#ef4444';
-        
-        // Sombra
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
-        ctx.beginPath(); ctx.ellipse(0, 10, 14, 4, 0, 0, Math.PI * 2); ctx.fill();
-        
-        // Ruedas traseras (dobles)
-        ctx.fillStyle = '#1a1a1a';
-        ctx.beginPath(); ctx.arc(-9, 6, 5, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#4b5563';
-        ctx.beginPath(); ctx.arc(-9, 6, 3, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#6b7280';
-        ctx.beginPath(); ctx.arc(-9, 6, 1.5, 0, Math.PI * 2); ctx.fill();
-        
-        // Ruedas delanteras
-        ctx.fillStyle = '#1a1a1a';
-        ctx.beginPath(); ctx.arc(9, 6, 5, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#4b5563';
-        ctx.beginPath(); ctx.arc(9, 6, 3, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#6b7280';
-        ctx.beginPath(); ctx.arc(9, 6, 1.5, 0, Math.PI * 2); ctx.fill();
-        
-        // Caja de carga (sin logo de empresa - solo en header)
-        ctx.fillStyle = waiting ? '#4b5563' : '#6b7280';
-        ctx.beginPath(); ctx.roundRect(-16, -8, 16, 14, 2); ctx.fill();
-        ctx.strokeStyle = '#1f2937';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(-15, -7, 14, 12);
-        // Líneas de la caja
-        ctx.beginPath();
-        ctx.moveTo(-15, -2);
-        ctx.lineTo(-1, -2);
-        ctx.moveTo(-8, -7);
-        ctx.lineTo(-8, 5);
-        ctx.stroke();
-        
-        // Cabina
-        ctx.fillStyle = waiting ? '#6b7280' : mainColor;
-        ctx.beginPath(); ctx.roundRect(0, -6, 14, 12, 3); ctx.fill();
-        
-        // Ventana de cabina
-        ctx.fillStyle = '#1e3a5f';
-        ctx.beginPath(); ctx.roundRect(2, -5, 8, 6, 2); ctx.fill();
-        
-        // Espejo retrovisor
-        ctx.fillStyle = '#374151';
-        ctx.fillRect(0, -3, 2, 4);
-        
-        // Luces delanteras
-        ctx.fillStyle = waiting ? '#6b7280' : '#fef08a';
-        ctx.beginPath(); ctx.roundRect(12, -2, 3, 3, 1); ctx.fill();
-        ctx.beginPath(); ctx.roundRect(12, 2, 3, 2, 1); ctx.fill();
-        
-        // Luces traseras
-        ctx.fillStyle = '#dc2626';
-        ctx.beginPath(); ctx.roundRect(-17, 0, 2, 4, 1); ctx.fill();
-        
-        // Parrilla
-        ctx.fillStyle = '#1f2937';
-        ctx.beginPath(); ctx.roundRect(13, -1, 2, 5, 1); ctx.fill();
-    } else if (selectedVehicle === 'bus') {
-        // Bus de reparto mejorado
-        const companyColor = companyColors[selectedCompany] || '#ef4444';
-        
-        // Sombra
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
-        ctx.beginPath(); ctx.ellipse(0, 11, 16, 4, 0, 0, Math.PI * 2); ctx.fill();
-        
-        // Ruedas traseras
-        ctx.fillStyle = '#1a1a1a';
-        ctx.beginPath(); ctx.arc(-11, 7, 5, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#4b5563';
-        ctx.beginPath(); ctx.arc(-11, 7, 3, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#6b7280';
-        ctx.beginPath(); ctx.arc(-11, 7, 1.5, 0, Math.PI * 2); ctx.fill();
-        
-        // Ruedas delanteras
-        ctx.fillStyle = '#1a1a1a';
-        ctx.beginPath(); ctx.arc(11, 7, 5, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#4b5563';
-        ctx.beginPath(); ctx.arc(11, 7, 3, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#6b7280';
-        ctx.beginPath(); ctx.arc(11, 7, 1.5, 0, Math.PI * 2); ctx.fill();
-        
-        // Cuerpo principal del bus
-        ctx.fillStyle = waiting ? '#6b7280' : mainColor;
-        ctx.beginPath(); ctx.roundRect(-18, -8, 36, 16, 4); ctx.fill();
-        
-        // Franja decorativa (sin logo de empresa - solo en header)
-        ctx.fillStyle = '#374151';
-        ctx.fillRect(-18, -2, 36, 4);
-        
-        // Ventanas superiores
-        ctx.fillStyle = '#1e3a5f';
-        for (let i = 0; i < 5; i++) {
-            ctx.beginPath(); ctx.roundRect(-15 + i * 7, -7, 5, 4, 1); ctx.fill();
-        }
-        
-        // Ventanas inferiores
-        for (let i = 0; i < 5; i++) {
-            ctx.beginPath(); ctx.roundRect(-15 + i * 7, 3, 5, 4, 1); ctx.fill();
-        }
-        
-        // Puerta
-        ctx.fillStyle = '#374151';
-        ctx.beginPath(); ctx.roundRect(14, -6, 4, 12, 1); ctx.fill();
-        ctx.fillStyle = '#1e3a5f';
-        ctx.beginPath(); ctx.roundRect(15, -5, 2, 10, 1); ctx.fill();
-        
-        // Luces delanteras
-        ctx.fillStyle = waiting ? '#6b7280' : '#fef08a';
-        ctx.beginPath(); ctx.roundRect(16, -7, 3, 3, 1); ctx.fill();
-        ctx.fillStyle = '#f97316';
-        ctx.beginPath(); ctx.roundRect(16, 5, 3, 2, 1); ctx.fill();
-        
-        // Luces traseras
-        ctx.fillStyle = '#dc2626';
-        ctx.beginPath(); ctx.roundRect(-19, -5, 2, 4, 1); ctx.fill();
-        ctx.beginPath(); ctx.roundRect(-19, 3, 2, 3, 1); ctx.fill();
-        
-        // Espejo lateral
-        ctx.fillStyle = '#374151';
-        ctx.fillRect(18, -4, 2, 3);
-        
-        // Letrero de destino
-        ctx.fillStyle = '#000000';
-        ctx.beginPath(); ctx.roundRect(-10, -10, 20, 3, 1); ctx.fill();
-        ctx.fillStyle = '#fef08a';
-        ctx.font = 'bold 3px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('DELIVERY', 0, -8);
-    } else if (selectedVehicle === 'motoa') {
-        // Moto Premium - usando imagen motoa.gif
-        const companyColor = companyColors[selectedCompany] || '#ef4444';
-        
-        // Sombra del vehículo
-        ctx.fillStyle = 'rgba(0,0,0,0.4)';
-        ctx.beginPath(); ctx.ellipse(0, 10, 14, 4, 0, 0, Math.PI * 2); ctx.fill();
-        
-        // Dibujar imagen de moto premium
-        if (premiumMotoImage.complete) {
-            ctx.drawImage(premiumMotoImage, -20, -15, 40, 30);
-        } else {
-            // Fallback si la imagen no carga - Moto deportiva dorada
-            // Rueda trasera
-            ctx.fillStyle = '#1a1a1a';
-            ctx.beginPath(); ctx.arc(-10, 5, 6, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#fbbf24';
-            ctx.beginPath(); ctx.arc(-10, 5, 4, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#1a1a1a';
-            ctx.beginPath(); ctx.arc(-10, 5, 2, 0, Math.PI * 2); ctx.fill();
-            
-            // Rueda delantera
-            ctx.fillStyle = '#1a1a1a';
-            ctx.beginPath(); ctx.arc(12, 5, 6, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#fbbf24';
-            ctx.beginPath(); ctx.arc(12, 5, 4, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#1a1a1a';
-            ctx.beginPath(); ctx.arc(12, 5, 2, 0, Math.PI * 2); ctx.fill();
-            
-            // Cuerpo deportivo dorado
-            ctx.fillStyle = waiting ? '#6b7280' : '#fbbf24';
-            ctx.beginPath();
-            ctx.moveTo(-14, 3);
-            ctx.lineTo(-8, -8);
-            ctx.lineTo(10, -8);
-            ctx.lineTo(16, 0);
-            ctx.lineTo(14, 5);
-            ctx.lineTo(-12, 5);
-            ctx.closePath();
-            ctx.fill();
-            
-            // Detalles negros
-            ctx.fillStyle = '#1a1a1a';
-            ctx.beginPath(); ctx.roundRect(-6, -10, 12, 4, 2); ctx.fill();
-            
-            // Carenado
-            ctx.fillStyle = waiting ? '#4b5563' : '#f59e0b';
-            ctx.beginPath();
-            ctx.moveTo(8, -8);
-            ctx.lineTo(18, -4);
-            ctx.lineTo(18, 2);
-            ctx.lineTo(14, 4);
-            ctx.lineTo(8, -2);
-            ctx.closePath();
-            ctx.fill();
-            
-            // Luz delantera dorada
-            ctx.fillStyle = '#fef3c7';
-            ctx.beginPath(); ctx.arc(17, -1, 3, 0, Math.PI * 2); ctx.fill();
-            
-            // Estrella premium
-            ctx.fillStyle = '#fbbf24';
-            ctx.font = 'bold 8px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('⭐', 0, -4);
-        }
-    } else if (selectedVehicle === 'trucka') {
-        // Camioneta Premium - usando imagen camionetaa.png
-        
-        // Sombra del vehículo
-        ctx.fillStyle = 'rgba(0,0,0,0.4)';
-        ctx.beginPath(); ctx.ellipse(0, 12, 18, 5, 0, 0, Math.PI * 2); ctx.fill();
-        
-        // Dibujar imagen de camioneta premium
-        // La imagen se dibuja correctamente orientada (la rotación ya está aplicada por ctx.rotate)
-        if (premiumTruckImage.complete && premiumTruckImage.naturalWidth > 0) {
-            // Dibujar la imagen centrada y escalada
-            const imgWidth = 50;
-            const imgHeight = 35;
-            ctx.drawImage(premiumTruckImage, -imgWidth/2, -imgHeight/2, imgWidth, imgHeight);
-        } else {
-            // Fallback si la imagen no carga - Camioneta deportiva plateada
-            // Ruedas traseras
-            ctx.fillStyle = '#1a1a1a';
-            ctx.beginPath(); ctx.arc(-12, 8, 6, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#c0c0c0';
-            ctx.beginPath(); ctx.arc(-12, 8, 4, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#1a1a1a';
-            ctx.beginPath(); ctx.arc(-12, 8, 2, 0, Math.PI * 2); ctx.fill();
-            
-            // Ruedas delanteras
-            ctx.fillStyle = '#1a1a1a';
-            ctx.beginPath(); ctx.arc(12, 8, 6, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#c0c0c0';
-            ctx.beginPath(); ctx.arc(12, 8, 4, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#1a1a1a';
-            ctx.beginPath(); ctx.arc(12, 8, 2, 0, Math.PI * 2); ctx.fill();
-            
-            // Cuerpo de la camioneta - plateado premium
-            ctx.fillStyle = waiting ? '#6b7280' : '#e5e7eb';
-            ctx.beginPath(); ctx.roundRect(-20, -8, 40, 18, 4); ctx.fill();
-            
-            // Cabina
-            ctx.fillStyle = waiting ? '#4b5563' : '#d1d5db';
-            ctx.beginPath();
-            ctx.moveTo(5, -8);
-            ctx.lineTo(8, -14);
-            ctx.lineTo(18, -14);
-            ctx.lineTo(20, -8);
-            ctx.closePath();
-            ctx.fill();
-            
-            // Ventana
-            ctx.fillStyle = '#1e3a5f';
-            ctx.beginPath();
-            ctx.moveTo(7, -8);
-            ctx.lineTo(9, -12);
-            ctx.lineTo(17, -12);
-            ctx.lineTo(18, -8);
-            ctx.closePath();
-            ctx.fill();
-            
-            // Caja de carga
-            ctx.fillStyle = '#9ca3af';
-            ctx.beginPath(); ctx.roundRect(-18, -6, 22, 12, 2); ctx.fill();
+        // Rayos del rin (efecto movimiento si no espera)
+        if(!waiting) {
             ctx.strokeStyle = '#6b7280';
             ctx.lineWidth = 1;
-            ctx.strokeRect(-17, -5, 20, 10);
-            
-            // Luces delanteras
-            ctx.fillStyle = '#fef3c7';
-            ctx.beginPath(); ctx.roundRect(18, -4, 3, 3, 1); ctx.fill();
-            ctx.beginPath(); ctx.roundRect(18, 2, 3, 2, 1); ctx.fill();
-            
-            // Luces traseras
-            ctx.fillStyle = '#dc2626';
-            ctx.beginPath(); ctx.roundRect(-21, -2, 2, 4, 1); ctx.fill();
-            
-            // Estrella premium
-            ctx.fillStyle = '#fbbf24';
-            ctx.font = 'bold 10px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('⭐', -8, 0);
+            ctx.beginPath(); ctx.moveTo(x-size*0.5, y); ctx.lineTo(x+size*0.5, y); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(x, y-size*0.5); ctx.lineTo(x, y+size*0.5); ctx.stroke();
         }
+    };
+
+    if (selectedVehicle === 'moto' || selectedVehicle === 'motoa') {
+        // --- MOTO DE REPARTO (VISTA PERFIL) ---
+        // Se ve el lado de la moto
+        const s = selectedVehicle === 'motoa' ? 1.0 : 0.9;
+        ctx.scale(s, s);
+
+        // Ruedas
+        drawSideWheel(-12, 6, 6); // Rueda Trasera
+        drawSideWheel(12, 6, 6);  // Rueda Delantera
         
-        // Efecto de brillo premium plateado
-        ctx.fillStyle = 'rgba(192, 192, 192, 0.25)';
+        // Suspensión / Tenedor delantero
+        ctx.strokeStyle = '#d4d4d4'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(12, 6); ctx.lineTo(9, -4); ctx.stroke();
+
+        // Escape
+        ctx.fillStyle = '#94a3b8';
+        ctx.beginPath(); ctx.moveTo(-6, 4); ctx.lineTo(4, 3); ctx.lineTo(4, 5); ctx.lineTo(-6, 6); ctx.fill();
+
+        // Cuerpo Moto
+        ctx.fillStyle = waiting ? '#ef4444' : (selectedVehicle === 'motoa' ? '#fbbf24' : mainColor);
         ctx.beginPath();
-        ctx.arc(0, 0, 22, 0, Math.PI * 2);
+        ctx.moveTo(-8, -2);
+        ctx.quadraticCurveTo(0, -9, 8, -4); // Tanque
+        ctx.lineTo(8, 6);
+        ctx.lineTo(-4, 6);
         ctx.fill();
+
+        // Caja de Reparto (Atrás, cuadrada, grande)
+        ctx.fillStyle = companyColors[selectedCompany] || '#ef4444';
+        ctx.beginPath(); ctx.roundRect(-18, -14, 12, 12, 2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.8)'; // Cinta reflectiva
+        ctx.fillRect(-18, -8, 12, 2);
+        
+        // Conductor
+        ctx.fillStyle = '#1f2937'; // Cuerpo
+        ctx.beginPath(); ctx.ellipse(-2, -6, 5, 7, -0.2, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#fff'; // Casco
+        ctx.beginPath(); ctx.arc(0, -13, 5, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#000'; // Visor
+        ctx.fillRect(2, -14, 4, 3);
+
+        // Manillar
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(6, -6); ctx.lineTo(8, -8); ctx.stroke();
+
+        // Foco
+        ctx.fillStyle = waiting ? '#ef4444' : '#fef08a';
+        ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 8;
+        ctx.beginPath(); ctx.arc(9, -3, 3, 0, Math.PI*2); ctx.fill();
+        ctx.shadowBlur = 0;
+
+        if (selectedVehicle === 'motoa') {
+            ctx.font = '10px sans-serif'; ctx.fillText('⭐', -12, -2);
+        }
+
+    } else if (selectedVehicle === 'car') {
+        // --- COCHE CON IMAGEN (VISTA PERFIL) ---
+        // Usamos la imagen 'carroa.png' en lugar del dibujo vectorial
+        
+        ctx.scale(0.9, 0.9);
+
+        // Si la imagen está cargada la dibujamos
+        if (carImg.complete && carImg.naturalWidth > 0) {
+            // Sombra suelo para realismo
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.beginPath(); ctx.ellipse(0, 10, 22, 4, 0, 0, Math.PI*2); ctx.fill();
+            
+            // Dibujar imagen centrada
+            // Ajustar tamaño para que quepa bien en el tile (aprox 50px ancho)
+            const w = 50;
+            const h = (carImg.naturalHeight / carImg.naturalWidth) * w;
+            ctx.drawImage(carImg, -w/2, -h/2, w, h);
+            
+            // Tintado básico si fuera necesario (Opcional, ahora solo imagen natural)
+            // Si el cliente quiere "mismas funciones", deberíamos poder cambiarle el color.
+            // Pero con un PNG directo no es fácil sin Canvas filters.
+            
+            // Dibujar Luces encima de la imagen para efecto "vivo"
+            // Delantera
+            ctx.fillStyle = waiting ? '#ef4444' : '#e0f2fe';
+            ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 10;
+            ctx.beginPath(); ctx.arc(w/2 - 2, 2, 2, 0, Math.PI*2); ctx.fill();
+            ctx.shadowBlur = 0;
+            
+            // Humo si está andando
+            if (!waiting && gameState === 'RUNNING') {
+                 ctx.fillStyle = 'rgba(100,100,100,0.3)';
+                 ctx.beginPath(); ctx.arc(-w/2 - 5, 5, 2 + Math.random(), 0, Math.PI*2); ctx.fill();
+            }
+
+        } else {
+            // FALLBACK: Si no carga la imagen, dibujar el coche vectorial antiguo
+            // Ruedas
+            drawSideWheel(-12, 8, 5.5);
+            drawSideWheel(12, 8, 5.5);
+
+            // Sombra suelo
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.beginPath(); ctx.roundRect(-20, 12, 40, 2, 1); ctx.fill();
+
+            // Carrocería
+            ctx.fillStyle = mainColor;
+            ctx.beginPath();
+            ctx.moveTo(-18, 8);
+            ctx.lineTo(-20, 0); // Parachoques trasero
+            ctx.lineTo(-18, -6); // Maletero subida
+            ctx.lineTo(0, -9);   // Techo
+            ctx.lineTo(14, -6);  // Parabrisas bajada
+            ctx.lineTo(22, 0);   // Capó
+            ctx.lineTo(22, 8);   // Parachoques delantero
+            ctx.closePath();
+            ctx.fill();
+
+            // Ventanas (Perfil)
+            ctx.fillStyle = '#1e293b';
+            ctx.beginPath();
+            ctx.moveTo(-10, -6);
+            ctx.lineTo(0, -7);
+            ctx.lineTo(12, -5);
+            ctx.lineTo(12, 0);
+            ctx.lineTo(-10, 0);
+            ctx.closePath();
+            ctx.fill();
+            // Separador puerta
+            ctx.fillStyle = mainColor;
+            ctx.fillRect(2, -7, 2, 7);
+
+            // Luces
+            // Delantera
+            ctx.fillStyle = waiting ? '#ef4444' : '#e0f2fe';
+            ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 10;
+            ctx.beginPath(); ctx.moveTo(22, 0); ctx.lineTo(24, 2); ctx.lineTo(22, 4); ctx.fill();
+            ctx.shadowBlur = 0;
+            // Trasera
+            ctx.fillStyle = '#dc2626';
+            ctx.fillRect(-20, 0, 2, 4);
+        }
+
+
+        // Logo Puerta
+        ctx.fillStyle = companyColors[selectedCompany];
+        ctx.beginPath(); ctx.arc(4, 4, 3, 0, Math.PI*2); ctx.fill();
+
+    } else if (selectedVehicle === 'truck' || selectedVehicle === 'trucka') {
+        // --- CAMIÓN DE REPARTO (VISTA PERFIL) ---
+        // Se debe ver el lado largo de la caja
+        ctx.scale(0.95, 0.95);
+        const isPremium = selectedVehicle === 'trucka';
+        
+        // Ruedas Robustas
+        drawSideWheel(-14, 9, 6);
+        drawSideWheel(16, 9, 6);
+
+        // Chasis
+        ctx.fillStyle = '#1f2937';
+        ctx.fillRect(-22, 6, 42, 6); // Base oscura
+
+        // Caja de Carga (Rectángulo grande atrás)
+        const boxColor = isPremium ? '#e5e7eb' : '#f3f4f6';
+        ctx.fillStyle = boxColor;
+        ctx.beginPath(); ctx.roundRect(-22, -12, 28, 20, 2); ctx.fill();
+        
+        // Decoración Caja
+        ctx.strokeStyle = '#d1d5db'; ctx.lineWidth = 1;
+        ctx.strokeRect(-16, -8, 16, 12); // Marco puerta lateral
+        ctx.fillStyle = '#d1d5db'; 
+        ctx.fillRect(-14, 0, 4, 2); // Manija
+
+        // Logo Grande en el lado de la caja
+        ctx.fillStyle = companyColors[selectedCompany];
+        ctx.beginPath(); ctx.arc(-8, -2, 6, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 8px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(selectedCompany.substring(0,1), -8, -1);
+
+        // Cabina (Parte delantera)
+        ctx.fillStyle = isPremium ? '#d1d5db' : mainColor;
+        ctx.beginPath();
+        ctx.moveTo(6, -12);
+        ctx.lineTo(6, 6);
+        ctx.lineTo(22, 6); // Parachoques
+        ctx.lineTo(22, -2); // Morro
+        ctx.lineTo(16, -12); // Parabrisas inclinado
+        ctx.fill();
+
+        // Ventana Cabina (Perfil)
+        ctx.fillStyle = '#1e3a8a';
+        ctx.beginPath();
+        ctx.moveTo(8, -10);
+        ctx.lineTo(15, -10);
+        ctx.lineTo(18, -2);
+        ctx.lineTo(8, -2);
+        ctx.fill();
+
+        // Faros
+        ctx.fillStyle = waiting ? '#fbbf24' : '#fef08a';
+        ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 10;
+        ctx.beginPath(); ctx.rect(21, 2, 2, 4); ctx.fill();
+        ctx.shadowBlur = 0;
+
+        if (isPremium) {
+            ctx.font = '10px sans-serif'; ctx.fillText('⭐', 0, -14);
+        }
+
+    } else if (selectedVehicle === 'bus') {
+        // --- AUTOBÚS (VISTA PERFIL) ---
+        // Largo y con muchas ventanas
+        ctx.scale(0.85, 0.85);
+
+        // Ruedas
+        drawSideWheel(-20, 10, 6);
+        drawSideWheel(22, 10, 6);
+
+        // Cuerpo Principal
+        ctx.fillStyle = mainColor;
+        ctx.beginPath(); ctx.roundRect(-28, -14, 56, 26, 4); ctx.fill();
+        
+        // Franja inferior oscura
+        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+        ctx.fillRect(-28, 6, 56, 6);
+
+        // Ventanas (Fila larga)
+        ctx.fillStyle = '#1e293b';
+        // Primera ventana (conductor)
+        ctx.beginPath(); 
+        ctx.moveTo(20, -8); ctx.lineTo(26, -8); ctx.lineTo(26, 2); ctx.lineTo(20, 2); ctx.fill();
+        // Ventanas pasajeros
+        for(let i=0; i<4; i++) {
+            ctx.fillRect(-22 + (i*10), -8, 8, 10);
+        }
+
+        // Puerta (Líneas)
+        ctx.fillStyle = '#333';
+        ctx.fillRect(10, -8, 8, 16); // Puerta delantera
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.fillRect(11, -7, 6, 14); // Cristal puerta
+
+        // Luces Traseras
+        ctx.fillStyle = '#dc2626';
+        ctx.fillRect(-28, 0, 2, 6);
+        
+        // Faros Delanteros
+        ctx.fillStyle = '#fef08a';
+        ctx.shadowBlur = 8; ctx.shadowColor = '#fef08a';
+        ctx.fillRect(27, 4, 1, 4);
+        ctx.shadowBlur = 0;
     }
     
-    // Indicador de dirección en modo edición
+    // Indicador de dirección en modo edición (Flotante encima)
     if (gameState === 'EDITING') {
-        ctx.fillStyle = 'rgba(74, 222, 128, 0.8)';
-        ctx.beginPath();
-        const offset = selectedVehicle === 'bus' ? 24 : selectedVehicle === 'trucka' ? 26 : selectedVehicle === 'truck' ? 20 : selectedVehicle === 'motoa' ? 22 : selectedVehicle === 'moto' ? 18 : 16;
-        ctx.moveTo(offset + 6, 0);
-        ctx.lineTo(offset - 2, -5);
-        ctx.lineTo(offset - 2, 5);
-        ctx.closePath();
-        ctx.fill();
+        const bounce = Math.sin(Date.now() / 200) * 3;
+        ctx.translate(0, -20 + bounce); // Arriba del coche
         
-        ctx.strokeStyle = selectedVehicle === 'motoa' ? 'rgba(251, 191, 36, 0.7)' : selectedVehicle === 'trucka' ? 'rgba(192, 192, 192, 0.7)' : 'rgba(74, 222, 128, 0.5)';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([3, 3]);
-        const radius = selectedVehicle === 'bus' ? 24 : selectedVehicle === 'trucka' ? 28 : selectedVehicle === 'truck' ? 22 : selectedVehicle === 'motoa' ? 24 : selectedVehicle === 'moto' ? 18 : 16;
+        ctx.fillStyle = 'rgba(74, 222, 128, 0.9)'; 
+        ctx.shadowColor = 'rgba(74, 222, 128, 0.6)'; ctx.shadowBlur = 8;
+        
+        // Flecha simple hacia abajo apuntando al coche
         ctx.beginPath();
-        ctx.arc(0, 0, radius, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.setLineDash([]);
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-4, -6);
+        ctx.lineTo(4, -6);
+        ctx.fill();
+        ctx.shadowBlur = 0;
     }
     
     ctx.restore();
