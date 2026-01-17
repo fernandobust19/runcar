@@ -626,7 +626,7 @@
     </div>
 
     <!-- Controls -->
-    <div class="absolute bottom-2 w-full flex justify-center gap-1 px-2 z-10">
+    <div class="w-full flex justify-center gap-1 px-2 z-10 shrink-0 mb-1">
         <button onclick="resetLevel()" class="btn-game bg-slate-600 hover:bg-slate-500 text-white p-2 rounded-lg shadow-md border-b-2 border-slate-800 text-sm" title="Reiniciar ($100)">🔄</button>
         <button onclick="instantDeliver()" class="btn-game bg-pink-600 hover:bg-pink-500 text-white p-2 rounded-lg shadow-md border-b-2 border-pink-800 text-xs" title="Entregar Ya ($500)">⚡</button>
         <button onclick="addExtraTime()" class="btn-game bg-orange-600 hover:bg-orange-500 text-white p-2 rounded-lg shadow-md border-b-2 border-orange-800 text-xs" title="+5 seg ($5)">⏱️+5</button>
@@ -2116,25 +2116,30 @@ function init() {
 function resize() {
     const config = LEVEL_CONFIG[Math.min(level - 1, 99)];
     COLS = config.cols; ROWS = config.rows;
-    // Ajustar maxH para asegurar que el botón (aprox 50-60px) + controles (40px) + velocidad (50px) entren.
-    // Antes 130, ahora más espacio para la UI fija.
-    // HEADER: 40px, FOOTER_AREA: aprox 140px (dashboard + boton + controls)
-    const availableHeight = innerHeight - 200; 
-    const isSmallScreen = window.innerWidth < 400 || window.innerHeight < 700;
     
-    const maxW = innerWidth - 8;
-    // Si la pantalla es pequeña, permitimos TILE_SIZE más pequeño para que quepa todo
-    const minTileSize = isSmallScreen ? 15 : 24; 
+    // RESERVAR ESPACIO VERTICAL para UI (Header + Footer)
+    // Header: ~80px
+    // Footer (Dashboard + Botón + Apps): ~170px
+    // Total seguro: 250px
+    const footerSpace = 250;
+    const availableHeight = window.innerHeight - footerSpace;
+    const maxW = window.innerWidth - 8;
     
-    TILE_SIZE = Math.min(Math.floor(maxW / COLS), Math.floor(availableHeight / ROWS), 60);
+    // Calcular TILE_SIZE para que quepa TODO en la pantalla sin scroll vertical si es posible
+    let calculatedTileSize = Math.min(
+        Math.floor(maxW / COLS), 
+        Math.floor(availableHeight / ROWS), 
+        60
+    );
 
-    // Asegurar que no sea demasiado pequeño, pero priorizar ajuste
-    if (TILE_SIZE < minTileSize) TILE_SIZE = minTileSize; 
+    // Mínimos absolutos para legibilidad
+    const isSmallScreen = window.innerWidth < 400 || window.innerHeight < 700;
+    const minTileSize = isSmallScreen ? 12 : 18; // Permitir que sea muy pequeño en mapas grandes
+    
+    // Si el cálculo da menos del mínimo, usamos el mínimo (habrá un poco de scroll si es necesario)
+    TILE_SIZE = Math.max(calculatedTileSize, minTileSize);
 
     canvas.width = COLS * TILE_SIZE; canvas.height = ROWS * TILE_SIZE;
-    
-    // Si el canvas es más grande que el espacio disponible, se hará scroll pero el footer es fijo
-    // Pero idealmente queremos que quepa.
 }
 
 function handleClick(e) {
