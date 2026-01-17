@@ -796,11 +796,32 @@ function updateSpeedometer() {
     // Detectar si el coche (variable global 'car') se está moviendo
     let targetSpeed = 0;
     
-    if (typeof car !== 'undefined' && car && car.moving) {
-        // Simular fluctuación realista de velocidad mientras se mueve
-        // Base 50 + random variación
-        targetSpeed = 50 + Math.random() * 30; 
-        if (car.speedMultiplier && car.speedMultiplier > 1) targetSpeed *= 1.2; // Si hay turbo
+    if (typeof car !== 'undefined' && car && gameState === 'RUNNING' && !car.waiting) {
+       // VELOCIDAD BASE EN PANTALLA: 100 KM/H
+       let displayBase = 100;
+       
+       // Detectar tiles especiales analizando la velocidad real vs base
+       // Si car.speed > car.baseSpeed -> Boost (150 KM/H)
+       // Si car.speed < car.baseSpeed -> Pozo (80 KM/H)
+       
+       // Verificar que baseSpeed no sea 0 para evitar division por cero
+       if (car.baseSpeed > 0) {
+           const ratio = car.speed / car.baseSpeed;
+           
+           if (ratio > 1.2) {
+               // Turbo detectado
+               displayBase = 150; 
+           } else if (ratio < 0.8) {
+               // Charco detectado
+               displayBase = 80;
+           }
+       }
+       
+       // Pequeña variación para realismo (+/- 3 km/h del objetivo)
+       targetSpeed = displayBase + (Math.random() * 6 - 3);
+    } else {
+        // Si está parado o esperando
+        targetSpeed = 0;
     }
     
     // Interpolación suave (lerp)
@@ -811,8 +832,8 @@ function updateSpeedometer() {
     
     speedText.textContent = Math.round(currentSpeed);
     
-    // Color barra según velocidad
-    const pct = Math.min((currentSpeed / 100) * 100, 100);
+    // Color barra y altura según velocidad (Max 160 en la barra)
+    const pct = Math.min((currentSpeed / 160) * 100, 100);
     // Ajustar altura (height) en lugar de width para el diseño vertical
     rpmBar.style.height = `${pct}%`;
 }
@@ -2426,6 +2447,10 @@ function generateLevel() {
     $('statusText').className = 'text-yellow-400 font-bold text-xs';
     $('levelHint').textContent = `📦 Pedido #${level} | 👆 Prepara la ruta de entrega`;
     
+    // Actualizar indicador superior de nivel
+    const lvlDisplay = $('levelDisplay');
+    if (lvlDisplay) lvlDisplay.textContent = level;
+
     // Mostrar animación de preparación
     startPrepAnimation();
     
