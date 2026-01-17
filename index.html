@@ -3153,13 +3153,13 @@ function win() {
         <p style="color:white; font-size:16px; text-shadow: 1px 1px 3px black; margin-top:5px;">Entrega completada con éxito</p>
     `;
 
-    // Imagen full screen (AJUSTADO: Más alta)
-    overlayImage.style.width = '100vw'; 
-    overlayImage.style.height = '75vh'; // Aumentado de 60vh a 75vh
-    overlayImage.style.objectFit = 'cover'; // Cover para llenar
-    overlayImage.style.objectPosition = 'top center'; // Enfocar arriba (cara)
+    // Imagen full screen (AJUSTADO: Completa y más pequeña)
+    overlayImage.style.width = '100%'; 
+    overlayImage.style.height = '60vh'; // Reducido para que quepa mejor
+    overlayImage.style.objectFit = 'contain'; // Contain para ver TODA la imagen sin recortes
+    overlayImage.style.objectPosition = 'center'; 
     overlayImage.style.borderRadius = '0';
-    overlayImage.style.margin = '0';
+    overlayImage.style.margin = '20px 0'; // Un poco de margen vertical
     overlayImage.style.display = 'block';
     overlayImage.style.border = 'none'; 
     
