@@ -581,50 +581,48 @@
         <p id="levelHint">Prepara la ruta de entrega 📦</p>
     </div>
 
-    <!-- DASHBOARD: Velocímetro y Música -->
-    <div class="w-full max-w-xs flex justify-between items-end px-2 mb-1 gap-2">
+    <!-- DASHBOARD: Velocímetro y Música (Estilo Mini) -->
+    <div class="w-full flex justify-between items-end px-2 mb-1 gap-1" style="max-height: 50px;">
         
-        <!-- Velocímetro -->
-        <div class="bg-slate-800/80 border border-slate-600 rounded-xl p-2 flex flex-col items-center w-24 relative overflow-hidden group">
-            <div class="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Km/h</div>
-            <div class="flex items-baseline gap-0.5">
-                <span id="speedValue" class="text-2xl font-black text-white tabular-nums drop-shadow-md">0</span>
-                <div class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
+        <!-- Velocímetro Compacto -->
+        <div class="bg-slate-800/90 border border-slate-600 rounded-lg p-1 flex items-center gap-2 w-20 relative overflow-hidden h-[45px]">
+            <div class="flex-col leading-none">
+                <div class="text-[8px] text-slate-400 font-bold">KM/H</div>
+                <span id="speedValue" class="text-xl font-black text-white tabular-nums drop-shadow-md">0</span>
             </div>
-            <!-- Barra visual de RPM -->
-            <div class="w-full h-1 bg-slate-700 mt-1 rounded-full overflow-hidden">
-                <div id="rpmBar" class="h-full bg-gradient-to-r from-emerald-500 via-yellow-400 to-red-500 w-0 transition-all duration-100"></div>
+             <!-- Barra Simple -->
+            <div class="h-full w-1.5 bg-slate-700 rounded-full overflow-hidden absolute right-1 top-0 bottom-0 my-1">
+                 <div id="rpmBar" class="w-full bg-gradient-to-t from-emerald-500 via-yellow-400 to-red-500 h-0 transition-all duration-100 bottom-0 absolute"></div>
             </div>
         </div>
 
-        <!-- Reproductor de Música -->
-        <div class="flex-1 bg-slate-800/80 border border-slate-600 rounded-xl p-2 flex flex-col justify-between h-full min-h-[60px]">
+        <!-- Reproductor de Música Compacto -->
+        <div class="flex-1 bg-slate-800/90 border border-slate-600 rounded-lg p-1 flex flex-col justify-center h-[45px]">
             <!-- Info Pista -->
-            <div class="overflow-hidden w-full whitespace-nowrap mb-1">
-                <div id="trackInfo" class="text-[10px] text-cyan-300 font-mono">🎵 Sin música seleccionada</div>
+            <div class="overflow-hidden w-full whitespace-nowrap mb-0.5">
+                <div id="trackInfo" class="text-[9px] text-cyan-300 font-mono">🎵 Música</div>
             </div>
             
-            <!-- Controles -->
-            <div class="flex justify-between items-center gap-2">
-                <input type="file" id="musicInput" accept="audio/*" multiple class="hidden" onchange="handleMusicUpload(this)">
-                
-                <button onclick="$('musicInput').click()" class="text-slate-300 hover:text-white text-xs flex items-center gap-1 bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded transition-colors">
-                    📂 <span class="hidden sm:inline">Cargar</span>
-                </button>
-                
-                <div class="flex gap-1">
-                    <button onclick="prevTrack()" class="text-slate-300 hover:text-white p-1">⏮️</button>
-                    <button onclick="toggleMusicPlay()" id="playBtn" class="text-emerald-400 hover:text-emerald-300 p-1 text-lg leading-none">▶️</button>
-                    <button onclick="nextTrack()" class="text-slate-300 hover:text-white p-1">⏭️</button>
+            <!-- Controles Fila Única -->
+            <div class="flex justify-between items-center px-1">
+               <button onclick="$('musicInput').click()" class="text-slate-300 hover:text-white text-[10px] bg-slate-700/50 px-1 rounded">📂</button>
+               <input type="file" id="musicInput" accept="audio/*" multiple class="hidden" onchange="handleMusicUpload(this)">
+               
+                <div class="flex gap-2">
+                    <button onclick="prevTrack()" class="text-slate-300 hover:text-white text-xs">⏮️</button>
+                    <button onclick="toggleMusicPlay()" id="playBtn" class="text-emerald-400 hover:text-emerald-300 text-sm leading-none font-bold">▶️</button>
+                    <button onclick="nextTrack()" class="text-slate-300 hover:text-white text-xs">⏭️</button>
                 </div>
             </div>
         </div>
 
     </div>
 
-    <!-- Botón Principal ENTREGAR -->
-    <div class="w-full flex justify-center px-4 mt-1 mb-1">
-        <button onclick="startCar()" id="btnStart" class="btn-game bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded-xl text-base shadow-lg border-b-4 border-emerald-800 w-full max-w-xs">📦 ENTREGAR</button>
+    <!-- Botón Principal ENTREGAR (FIJO) -->
+    <div class="w-full flex justify-center px-4 mt-0.5 mb-1 shrink-0 z-20">
+        <button onclick="startCar()" id="btnStart" class="btn-game bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-8 rounded-xl text-base shadow-lg border-b-4 border-emerald-800 w-full max-w-xs transition-transform active:scale-95">
+            📦 ENTREGAR
+        </button>
     </div>
 
     <!-- Controls -->
@@ -815,7 +813,8 @@ function updateSpeedometer() {
     
     // Color barra según velocidad
     const pct = Math.min((currentSpeed / 100) * 100, 100);
-    rpmBar.style.width = `${pct}%`;
+    // Ajustar altura (height) en lugar de width para el diseño vertical
+    rpmBar.style.height = `${pct}%`;
 }
 
 
@@ -2117,9 +2116,25 @@ function init() {
 function resize() {
     const config = LEVEL_CONFIG[Math.min(level - 1, 99)];
     COLS = config.cols; ROWS = config.rows;
-    const maxW = innerWidth - 8, maxH = innerHeight - 130;
-    TILE_SIZE = Math.min(Math.floor(maxW / COLS), Math.floor(maxH / ROWS), 60);
+    // Ajustar maxH para asegurar que el botón (aprox 50-60px) + controles (40px) + velocidad (50px) entren.
+    // Antes 130, ahora más espacio para la UI fija.
+    // HEADER: 40px, FOOTER_AREA: aprox 140px (dashboard + boton + controls)
+    const availableHeight = innerHeight - 200; 
+    const isSmallScreen = window.innerWidth < 400 || window.innerHeight < 700;
+    
+    const maxW = innerWidth - 8;
+    // Si la pantalla es pequeña, permitimos TILE_SIZE más pequeño para que quepa todo
+    const minTileSize = isSmallScreen ? 15 : 24; 
+    
+    TILE_SIZE = Math.min(Math.floor(maxW / COLS), Math.floor(availableHeight / ROWS), 60);
+
+    // Asegurar que no sea demasiado pequeño, pero priorizar ajuste
+    if (TILE_SIZE < minTileSize) TILE_SIZE = minTileSize; 
+
     canvas.width = COLS * TILE_SIZE; canvas.height = ROWS * TILE_SIZE;
+    
+    // Si el canvas es más grande que el espacio disponible, se hará scroll pero el footer es fijo
+    // Pero idealmente queremos que quepa.
 }
 
 function handleClick(e) {
