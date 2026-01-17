@@ -3881,8 +3881,11 @@ function win() {
     const overlayImage = $('overlayImage');
     const deliveryImages = ['repartidor.jpeg', 'repartidor1.png', 'repartidor2.png', 'repartidor3.png'];
     const imgIndex = (level - 1) % deliveryImages.length;
+    
+    // Asegurar que la imagen se cargue y se vea
     overlayImage.src = deliveryImages[imgIndex];
-    overlayImage.classList.remove('hidden');
+    overlayImage.className = ''; // Limpiar clases de Tailwind que puedan ocultarla (como .hidden)
+    overlayImage.style.display = 'block';
     
     // Configurar layout especial FULL SCREEN
     const overlay = $('overlay');
@@ -3920,15 +3923,24 @@ function win() {
     `;
 
     // Imagen full screen (AJUSTADO: Completa y más pequeña)
-    overlayImage.style.width = '100%'; 
-    overlayImage.style.height = '60vh'; // Reducido para que quepa mejor
-    overlayImage.style.objectFit = 'contain'; // Contain para ver TODA la imagen sin recortes
+    overlayImage.style.width = 'auto'; // Auto width para mantener ratio
+    overlayImage.style.maxWidth = '90%'; // No exceder ancho pantalla
+    overlayImage.style.maxHeight = '50vh'; // Altura máxima controlada
+    overlayImage.style.height = 'auto'; 
+    overlayImage.style.objectFit = 'contain'; 
     overlayImage.style.objectPosition = 'center'; 
-    overlayImage.style.borderRadius = '0';
-    overlayImage.style.margin = '20px 0'; // Un poco de margen vertical
+    overlayImage.style.borderRadius = '10px';
+    overlayImage.style.margin = '20px auto';
     overlayImage.style.display = 'block';
-    overlayImage.style.border = 'none'; 
+    overlayImage.style.border = '2px solid #334155'; // Borde sutil para ver si carga
+    overlayImage.style.zIndex = '55'; // Asegurar que esté por encima del fondo
     
+    // ERROR HANDLER: Si la imagen falla, intentar cargar una por defecto
+    overlayImage.onerror = function() {
+        this.onerror = null;
+        this.src = 'INDRIVER.png'; // Fallback a una imagen que sabemos que existe
+    };
+
     // Footer negro abajo con texto
     let footer = $('overlayFooter');
     if (!footer) {
