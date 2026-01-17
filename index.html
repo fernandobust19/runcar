@@ -8,6 +8,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#0f172a">
     <title>Delivery Rush - Entregas Rápidas</title>
+    <link rel="icon" type="image/png" href="favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         * { box-sizing: border-box; }
@@ -524,7 +525,7 @@
     </div>
 
     <!-- Header -->
-    <div class="absolute top-0 w-full p-1 flex justify-between items-center pointer-events-none z-10">
+    <div class="w-full p-1 flex justify-between items-center z-10 bg-slate-900/50 backdrop-blur-sm relative">
         <div class="bg-slate-800/95 px-2 py-1 rounded-lg border border-slate-600 shadow-md flex items-center gap-1.5">
             <img id="companyLogo" src="LOGO-RAPPI.png" alt="Empresa" class="w-8 h-8 rounded-md object-contain bg-white p-0.5">
             <div>
@@ -584,16 +585,9 @@
     <!-- DASHBOARD: Velocímetro y Música (Estilo Mini) -->
     <div class="w-full flex justify-between items-end px-2 mb-1 gap-1" style="max-height: 50px;">
         
-        <!-- Velocímetro Compacto -->
-        <div class="bg-slate-800/90 border border-slate-600 rounded-lg p-1 flex items-center gap-2 w-20 relative overflow-hidden h-[45px]">
-            <div class="flex-col leading-none">
-                <div class="text-[8px] text-slate-400 font-bold">KM/H</div>
-                <span id="speedValue" class="text-xl font-black text-white tabular-nums drop-shadow-md">0</span>
-            </div>
-             <!-- Barra Simple -->
-            <div class="h-full w-1.5 bg-slate-700 rounded-full overflow-hidden absolute right-1 top-0 bottom-0 my-1">
-                 <div id="rpmBar" class="w-full bg-gradient-to-t from-emerald-500 via-yellow-400 to-red-500 h-0 transition-all duration-100 bottom-0 absolute"></div>
-            </div>
+        <!-- Velocímetro Analógico -->
+        <div class="bg-slate-800/90 border border-slate-600 rounded-lg p-0 flex items-center justify-center w-[90px] h-[50px] relative overflow-hidden">
+            <canvas id="speedoCanvas" width="90" height="50"></canvas>
         </div>
 
         <!-- Reproductor de Música Compacto -->
@@ -788,11 +782,6 @@ function prevTrack() {
 
 // Lógica Velocímetro (Llamar en el Loop principal)
 function updateSpeedometer() {
-    const speedText = $('speedValue');
-    const rpmBar = $('rpmBar');
-    
-    if (!speedText || !rpmBar) return;
-    
     // Detectar si el coche (variable global 'car') se está moviendo
     let targetSpeed = 0;
     
@@ -830,12 +819,84 @@ function updateSpeedometer() {
     // Evitar decimales feos y ceros negativos
     if (Math.abs(currentSpeed) < 0.5) currentSpeed = 0;
     
-    speedText.textContent = Math.round(currentSpeed);
+    // --- DIBUJAR VELOCÍMETRO ANALÓGICO ---
+    const canvas = document.getElementById('speedoCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
     
-    // Color barra y altura según velocidad (Max 160 en la barra)
-    const pct = Math.min((currentSpeed / 160) * 100, 100);
-    // Ajustar altura (height) en lugar de width para el diseño vertical
-    rpmBar.style.height = `${pct}%`;
+    ctx.clearRect(0, 0, w, h);
+    
+    const centerX = w / 2;
+    const centerY = h - 2; // Casi abajo
+    const radius = h - 5; // Radio basado en altura
+
+    // Fondo del arco (Semi-círculo)
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, Math.PI, 0); 
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#1e293b'; // Slate-800 oscuro
+    ctx.stroke();
+
+    // Gradiente para el arco activo
+    const grad = ctx.createLinearGradient(centerX - radius, centerY, centerX + radius, centerY);
+    grad.addColorStop(0, '#10b981'); // Verde
+    grad.addColorStop(0.5, '#facc15'); // Amarillo/Naranja
+    grad.addColorStop(1, '#ef4444'); // Rojo
+    
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, Math.PI, 0);
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = grad;
+    ctx.stroke();
+    
+    // Marcas de velocidad simplificadas
+    for (let i = 0; i <= 180; i += 45) {
+        const ang = Math.PI + (i / 180) * Math.PI;
+        const x1 = centerX + Math.cos(ang) * (radius - 8);
+        const y1 = centerY + Math.sin(ang) * (radius - 8);
+        const x2 = centerX + Math.cos(ang) * (radius - 12);
+        const y2 = centerY + Math.sin(ang) * (radius - 12);
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+        ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.stroke();
+    }
+
+    // AGUJA
+    const maxSpeed = 160;
+    const speed = Math.min(currentSpeed, maxSpeed);
+    // Mapear 0-160 a Math.PI - 0 (Semicírculo, de izq a der)
+    const angle = Math.PI + (speed / maxSpeed) * Math.PI;
+    
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    ctx.rotate(angle);
+    
+    // Dibujo Aguja Roja
+    ctx.beginPath();
+    ctx.moveTo(0, 0); 
+    ctx.lineTo(0, -radius + 2); // Largo de aguja
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#ef4444';
+    ctx.stroke();
+    
+    // Centro Eje
+    ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill();
+    ctx.restore();
+    
+    // TEXTO DIGITAL DEBAJO (Dentro del arco)
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.shadowColor="black"; ctx.shadowBlur=2;
+    ctx.fillText(`${Math.round(currentSpeed)}`, centerX, centerY - 10);
+    ctx.shadowBlur=0;
+    
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = 'bold 8px sans-serif';
+    ctx.fillText('KM/H', centerX, centerY - 28);
 }
 
 
@@ -985,6 +1046,15 @@ premiumMotoImage.src = 'motoa.gif';
 // Imagen de camioneta premium
 let premiumTruckImage = new Image();
 premiumTruckImage.src = 'camionetaa.png';
+
+// PRECARGA DE IMÁGENES DEL JUEGO (GAME OVER / WIN)
+const preloadedImages = {};
+const imagesToLoad = ['fallo.jpeg', 'repartidor.jpeg', 'repartidor1.png', 'repartidor2.png', 'repartidor3.png', 'INDRIVER.png'];
+imagesToLoad.forEach(s => {
+    const i = new Image();
+    i.src = s;
+    preloadedImages[s] = i;
+});
 
 function selectCompany(company) {
     selectedCompany = company;
@@ -1528,29 +1598,32 @@ function playSound(type) {
         }
         else if (type === 'money') {
             // Sonido de CAJA REGISTRADORA (Cha-ching!)
-            // Parte 1: "Cha" (Ruido metálico/mecánico rápido)
-            const o1 = audioCtx.createOscillator(), g1 = audioCtx.createGain();
-            o1.connect(g1); g1.connect(audioCtx.destination);
-            o1.type = 'sawtooth';
-            o1.frequency.setValueAtTime(2000, t);
-            o1.frequency.exponentialRampToValueAtTime(100, t + 0.1); // Bajada rápida
-            g1.gain.setValueAtTime(0.1, t);
-            g1.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
-            o1.start(t); o1.stop(t + 0.1);
-
-            // Parte 2: "Ching!" (Timbre agudo brillante ascendente)
-            [1200, 2000].forEach((f, i) => {
-                const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-                o.connect(g); g.connect(audioCtx.destination);
-                o.type = 'square'; // Cuadrada para sonar más "digital/moneda" pero rica armónicamente
-                
-                const startTime = t + 0.08 + (i * 0.05);
-                o.frequency.setValueAtTime(f, startTime);
-                g.gain.setValueAtTime(0.1, startTime);
-                g.gain.exponentialRampToValueAtTime(0.001, startTime + 0.4);
-                
-                o.start(startTime); o.stop(startTime + 0.4);
-            });
+            const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.frequency.setValueAtTime(1200, t);
+            osc.frequency.exponentialRampToValueAtTime(1800, t + 0.1);
+            gain.gain.setValueAtTime(0.1, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+            osc.start(t); osc.stop(t + 0.2);
+            
+            // Segundo "ching"
+            const osc2 = audioCtx.createOscillator(), gain2 = audioCtx.createGain();
+            osc2.connect(gain2); gain2.connect(audioCtx.destination);
+            osc2.frequency.setValueAtTime(2000, t + 0.1);
+            gain2.gain.setValueAtTime(0.1, t + 0.1);
+            gain2.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+            osc2.start(t + 0.1); osc2.stop(t + 0.3);
+        }
+        else if (type === 'pop') {
+            // Sonido POP suave para UI
+            const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, t);
+            osc.frequency.exponentialRampToValueAtTime(400, t + 0.1);
+            gain.gain.setValueAtTime(0.1, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+            osc.start(t); osc.stop(t + 0.1);
         }
     } catch(e) {}
 }
@@ -3367,8 +3440,16 @@ function startCar() {
     showOrderReady();
 }
 
+// Variables globales de estadísticas de nivel
+let levelCoins = 0;
+let levelStars = 0;
+
 function actuallyStartCar() {
     $('orderReady').classList.add('hidden');
+    
+    // Resetear estadísticas del nivel actual
+    levelCoins = 0;
+    levelStars = 0;
     
     // --- VALIDACIÓN ESTRICTA ---
     // Ya no corregimos la dirección automáticamente. 
@@ -3452,6 +3533,7 @@ function gameLoop() {
         // RECOLECTAR MONEDA
         if (tile?.hasCoin) {
             tile.hasCoin = false;
+            levelCoins++; // Contar para estadísticas
             playSound('money');
             
             // Efecto visual en el mapa (texto flotante inmediato)
@@ -3471,6 +3553,7 @@ function gameLoop() {
         // RECOLECTAR ESTRELLA (Nivel 30+)
         if (tile?.hasStar) {
             tile.hasStar = false;
+            levelStars++; // Contar para estadísticas
             totalStars++;
             saveGameData();
             
@@ -3605,10 +3688,15 @@ function crash(msg) {
     const overlayImage = $('overlayImage');
     overlayImage.src = 'fallo.jpeg';
     overlayImage.classList.remove('hidden');
-    overlayImage.style.width = '100vw'; 
-    overlayImage.style.height = '60vh'; 
-    overlayImage.style.objectFit = 'contain'; // Contain para ver toda la escena de fallo
-    overlayImage.style.borderRadius = '0';
+    
+    // ESTILOS AJUSTADOS (Completa y visible)
+    overlayImage.style.width = 'auto'; 
+    overlayImage.style.maxWidth = '95%'; 
+    overlayImage.style.height = 'auto'; 
+    overlayImage.style.maxHeight = '50vh'; 
+    overlayImage.style.objectFit = 'contain'; 
+    overlayImage.style.margin = '0 auto';
+    overlayImage.style.borderRadius = '10px';
     overlayImage.style.display = 'block';
     
     // Título Superior "ALGO VA MAL"
@@ -3952,15 +4040,94 @@ function win() {
         <p style="color:white; font-size:16px; text-shadow: 1px 1px 3px black; margin-top:5px;">Entrega completada con éxito</p>
     `;
 
+    // --- SECCIÓN DE ESTADÍSTICAS (Nuevo Requerimiento) ---
+    // Agregamos esto antes de la imagen
+    let statsContainer = $('winStatsContainer');
+    if (!statsContainer) {
+        statsContainer = document.createElement('div');
+        statsContainer.id = 'winStatsContainer';
+        overlay.appendChild(statsContainer);
+    }
+    
+    // Estilos del contenedor de stats
+    statsContainer.style.position = 'absolute';
+    statsContainer.style.top = '100px'; 
+    statsContainer.style.width = '100%';
+    statsContainer.style.display = 'flex';
+    statsContainer.style.justifyContent = 'center';
+    statsContainer.style.gap = '20px';
+    statsContainer.style.zIndex = '60';
+    
+    const moneyEarnedInRun = levelCoins * 20; // 20 por moneda
+    // TIEMPO SOBRANTE (Lo que faltó para terminar el tiempo total)
+    const timeSaved = timeLeft; 
+    
+    // Generar HTML de las stats con animaciones CSS inline
+    statsContainer.innerHTML = `
+        <!-- ITEM 1: Monedas -->
+        <div class="stat-bubble pop-in" style="animation-delay: 0.2s">
+            <div style="font-size: 32px;">🪙</div>
+            <div class="stat-val text-yellow-400" style="font-size: 28px;">+${moneyEarnedInRun}</div>
+            <div class="stat-label" style="font-size: 12px;">Monedas</div>
+        </div>
+        
+        <!-- ITEM 2: Tiempo Sobrante -->
+        <div class="stat-bubble pop-in" style="animation-delay: 0.5s">
+             <div style="font-size: 32px;">⏱️</div>
+             <div class="stat-val text-blue-400" style="font-size: 28px;">${timeSaved}s</div>
+             <div class="stat-label" style="font-size: 12px;">Sobrante</div>
+        </div>
+        
+        <!-- ITEM 3: Estrellas (Solo si hay) -->
+        ${levelStars > 0 ? `
+        <div class="stat-bubble pop-in" style="animation-delay: 0.8s">
+             <div style="font-size: 32px;">⭐</div>
+             <div class="stat-val text-purple-400" style="font-size: 28px;">${levelStars}</div>
+             <div class="stat-label" style="font-size: 12px;">Estrellas</div>
+        </div>` : ''}
+    `;
+    
+    // Inyectar estilos CSS para las burbujas si no existen
+    if (!$('statsStyles')) {
+        const s = document.createElement('style');
+        s.id = 'statsStyles';
+        s.innerHTML = `
+            .stat-bubble {
+                background: rgba(15, 23, 42, 0.9);
+                border: 2px solid #475569;
+                border-radius: 20px;
+                padding: 15px 20px;
+                min-width: 100px;
+                text-align: center;
+                backdrop-filter: blur(8px);
+                transform: scale(0);
+                animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            }
+            .stat-val { font-weight: 900; margin: 5px 0; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+            .stat-label { color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; }
+            @keyframes popIn {
+                0% { transform: scale(0) translateY(40px); opacity: 0; }
+                100% { transform: scale(1) translateY(0); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(s);
+    }
+    
+    // Sonidos secuenciales para cada stat que aparece
+    setTimeout(() => playSound('pop'), 200);
+    setTimeout(() => playSound('pop'), 500);
+    if(levelStars > 0) setTimeout(() => playSound('pop'), 800);
+    
     // Imagen full screen (AJUSTADO: Completa y más pequeña)
     overlayImage.style.width = 'auto'; // Auto width para mantener ratio
     overlayImage.style.maxWidth = '90%'; // No exceder ancho pantalla
-    overlayImage.style.maxHeight = '50vh'; // Altura máxima controlada
+    overlayImage.style.maxHeight = '35vh'; // Aún más pequeña para dar espacio a burbujas grandes
     overlayImage.style.height = 'auto'; 
     overlayImage.style.objectFit = 'contain'; 
     overlayImage.style.objectPosition = 'center'; 
     overlayImage.style.borderRadius = '10px';
-    overlayImage.style.margin = '20px auto';
+    overlayImage.style.margin = '140px auto 20px auto'; // MÁS MARGEN ARRIBA para que no tape las stats
     overlayImage.style.display = 'block';
     overlayImage.style.border = '2px solid #334155'; // Borde sutil para ver si carga
     overlayImage.style.zIndex = '55'; // Asegurar que esté por encima del fondo
@@ -4281,174 +4448,78 @@ function drawTile(tile) {
     // PATRÓN DE ASFALTO: Si la imagen cargó, usarla. Si no, gris.
     let fillStyle = null;
     if (pavementImg.complete && pavementImg.naturalWidth > 0) {
-        // Truco: Rotar el patrón en sentido opuesto para que siempre quede "alineado al mundo"
-        // o dejarlo que rote con la tile. 
-        // Para pavimento (ruido) no importa que rote. Dejaremos que rote con la tile.
-        // Pero para que no se vea repetitivo, podemos crear el patrón una vez.
-        // Como drawTile se llama mucho, crear patrón aquí es un poco costoso pero aceptable para este juego 2D sencillo.
-        // Mejor opción para rendimiento: crear variable global, pero por simplicidad:
         const pattern = ctx.createPattern(pavementImg, 'repeat');
         fillStyle = pattern;
     } else {
-        // Fallback color
         fillStyle = tile.isDeadEnd ? (tile.powered ? '#65a30d' : '#3a3a3a') : 
                    tile.type === TILE_TYPES.START ? '#10b981' : '#5a5a5a';
     }
     
-    // Si es START/END se superpone un color semitransparente para identificar
-    
     ctx.fillStyle = fillStyle;
     const conn = tile.type.base, s = TILE_SIZE;
     
-    // Dibujar calles (Rectángulos base con la textura)
-    if (conn & DIR.N) ctx.fillRect(-h, -s/2, rw, s/2 + h);
-    if (conn & DIR.S) ctx.fillRect(-h, -h, rw, s/2 + h);
-    if (conn & DIR.E) ctx.fillRect(-h, -h, s/2 + h, rw);
-    if (conn & DIR.W) ctx.fillRect(-s/2, -h, s/2 + h, rw);
-    
-    ctx.beginPath(); ctx.arc(0, 0, h, 0, Math.PI * 2); ctx.fill();
+    // --- LÓGICA DE DIBUJO DE CALLE MODIFICADA ---
 
-    // Coloreado especial para START y END sobre la textura
-    if (tile.type === TILE_TYPES.START) {
-        ctx.fillStyle = 'rgba(16, 185, 129, 0.7)'; // Verde semitransparente
-        ctx.beginPath(); ctx.arc(0, 0, h*0.8, 0, Math.PI * 2); ctx.fill();
-    } else if (tile.isEnd) {
-        ctx.fillStyle = 'rgba(239, 68, 68, 0.7)'; // Rojo semitransparente para meta (casa)
-        ctx.beginPath(); ctx.arc(0, 0, h*0.8, 0, Math.PI * 2); ctx.fill();
+    // 1. Dibuja la forma base de la carretera con la textura de pavimento.
+    // Se usan solo rectángulos para formar una cruz nítida en las intersecciones, sin círculos.
+    const roadPath = new Path2D();
+    if (conn & DIR.N) roadPath.rect(-h, -s/2, rw, s/2 + h);
+    if (conn & DIR.S) roadPath.rect(-h, -h, rw, s/2 + h);
+    if (conn & DIR.E) roadPath.rect(-h, -h, s/2 + h, rw);
+    if (conn & DIR.W) roadPath.rect(-s/2, -h, s/2 + h, rw);
+    ctx.fill(roadPath);
+
+    // 2. Oscurece la textura de la calle como solicitó el usuario.
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; // Negro al 25% de opacidad.
+    ctx.fill(roadPath);
+
+    // 3. Dibuja las aceras (veredas) INTERNAS de cada pieza
+    // Usamos líneas grises claras para delimitar el asfalto, 
+    // pero SIN cerrar las conexiones (entradas/salidas).
+    ctx.strokeStyle = '#cccccc'; 
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    
+    const hasN = (conn & DIR.N);
+    const hasE = (conn & DIR.E);
+    const hasS = (conn & DIR.S);
+    const hasW = (conn & DIR.W);
+
+    // SEGMENTOS DE LOS BRAZOS (Laterales de la calle)
+    // Solo se dibujan si existe la conexión en esa dirección
+    if (hasN) {
+        ctx.moveTo(-h, -s/2); ctx.lineTo(-h, -h); // N Izq
+        ctx.moveTo(h, -s/2);  ctx.lineTo(h, -h);  // N Der
+    }
+    if (hasS) {
+        ctx.moveTo(-h, s/2);  ctx.lineTo(-h, h);  // S Izq
+        ctx.moveTo(h, s/2);   ctx.lineTo(h, h);   // S Der
+    }
+    if (hasE) {
+        ctx.moveTo(s/2, -h); ctx.lineTo(h, -h);   // E Sup
+        ctx.moveTo(s/2, h);  ctx.lineTo(h, h);    // E Inf
+    }
+    if (hasW) {
+        ctx.moveTo(-s/2, -h); ctx.lineTo(-h, -h); // W Sup
+        ctx.moveTo(-s/2, h);  ctx.lineTo(-h, h);  // W Inf
     }
     
-    // Agregar veredas (bordes grises que NO se cruzan entre calles)
-    ctx.strokeStyle = '#6b7280'; // Gris oscuro
-    ctx.lineWidth = 1.5;
-    ctx.lineCap = 'butt'; // Bordes rectos para evitar cruces
+    // TAPAS DEL CENTRO (Cierran donde NO hay calle)
+    // Si no hay calle al Norte, cerramos el borde superior del cuadro central, etc.
+    if (!hasN) { ctx.moveTo(-h, -h); ctx.lineTo(h, -h); } // Tapa Sup
+    if (!hasS) { ctx.moveTo(-h, h);  ctx.lineTo(h, h); }  // Tapa Inf
+    if (!hasE) { ctx.moveTo(h, -h);  ctx.lineTo(h, h); }  // Tapa Der
+    if (!hasW) { ctx.moveTo(-h, -h); ctx.lineTo(-h, h); } // Tapa Izq
     
-    if (conn & DIR.N) {
-        // Vereda izquierda Norte - solo vertical, no cruza
-        ctx.beginPath();
-        ctx.moveTo(-h, -s/2);
-        ctx.lineTo(-h, 0);
-        ctx.stroke();
-        // Vereda derecha Norte - solo vertical, no cruza
-        ctx.beginPath();
-        ctx.moveTo(h, -s/2);
-        ctx.lineTo(h, 0);
-        ctx.stroke();
-        // Cierre superior solo si NO hay conexión
-        if (!(conn & DIR.N)) {
-            ctx.beginPath();
-            ctx.moveTo(-h, -s/2);
-            ctx.lineTo(h, -s/2);
-            ctx.stroke();
-        }
-    } else {
-        // Si no hay conexión al Norte, cerrar con línea horizontal
-        ctx.beginPath();
-        ctx.moveTo(-h, -h);
-        ctx.lineTo(h, -h);
-        ctx.stroke();
-    }
+    ctx.stroke();
     
-    if (conn & DIR.S) {
-        // Vereda izquierda Sur
-        ctx.beginPath();
-        ctx.moveTo(-h, s/2);
-        ctx.lineTo(-h, 0);
-        ctx.stroke();
-        // Vereda derecha Sur
-        ctx.beginPath();
-        ctx.moveTo(h, s/2);
-        ctx.lineTo(h, 0);
-        ctx.stroke();
-        // Cierre inferior
-        if (!(conn & DIR.S)) {
-            ctx.beginPath();
-            ctx.moveTo(-h, s/2);
-            ctx.lineTo(h, s/2);
-            ctx.stroke();
-        }
-    } else {
-        // Si no hay conexión al Sur, dibujar línea horizontal de cierre
-        ctx.beginPath();
-        ctx.moveTo(-h, h);
-        ctx.lineTo(h, h);
-        ctx.stroke();
-    }
-    
-    if (conn & DIR.E) {
-        // Vereda superior Este
-        ctx.beginPath();
-        ctx.moveTo(s/2, -h);
-        ctx.lineTo(0, -h);
-        ctx.stroke();
-        // Vereda inferior Este
-        ctx.beginPath();
-        ctx.moveTo(s/2, h);
-        ctx.lineTo(0, h);
-        ctx.stroke();
-        // Cierre derecho
-        if (!(conn & DIR.E)) {
-            ctx.beginPath();
-            ctx.moveTo(s/2, -h);
-            ctx.lineTo(s/2, h);
-            ctx.stroke();
-        }
-    } else {
-        // Si no hay conexión al Este, dibujar línea vertical de cierre
-        ctx.beginPath();
-        ctx.moveTo(h, -h);
-        ctx.lineTo(h, h);
-        ctx.stroke();
-    }
-    
-    if (conn & DIR.W) {
-        // Vereda superior Oeste
-        ctx.beginPath();
-        ctx.moveTo(-s/2, -h);
-        ctx.lineTo(0, -h);
-        ctx.stroke();
-        // Vereda inferior Oeste
-        ctx.beginPath();
-        ctx.moveTo(-s/2, h);
-        ctx.lineTo(0, h);
-        ctx.stroke();
-        // Cierre izquierdo
-        if (!(conn & DIR.W)) {
-            ctx.beginPath();
-            ctx.moveTo(-s/2, -h);
-            ctx.lineTo(-s/2, h);
-            ctx.stroke();
-        }
-    } else {
-        // Si no hay conexión al Oeste, dibujar línea vertical de cierre
-        ctx.beginPath();
-        ctx.moveTo(-h, -h);
-        ctx.lineTo(-h, h);
-        ctx.stroke();
-    }
-    
-    // Líneas amarillas eliminadas según solicitud del usuario
-    
-    // Dibujar líneas de guía de circulación SOLO cuando la pieza está conectada
-    if (!tile.isDeadEnd && !tile.type.noArrows && tile.isPowered) {
-        // Línea azul sólida para mostrar camino disponible
-        ctx.strokeStyle = 'rgba(59, 130, 246, 0.8)'; // Azul
-        ctx.lineWidth = 2;
-        ctx.setLineDash([]);
-        
-        // Para CROSS y T_JUNCTION, dibujar líneas para TODAS las salidas
-        if (tile.type === TILE_TYPES.CROSS || tile.type === TILE_TYPES.T_JUNCTION) {
-            // Dibujar líneas azules en todas las direcciones que tienen conexión
-            if (conn & DIR.N) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -s/2); ctx.stroke(); }
-            if (conn & DIR.S) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, s/2); ctx.stroke(); }
-            if (conn & DIR.E) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(s/2, 0); ctx.stroke(); }
-            if (conn & DIR.W) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-s/2, 0); ctx.stroke(); }
-        } else {
-            // Para otras piezas, dibujar líneas normales
-            if ((conn & DIR.N) && (conn & DIR.S)) { ctx.beginPath(); ctx.moveTo(0, -s/2); ctx.lineTo(0, s/2); ctx.stroke(); }
-            if ((conn & DIR.E) && (conn & DIR.W)) { ctx.beginPath(); ctx.moveTo(-s/2, 0); ctx.lineTo(s/2, 0); ctx.stroke(); }
-        }
-    }
-    
+    /* 
+       Ya no necesitamos dibujar bordes especiales en los límites del mapa 
+       porque la lógica anterior ya maneja correctamente todas las piezas,
+       incluyendo las que están en el borde (simplemente no tendrán conexión hacia afuera).
+    */
+
+
     if (tile.type === TILE_TYPES.START) {
         ctx.fillStyle = 'white'; ctx.font = 'bold 9px sans-serif';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
