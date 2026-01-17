@@ -475,10 +475,6 @@
                             <span class="text-2xl">🛻</span>
                             <p class="text-xs mt-1">Camioneta</p>
                         </button>
-                        <button onclick="selectVehicle('bus')" id="btn-bus" class="vehicle-btn bg-slate-700 rounded-xl">
-                            <span class="text-2xl">🚌</span>
-                            <p class="text-xs mt-1">Bus</p>
-                        </button>
                     </div>
                     
                     <!-- Vehículos Premium -->
@@ -488,13 +484,19 @@
                             <img src="motoa.gif" alt="Moto Premium" class="w-10 h-10 object-contain mx-auto">
                             <p class="text-xs text-yellow-400 mt-1">Moto PRO</p>
                             <span id="motoLock" class="absolute -top-2 -right-2 text-lg">🔒</span>
-                            <span id="motoPrice" class="absolute -bottom-2 left-0 right-0 text-[9px] text-yellow-300 bg-slate-900/90 rounded-full py-0.5">$2,000</span>
+                            <span id="motoPrice" class="absolute -bottom-2 left-0 right-0 text-[9px] text-yellow-300 bg-slate-900/90 rounded-full py-0.5">$4,000</span>
                         </button>
                         <button onclick="selectPremiumTruck()" id="btn-trucka" class="vehicle-btn bg-slate-700 rounded-xl relative">
                             <img src="camionetaa.png" alt="Camioneta Premium" class="w-10 h-10 object-contain mx-auto">
                             <p class="text-xs text-yellow-400 mt-1">Cami. PRO</p>
                             <span id="truckLock" class="absolute -top-2 -right-2 text-lg">🔒</span>
-                            <span id="truckPrice" class="absolute -bottom-2 left-0 right-0 text-[9px] text-yellow-300 bg-slate-900/90 rounded-full py-0.5">$4,000</span>
+                            <span id="truckPrice" class="absolute -bottom-2 left-0 right-0 text-[9px] text-yellow-300 bg-slate-900/90 rounded-full py-0.5">$6,000</span>
+                        </button>
+                        <button onclick="selectPremiumCamion()" id="btn-camion" class="vehicle-btn bg-slate-700 rounded-xl relative">
+                            <img src="camion.png" alt="Camión Carga" class="w-10 h-10 object-contain mx-auto">
+                            <p class="text-xs text-yellow-400 mt-1">Camión</p>
+                            <span id="camionLock" class="absolute -top-2 -right-2 text-lg">🔒</span>
+                            <span id="camionPrice" class="absolute -bottom-2 left-0 right-0 text-[9px] text-yellow-300 bg-slate-900/90 rounded-full py-0.5">$12,000</span>
                         </button>
                     </div>
                 </div>
@@ -516,7 +518,7 @@
                 </button>
                 
                 <p class="mt-4 text-slate-500 text-xs">👆 Toca fichas para girar | 📦 Entrega a tiempo</p>
-                <p class="text-slate-600 text-[10px] mt-1">v2.1 - Moto Premium con GIF animado</p>
+                <p class="text-slate-600 text-[10px] mt-1">Versión 1.0</p>
             </div>
         </div>
     </div>
@@ -579,6 +581,47 @@
         <p id="levelHint">Prepara la ruta de entrega 📦</p>
     </div>
 
+    <!-- DASHBOARD: Velocímetro y Música -->
+    <div class="w-full max-w-xs flex justify-between items-end px-2 mb-1 gap-2">
+        
+        <!-- Velocímetro -->
+        <div class="bg-slate-800/80 border border-slate-600 rounded-xl p-2 flex flex-col items-center w-24 relative overflow-hidden group">
+            <div class="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Km/h</div>
+            <div class="flex items-baseline gap-0.5">
+                <span id="speedValue" class="text-2xl font-black text-white tabular-nums drop-shadow-md">0</span>
+                <div class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
+            </div>
+            <!-- Barra visual de RPM -->
+            <div class="w-full h-1 bg-slate-700 mt-1 rounded-full overflow-hidden">
+                <div id="rpmBar" class="h-full bg-gradient-to-r from-emerald-500 via-yellow-400 to-red-500 w-0 transition-all duration-100"></div>
+            </div>
+        </div>
+
+        <!-- Reproductor de Música -->
+        <div class="flex-1 bg-slate-800/80 border border-slate-600 rounded-xl p-2 flex flex-col justify-between h-full min-h-[60px]">
+            <!-- Info Pista -->
+            <div class="overflow-hidden w-full whitespace-nowrap mb-1">
+                <div id="trackInfo" class="text-[10px] text-cyan-300 font-mono">🎵 Sin música seleccionada</div>
+            </div>
+            
+            <!-- Controles -->
+            <div class="flex justify-between items-center gap-2">
+                <input type="file" id="musicInput" accept="audio/*" multiple class="hidden" onchange="handleMusicUpload(this)">
+                
+                <button onclick="$('musicInput').click()" class="text-slate-300 hover:text-white text-xs flex items-center gap-1 bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded transition-colors">
+                    📂 <span class="hidden sm:inline">Cargar</span>
+                </button>
+                
+                <div class="flex gap-1">
+                    <button onclick="prevTrack()" class="text-slate-300 hover:text-white p-1">⏮️</button>
+                    <button onclick="toggleMusicPlay()" id="playBtn" class="text-emerald-400 hover:text-emerald-300 p-1 text-lg leading-none">▶️</button>
+                    <button onclick="nextTrack()" class="text-slate-300 hover:text-white p-1">⏭️</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
     <!-- Botón Principal ENTREGAR -->
     <div class="w-full flex justify-center px-4 mt-1 mb-1">
         <button onclick="startCar()" id="btnStart" class="btn-game bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded-xl text-base shadow-lg border-b-4 border-emerald-800 w-full max-w-xs">📦 ENTREGAR</button>
@@ -627,7 +670,7 @@
                         <img src="motoa.gif" alt="Moto Premium" class="w-12 h-12 object-contain">
                         <div>
                             <p class="text-white font-bold">Moto Premium</p>
-                            <p class="text-yellow-400 text-sm" id="shopMotoStatus">$2,000</p>
+                            <p class="text-yellow-400 text-sm" id="shopMotoStatus">$4,000</p>
                         </div>
                     </div>
                     <span id="shopMotoIcon" class="text-2xl">🔒</span>
@@ -639,10 +682,23 @@
                         <img src="camionetaa.png" alt="Camioneta Premium" class="w-12 h-12 object-contain">
                         <div>
                             <p class="text-white font-bold">Camioneta Premium</p>
-                            <p class="text-yellow-400 text-sm" id="shopTruckStatus">$4,000</p>
+                            <p class="text-yellow-400 text-sm" id="shopTruckStatus">$6,000</p>
                         </div>
                     </div>
                     <span id="shopTruckIcon" class="text-2xl">🔒</span>
+                </div>
+                
+                <!-- Camión Carga -->
+                <div id="shopCamion" class="flex items-center justify-between bg-slate-700 p-3 rounded-xl border-2 border-transparent hover:border-yellow-400 cursor-pointer transition-all" onclick="buyVehicle('camion')">
+                    <div class="flex items-center gap-3">
+                        <img src="camion.png" alt="Camión" class="w-12 h-12 object-contain">
+                        <div>
+                            <p class="text-white font-bold">Camión de Carga</p>
+                            <p class="text-xs text-emerald-300">¡Gana +$30 por entrega!</p>
+                            <p class="text-yellow-400 text-sm" id="shopCamionStatus">$12,000</p>
+                        </div>
+                    </div>
+                    <span id="shopCamionIcon" class="text-2xl">🔒</span>
                 </div>
                 
                 <!-- Puente -->
@@ -666,6 +722,103 @@
     </div>
 
 <script>
+// --- SISTEMA DE MÚSICA Y VELOCÍMETRO ---
+// Variables Globales
+let musicPlaylist = [];
+let currentTrackIndex = 0;
+let musicPlayer = new Audio();
+let isMusicPlaying = false;
+let currentSpeed = 0; // Velocidad visual simulada
+
+// Funciones Música
+function handleMusicUpload(input) {
+    if (input.files && input.files.length > 0) {
+        musicPlaylist = Array.from(input.files);
+        currentTrackIndex = 0;
+        playTrack(currentTrackIndex);
+    }
+}
+
+function playTrack(index) {
+    if (index >= 0 && index < musicPlaylist.length) {
+        const file = musicPlaylist[index];
+        const fileURL = URL.createObjectURL(file);
+        musicPlayer.src = fileURL;
+        musicPlayer.play().then(() => {
+            isMusicPlaying = true;
+            updatePlayBtn();
+            const safeName = file.name.replace(/[<>]/g, ''); // Sanitize simple
+            $('trackInfo').innerHTML = `<marquee scrollamount="3">🎵 Reproduciendo: ${safeName} ... </marquee>`;
+        }).catch(err => {
+            console.error("Error al reproducir audio:", err);
+            // Algunos navegadores bloquean autoplay sin interacción previa
+        });
+        
+        musicPlayer.onended = nextTrack;
+    }
+}
+
+function toggleMusicPlay() {
+    if (musicPlaylist.length === 0) return alert('¡Primero carga archivos de música pulsando "Cargar"!');
+    
+    if (musicPlayer.paused) {
+        musicPlayer.play();
+        isMusicPlaying = true;
+    } else {
+        musicPlayer.pause();
+        isMusicPlaying = false;
+    }
+    updatePlayBtn();
+}
+
+function updatePlayBtn() {
+    const btn = $('playBtn');
+    if (btn) btn.textContent = isMusicPlaying ? '⏸️' : '▶️';
+}
+
+function nextTrack() {
+    if (musicPlaylist.length === 0) return;
+    currentTrackIndex = (currentTrackIndex + 1) % musicPlaylist.length;
+    playTrack(currentTrackIndex);
+}
+
+function prevTrack() {
+    if (musicPlaylist.length === 0) return;
+    currentTrackIndex = (currentTrackIndex - 1 + musicPlaylist.length) % musicPlaylist.length;
+    playTrack(currentTrackIndex);
+}
+
+// Lógica Velocímetro (Llamar en el Loop principal)
+function updateSpeedometer() {
+    const speedText = $('speedValue');
+    const rpmBar = $('rpmBar');
+    
+    if (!speedText || !rpmBar) return;
+    
+    // Detectar si el coche (variable global 'car') se está moviendo
+    let targetSpeed = 0;
+    
+    if (typeof car !== 'undefined' && car && car.moving) {
+        // Simular fluctuación realista de velocidad mientras se mueve
+        // Base 50 + random variación
+        targetSpeed = 50 + Math.random() * 30; 
+        if (car.speedMultiplier && car.speedMultiplier > 1) targetSpeed *= 1.2; // Si hay turbo
+    }
+    
+    // Interpolación suave (lerp)
+    currentSpeed += (targetSpeed - currentSpeed) * 0.1;
+    
+    // Evitar decimales feos y ceros negativos
+    if (Math.abs(currentSpeed) < 0.5) currentSpeed = 0;
+    
+    speedText.textContent = Math.round(currentSpeed);
+    
+    // Color barra según velocidad
+    const pct = Math.min((currentSpeed / 100) * 100, 100);
+    rpmBar.style.width = `${pct}%`;
+}
+
+
 // Polyfill para roundRect en navegadores antiguos
 if (!CanvasRenderingContext2D.prototype.roundRect) {
     CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
@@ -722,7 +875,6 @@ const vehicleEmojis = {
     moto: '🏍️',
     car: '🚗',
     truck: '🛻',
-    bus: '🚌',
     motoa: '🏎️',  // Moto premium
     trucka: '🚚'  // Camioneta premium
 };
@@ -845,6 +997,7 @@ function updateColorFromSlider(value) {
 function selectVehicle(type) {
     if (type === 'motoa' && !premiumMotoUnlocked) return;
     if (type === 'trucka' && !premiumTruckUnlocked) return;
+    if (type === 'camion' && !premiumCamionUnlocked) return;
     selectedVehicle = type;
     document.querySelectorAll('.vehicle-btn').forEach(btn => btn.classList.remove('selected'));
     document.getElementById('btn-' + type).classList.add('selected');
@@ -936,6 +1089,47 @@ function selectPremiumTruck() {
     }
 }
 
+function selectPremiumCamion() {
+    if (premiumCamionUnlocked) {
+        selectVehicle('camion');
+    } else {
+        if (totalMoney >= PREMIUM_CAMION_PRICE) {
+            showConfirmModal({
+                icon: '🚛',
+                title: 'Camión de Carga',
+                message: `<strong>¿Comprar Camión por $${PREMIUM_CAMION_PRICE}?</strong><br><br>💰 Tu dinero: <span style="color:#fbbf24">$${totalMoney}</span><br>📈 ¡Gana más dinero por entrega!`,
+                type: 'warning',
+                confirmText: '🛒 Comprar',
+                cancelText: '❌ Cancelar'
+            }).then(confirmed => {
+                if (confirmed) {
+                    totalMoney -= PREMIUM_CAMION_PRICE;
+                    premiumCamionUnlocked = true;
+                    $('moneyDisplay').textContent = totalMoney;
+                    $('camionLock').textContent = '⭐';
+                    $('camionPrice').textContent = 'TUYO';
+                    $('camionPrice').classList.add('text-emerald-400');
+                    selectVehicle('camion');
+                    playSound('money');
+                    showGameModal({
+                        iconImage: 'camion.png',
+                        title: '¡Compra Exitosa!',
+                        message: '<strong>🚛 Camión desbloqueado!</strong><br>¡Ahora ganarás bonos extra!',
+                        type: 'success'
+                    });
+                }
+            });
+        } else {
+            showGameModal({
+                icon: '💸',
+                title: 'Dinero Insuficiente',
+                message: `<strong>Necesitas $${PREMIUM_CAMION_PRICE} para el Camión</strong><br><br>💰 Tu dinero: <span style="color:#fbbf24">$${totalMoney}</span><br>🚫 Te faltan: <span style="color:#ef4444">$${PREMIUM_CAMION_PRICE - totalMoney}</span>`,
+                type: 'error'
+            });
+        }
+    }
+}
+
 // Funciones de la tienda
 function openShop() {
     $('shopModal').classList.remove('hidden');
@@ -949,33 +1143,51 @@ function closeShop() {
 
 function updateShopUI() {
     // Moto Premium
+    const motoPriceStr = '$' + PREMIUM_MOTO_PRICE.toLocaleString();
     if (premiumMotoUnlocked) {
         $('shopMotoStatus').textContent = '✅ COMPRADA';
         $('shopMotoStatus').className = 'text-emerald-400 text-sm font-bold';
         $('shopMotoIcon').textContent = '⭐';
     } else if (totalMoney >= PREMIUM_MOTO_PRICE) {
-        $('shopMotoStatus').textContent = '$2,000 - ¡Disponible!';
+        $('shopMotoStatus').textContent = `${motoPriceStr} - ¡Disponible!`;
         $('shopMotoStatus').className = 'text-yellow-400 text-sm';
         $('shopMotoIcon').textContent = '💰';
     } else {
-        $('shopMotoStatus').textContent = `$2,000 (Faltan $${PREMIUM_MOTO_PRICE - totalMoney})`;
+        $('shopMotoStatus').textContent = `${motoPriceStr} (Faltan $${PREMIUM_MOTO_PRICE - totalMoney})`;
         $('shopMotoStatus').className = 'text-red-400 text-sm';
         $('shopMotoIcon').textContent = '🔒';
     }
     
     // Camioneta Premium
+    const truckPriceStr = '$' + PREMIUM_TRUCK_PRICE.toLocaleString();
     if (premiumTruckUnlocked) {
         $('shopTruckStatus').textContent = '✅ COMPRADA';
         $('shopTruckStatus').className = 'text-emerald-400 text-sm font-bold';
         $('shopTruckIcon').textContent = '⭐';
     } else if (totalMoney >= PREMIUM_TRUCK_PRICE) {
-        $('shopTruckStatus').textContent = '$4,000 - ¡Disponible!';
+        $('shopTruckStatus').textContent = `${truckPriceStr} - ¡Disponible!`;
         $('shopTruckStatus').className = 'text-yellow-400 text-sm';
         $('shopTruckIcon').textContent = '💰';
     } else {
-        $('shopTruckStatus').textContent = `$4,000 (Faltan $${PREMIUM_TRUCK_PRICE - totalMoney})`;
+        $('shopTruckStatus').textContent = `${truckPriceStr} (Faltan $${PREMIUM_TRUCK_PRICE - totalMoney})`;
         $('shopTruckStatus').className = 'text-red-400 text-sm';
         $('shopTruckIcon').textContent = '🔒';
+    }
+    
+    // Camión de Carga
+    const camionPriceStr = '$' + PREMIUM_CAMION_PRICE.toLocaleString();
+    if (premiumCamionUnlocked) {
+        $('shopCamionStatus').textContent = '✅ COMPRADO';
+        $('shopCamionStatus').className = 'text-emerald-400 text-sm font-bold';
+        $('shopCamionIcon').textContent = '⭐';
+    } else if (totalMoney >= PREMIUM_CAMION_PRICE) {
+        $('shopCamionStatus').textContent = `${camionPriceStr} - ¡Disponible!`;
+        $('shopCamionStatus').className = 'text-yellow-400 text-sm';
+        $('shopCamionIcon').textContent = '💰';
+    } else {
+        $('shopCamionStatus').textContent = `${camionPriceStr} (Faltan $${PREMIUM_CAMION_PRICE - totalMoney})`;
+        $('shopCamionStatus').className = 'text-red-400 text-sm';
+        $('shopCamionIcon').textContent = '🔒';
     }
     
     // Puentes
@@ -1090,6 +1302,55 @@ function buyVehicle(vehicleType) {
                 type: 'error'
             });
         }
+    } else if (vehicleType === 'camion') {
+        if (premiumCamionUnlocked) {
+            showGameModal({
+                icon: '🚛',
+                title: 'Ya Comprado',
+                message: '<strong>¡Ya tienes el Camión!</strong><br>Selecciónalo desde el menú principal',
+                type: 'success'
+            });
+        } else if (totalMoney >= PREMIUM_CAMION_PRICE) {
+            showConfirmModal({
+                icon: '🚛',
+                title: 'Camión de Carga',
+                message: `<strong>¿Comprar Camión por $${PREMIUM_CAMION_PRICE}?</strong><br><br>📈 ¡Gana más dinero cada vez!<br>💰 Tu dinero: <span style="color:#fbbf24">$${totalMoney}</span>`,
+                type: 'warning',
+                confirmText: '🛒 Comprar',
+                cancelText: '❌ Cancelar'
+            }).then(confirmed => {
+                if (confirmed) {
+                    totalMoney -= PREMIUM_CAMION_PRICE;
+                    premiumCamionUnlocked = true;
+                    // Actualizar UI y guardar
+                    $('moneyDisplay').textContent = totalMoney;
+                    $('shopMoney').textContent = totalMoney;
+                    if ($('camionLock')) $('camionLock').textContent = '⭐';
+                    if ($('camionPrice')) {
+                        $('camionPrice').textContent = 'TUYO';
+                        $('camionPrice').classList.add('text-emerald-400');
+                    }
+                    playSound('money');
+                    updateShopUI();
+                    saveGameData();
+                    // Seleccionar automáticamente el vehículo comprado
+                    selectVehicle('camion');
+                    showGameModal({
+                        iconImage: 'camion.png',
+                        title: '¡Compra Exitosa!',
+                        message: '<strong>🚛 Camión desbloqueado!</strong><br>💰 ¡Ganarás bonos extra!',
+                        type: 'success'
+                    });
+                }
+            });
+        } else {
+            showGameModal({
+                icon: '💸',
+                title: 'Dinero Insuficiente',
+                message: `<strong>Te faltan $${PREMIUM_CAMION_PRICE - totalMoney}</strong><br><br>🎯 Necesitas: <span style="color:#fbbf24">$${PREMIUM_CAMION_PRICE}</span><br>💰 Tu dinero: $${totalMoney}`,
+                type: 'error'
+            });
+        }
     }
 }
 
@@ -1132,6 +1393,7 @@ function buyBridge() {
 
 function updatePremiumMotoUI() {
     // Moto Premium
+    const motoPriceStr = '$' + PREMIUM_MOTO_PRICE.toLocaleString();
     if (premiumMotoUnlocked) {
         if ($('motoLock')) $('motoLock').textContent = '⭐';
         if ($('motoPrice')) {
@@ -1145,16 +1407,17 @@ function updatePremiumMotoUI() {
     } else {
         if ($('motoLock')) $('motoLock').textContent = '🔒';
         if ($('motoPrice')) {
-            $('motoPrice').textContent = '$2,000';
+            $('motoPrice').textContent = motoPriceStr;
             $('motoPrice').classList.remove('text-emerald-400');
             $('motoPrice').classList.add('text-yellow-300');
         }
         // Tienda
         if ($('shopMotoIcon')) $('shopMotoIcon').textContent = '🔒';
-        if ($('shopMotoStatus')) $('shopMotoStatus').textContent = '$2,000';
+        if ($('shopMotoStatus')) $('shopMotoStatus').textContent = motoPriceStr;
     }
     
     // Camioneta Premium
+    const truckPriceStr = '$' + PREMIUM_TRUCK_PRICE.toLocaleString();
     if (premiumTruckUnlocked) {
         if ($('truckLock')) $('truckLock').textContent = '⭐';
         if ($('truckPrice')) {
@@ -1168,13 +1431,31 @@ function updatePremiumMotoUI() {
     } else {
         if ($('truckLock')) $('truckLock').textContent = '🔒';
         if ($('truckPrice')) {
-            $('truckPrice').textContent = '$4,000';
+            $('truckPrice').textContent = truckPriceStr;
             $('truckPrice').classList.remove('text-emerald-400');
             $('truckPrice').classList.add('text-yellow-300');
         }
         // Tienda
         if ($('shopTruckIcon')) $('shopTruckIcon').textContent = '🔒';
-        if ($('shopTruckStatus')) $('shopTruckStatus').textContent = '$4,000';
+        if ($('shopTruckStatus')) $('shopTruckStatus').textContent = truckPriceStr;
+    }
+
+    // Camión de Carga
+    const camionPriceStr = '$' + PREMIUM_CAMION_PRICE.toLocaleString();
+    if (premiumCamionUnlocked) {
+        if ($('camionLock')) $('camionLock').textContent = '⭐';
+        if ($('camionPrice')) {
+            $('camionPrice').textContent = 'TUYO';
+            $('camionPrice').classList.remove('text-yellow-300');
+            $('camionPrice').classList.add('text-emerald-400');
+        }
+    } else {
+        if ($('camionLock')) $('camionLock').textContent = '🔒';
+        if ($('camionPrice')) {
+            $('camionPrice').textContent = camionPriceStr;
+            $('camionPrice').classList.remove('text-emerald-400');
+            $('camionPrice').classList.add('text-yellow-300');
+        }
     }
 }
 
@@ -1197,27 +1478,58 @@ function playSound(type) {
         else if (type === 'win') { [523,659,784,1047].forEach((f,i) => { const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); o.frequency.setValueAtTime(f, t+i*0.15); g.gain.setValueAtTime(0.1, t+i*0.15); o.start(t+i*0.15); o.stop(t+i*0.15+0.2); }); }
         else if (type === 'warning') { osc.frequency.setValueAtTime(400, t); gain.gain.setValueAtTime(0.1, t); osc.start(t); osc.stop(t + 0.1); }
         else if (type === 'delivery') {
-            // Sonido de entrega exitosa - campanita + monedas
-            [880, 1100, 1320].forEach((f, i) => {
+            // Sonido de entrega exitosa - FANFARRIA DE SATISFACCIÓN
+            // Acorde triunfal (C Mayor: C4, E4, G4, C5)
+            [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
                 const o = audioCtx.createOscillator(), g = audioCtx.createGain();
                 o.connect(g); g.connect(audioCtx.destination);
-                o.type = 'sine';
-                o.frequency.setValueAtTime(f, t + i * 0.1);
-                g.gain.setValueAtTime(0.15, t + i * 0.1);
-                g.gain.exponentialRampToValueAtTime(0.01, t + i * 0.1 + 0.3);
-                o.start(t + i * 0.1); o.stop(t + i * 0.1 + 0.3);
+                o.type = 'triangle'; // Triángulo para sonido suave pero alegre
+                
+                // Arpegio rápido
+                const startT = t + i * 0.05;
+                o.frequency.setValueAtTime(f, startT);
+                
+                // Envolvente de volumen más larga y sostenida
+                g.gain.setValueAtTime(0, startT);
+                g.gain.linearRampToValueAtTime(0.2, startT + 0.05); // Ataque suave
+                g.gain.exponentialRampToValueAtTime(0.01, startT + 0.8); // Decay largo
+                
+                o.start(startT); o.stop(startT + 0.8);
             });
+            
+            // Bajo de fondo para dar cuerpo
+            const bass = audioCtx.createOscillator(), bassGain = audioCtx.createGain();
+            bass.connect(bassGain); bassGain.connect(audioCtx.destination);
+            bass.type = 'sine';
+            bass.frequency.setValueAtTime(261.63, t); // C3
+            bassGain.gain.setValueAtTime(0.2, t);
+            bassGain.gain.exponentialRampToValueAtTime(0.01, t + 1.2);
+            bass.start(t); bass.stop(t + 1.2);
         }
         else if (type === 'money') {
-            // Sonido de cobrar dinero - cash register
-            [1200, 1400, 1600, 1800].forEach((f, i) => {
+            // Sonido de CAJA REGISTRADORA (Cha-ching!)
+            // Parte 1: "Cha" (Ruido metálico/mecánico rápido)
+            const o1 = audioCtx.createOscillator(), g1 = audioCtx.createGain();
+            o1.connect(g1); g1.connect(audioCtx.destination);
+            o1.type = 'sawtooth';
+            o1.frequency.setValueAtTime(2000, t);
+            o1.frequency.exponentialRampToValueAtTime(100, t + 0.1); // Bajada rápida
+            g1.gain.setValueAtTime(0.1, t);
+            g1.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+            o1.start(t); o1.stop(t + 0.1);
+
+            // Parte 2: "Ching!" (Timbre agudo brillante ascendente)
+            [1200, 2000].forEach((f, i) => {
                 const o = audioCtx.createOscillator(), g = audioCtx.createGain();
                 o.connect(g); g.connect(audioCtx.destination);
-                o.type = 'square';
-                o.frequency.setValueAtTime(f, t + 0.3 + i * 0.05);
-                g.gain.setValueAtTime(0.08, t + 0.3 + i * 0.05);
-                g.gain.exponentialRampToValueAtTime(0.01, t + 0.3 + i * 0.05 + 0.1);
-                o.start(t + 0.3 + i * 0.05); o.stop(t + 0.3 + i * 0.05 + 0.1);
+                o.type = 'square'; // Cuadrada para sonar más "digital/moneda" pero rica armónicamente
+                
+                const startTime = t + 0.08 + (i * 0.05);
+                o.frequency.setValueAtTime(f, startTime);
+                g.gain.setValueAtTime(0.1, startTime);
+                g.gain.exponentialRampToValueAtTime(0.001, startTime + 0.4);
+                
+                o.start(startTime); o.stop(startTime + 0.4);
             });
         }
     } catch(e) {}
@@ -1238,8 +1550,8 @@ for (let i = 1; i <= 100; i++) {
         // Tiempo ajustado
         time: 40 + i * 2 + (isHard ? 0 : 10), 
         
-        // Velocidad aumenta
-        speed: Math.min(2.0 + i * 0.05, 5.0),
+        // Velocidad aumenta (AJUSTADO: Más lento para mejor control)
+        speed: Math.min(2.0 + i * 0.015, 3.5),
         
         // Obstáculos y callejones sin salida aumentan drásticamente en niveles altos
         obstacles: Math.min(Math.floor(i / 4) + (isHard ? 3 : 0), 12),
@@ -1257,6 +1569,7 @@ for (let i = 1; i <= 100; i++) {
 }
 
 let TILE_SIZE = 55, COLS = 6, ROWS = 7;
+let floatingTexts = []; // Variable global para textos flotantes
 const DIR = { N: 1, E: 2, S: 4, W: 8 };
 const DIR_DELTA = { 1: {dc:0,dr:-1}, 2: {dc:1,dr:0}, 4: {dc:0,dr:1}, 8: {dc:-1,dr:0} };
 const OPPOSITE = { 1: 4, 2: 8, 4: 1, 8: 2 };
@@ -1280,20 +1593,22 @@ const TILE_TYPES = {
 let grid = [], specialTiles = [], car = null, level = 1, driverName = "Repartidor";
 const grassImg = new Image();
 grassImg.src = 'cesped.jpg';
-const carImg = new Image();
-carImg.src = 'carroa.png';
+// carImg eliminado
 const pavementImg = new Image();
 pavementImg.src = 'pavimento.jpg';
 let gameState = 'START', animationId, countdownTimer, timeLeft, maxTime, engineSoundInterval;
 let totalMoney = 0; // Dinero acumulado por propinas
+let totalStars = 0; // Estrellas acumuladas para el cofre
 let savedEndPosition = null; // Posición guardada de la casa para reintentos
 let currentLevelForEnd = 0; // Nivel actual para saber cuándo cambiar la casa
 let premiumMotoUnlocked = false; // Moto premium desbloqueada
 let previewPath = []; // Ruta calculada
 let plannedRoute = []; // Ruta planificada con direcciones para que el carro la siga
-const PREMIUM_MOTO_PRICE = 2000; // Precio de la moto premium
+const PREMIUM_MOTO_PRICE = 4000; // Precio de la moto premium
 let premiumTruckUnlocked = false; // Camioneta premium desbloqueada
-const PREMIUM_TRUCK_PRICE = 4000; // Precio de la camioneta premium
+const PREMIUM_TRUCK_PRICE = 6000; // Precio de la camioneta premium
+let premiumCamionUnlocked = false; // Camión de carga (12000)
+const PREMIUM_CAMION_PRICE = 12000;
 let deliveryStartTime = 0; // Tiempo cuando comenzó la entrega
 let deliveryTimer = null; // Timer para la entrega
 let bridgesOwned = 0; // Número de puentes que tiene el jugador
@@ -1307,6 +1622,8 @@ class Tile {
         this.rotation = rotation; this.locked = type.locked || false;
         this.powered = false; this.special = null; this.semaphoreState = 'red';
         this.isEnd = false; this.isDeadEnd = false;
+        this.hasCoin = false; // Propiedad para monedas
+        this.hasStar = false; // Propiedad para estrellas (Nivel 30+)
     }
     getConnections() {
         if (this.type === TILE_TYPES.BLOCKED) return 0;
@@ -1357,8 +1674,10 @@ function saveGameData() {
         driverName: driverName,
         level: level,
         totalMoney: totalMoney,
+        totalStars: totalStars, // Guardar estrellas
         premiumMotoUnlocked: premiumMotoUnlocked,
         premiumTruckUnlocked: premiumTruckUnlocked,
+        premiumCamionUnlocked: premiumCamionUnlocked,
         bridgesOwned: bridgesOwned,
         selectedCompany: selectedCompany,
         selectedVehicle: selectedVehicle,
@@ -1434,6 +1753,13 @@ function loadGameData(playerName) {
                     $('savedMoneyAmount').textContent = totalMoney;
                 }
             }
+
+            // Cargar estrellas
+            if (gameData.totalStars !== undefined) {
+                totalStars = gameData.totalStars;
+            } else {
+                totalStars = 0;
+            }
             
             // Cargar desbloqueos
             if (gameData.premiumMotoUnlocked) {
@@ -1441,6 +1767,9 @@ function loadGameData(playerName) {
             }
             if (gameData.premiumTruckUnlocked) {
                 premiumTruckUnlocked = true;
+            }
+            if (gameData.premiumCamionUnlocked) {
+                premiumCamionUnlocked = true;
             }
             if (gameData.bridgesOwned !== undefined) {
                 bridgesOwned = gameData.bridgesOwned;
@@ -1454,7 +1783,7 @@ function loadGameData(playerName) {
                 if (companyBtn) companyBtn.classList.add('selected');
             }
             
-            if (gameData.selectedVehicle && (gameData.selectedVehicle !== 'motoa' || premiumMotoUnlocked) && (gameData.selectedVehicle !== 'trucka' || premiumTruckUnlocked)) {
+            if (gameData.selectedVehicle && (gameData.selectedVehicle !== 'motoa' || premiumMotoUnlocked) && (gameData.selectedVehicle !== 'trucka' || premiumTruckUnlocked) && (gameData.selectedVehicle !== 'camion' || premiumCamionUnlocked)) {
                 selectedVehicle = gameData.selectedVehicle;
                 document.querySelectorAll('.vehicle-btn').forEach(btn => btn.classList.remove('selected'));
                 const vehicleBtn = document.getElementById('btn-' + selectedVehicle);
@@ -1533,6 +1862,7 @@ function deletePlayer(playerName) {
                         totalMoney = 0;
                         premiumMotoUnlocked = false;
                         premiumTruckUnlocked = false;
+                        premiumCamionUnlocked = false;
                         bridgesOwned = 0;
                         $('moneyDisplay').textContent = '0';
                     }
@@ -1656,7 +1986,7 @@ function showMenu() {
     showConfirmModal({
         icon: '☰',
         title: 'Volver al Menú',
-        message: '<strong>¿Volver al menú principal?</strong><br><br>⚠️ Se perderá el progreso del nivel actual',
+        message: '<strong>¿Volver al menú principal?</strong><br>Tu dinero y progreso general se guardarán.<br><small>Solo se reinicia el laberinto actual.</small>',
         type: 'warning',
         confirmText: '✅ Volver',
         cancelText: '❌ Cancelar'
@@ -1665,11 +1995,31 @@ function showMenu() {
             cancelAnimationFrame(animationId);
             clearInterval(countdownTimer);
             clearInterval(engineSoundInterval);
+            
+            // Guardar progreso antes de salir
+            saveGameData();
+            
             $('startScreen').classList.remove('hidden');
-            updatePremiumMotoUI(); // Actualizar UI de moto premium
+            
+            // Actualizar visualización de dinero en el menú
+            $('savedMoneyDisplay').classList.remove('hidden');
+            $('savedMoneyAmount').textContent = totalMoney;
+            
+            // Actualizar información de nivel
+            if (level > 1) {
+                $('levelInfo').classList.remove('hidden');
+                $('currentLevel').textContent = level;
+                $('resetProgressBtn').classList.remove('hidden');
+            }
+            
+            updatePremiumMotoUI(); // Actualizar UI de moto premium y camión
             gameState = 'START';
             bridgeModeActive = false;
             if ($('btnBridge')) $('btnBridge').classList.remove('ring-4', 'ring-yellow-400');
+            
+            // Limpiar overlays por si acaso
+            $('overlay').classList.add('hidden');
+            hideGameModal();
         }
     });
 }
@@ -2022,9 +2372,11 @@ function retryLevel() {
     placeStart();
     placeEnd(); // Usará la posición guardada porque el nivel no cambió
     placeObstacles(config.obstacles);
+    
     fillEmpty(config.deadEnds);
     randomizeRotations();
     addSpecials(config.features);
+    placeCoins(); // Colocar monedas al final
     
     resetCar();
     checkConnections();
@@ -2057,6 +2409,9 @@ function generateLevel() {
     // Mostrar animación de preparación
     startPrepAnimation();
     
+    // Actualizar UI de Estrellas
+    updateStarUI();
+    
     resize();
     grid = new Array(COLS * ROWS).fill(null);
     specialTiles = [];
@@ -2068,6 +2423,7 @@ function generateLevel() {
     fillEmpty(config.deadEnds);
     randomizeRotations();
     addSpecials(config.features);
+    placeCoins(); // Agregar monedas al final cuando ya hay calles
     
     resetCar();
     checkConnections();
@@ -2151,6 +2507,57 @@ function placeObstacles(count) {
             : ['broken', 'tree', 'construction'];
         grid[row * COLS + col].special = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
         placed++;
+    }
+}
+
+function placeCoins() {
+    const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
+    if (!startTile) return;
+
+    // --- MONEDAS ---
+    let extraCoins = level >= 30 ? 2 : 0; // Más monedas a partir del lvl 30
+    let coinsToPlace = Math.min(3 + extraCoins, Math.floor(level / 3) + 1); // 1 a 3 (o 5) monedas
+    let attempts = 0;
+    
+    while (coinsToPlace > 0 && attempts < 100) {
+        attempts++;
+        const col = Math.floor(Math.random() * COLS);
+        const row = Math.floor(Math.random() * ROWS);
+        const tile = grid[row * COLS + col];
+        
+        // Solo en tiles existentes transitables
+        if (!tile || tile.type === TILE_TYPES.BLOCKED || tile.type === TILE_TYPES.START || tile.type === TILE_TYPES.END) continue;
+        
+        const dist = Math.abs(col - startTile.col) + Math.abs(row - startTile.row);
+        
+        if (dist > 3 && !tile.hasCoin && !tile.hasStar) {
+            tile.hasCoin = true;
+            coinsToPlace--;
+        }
+    }
+
+    // --- ESTRELLAS (Nivel 30+) ---
+    if (level >= 30) {
+        // Probabilidad alta de 1 estrella por nivel, o a veces 2
+        let starsToPlace = Math.random() < 0.7 ? 1 : 2; 
+        attempts = 0;
+
+        while (starsToPlace > 0 && attempts < 100) {
+            attempts++;
+            const col = Math.floor(Math.random() * COLS);
+            const row = Math.floor(Math.random() * ROWS);
+            const tile = grid[row * COLS + col];
+            
+            if (!tile || tile.type === TILE_TYPES.BLOCKED || tile.type === TILE_TYPES.START || tile.type === TILE_TYPES.END) continue;
+            
+            // Distancia considerable para dificultad
+            const dist = Math.abs(col - startTile.col) + Math.abs(row - startTile.row);
+            
+            if (dist > 2 && !tile.hasCoin && !tile.hasStar) {
+                tile.hasStar = true;
+                starsToPlace--;
+            }
+        }
     }
 }
 
@@ -2716,6 +3123,90 @@ function calculatePreviewPath() {
     }
 }
 
+// Función para mostrar el modal del cofre
+function showKeyChestModal() {
+    playSound('delivery'); // Sonido especial
+    
+    // Crear modal especial
+    const message = `
+        <div style="text-align:center;">
+            <div style="font-size:60px; margin-bottom:10px;">🔑</div>
+            <strong>¡HAS CONSEGUIDO UNA LLAVE!</strong><br>
+            <p style="color:#fbbf24; margin:10px 0;">Recolectaste 10 Estrellas</p>
+            <p>Puedes usar esta llave para abrir el <strong>Cofre del Tesoro</strong>.</p>
+        </div>
+    `;
+    
+    showGameModal({
+        icon: '⭐',
+        title: '¡Misión Cumplida!',
+        message: message,
+        type: 'success',
+        buttons: [{
+            text: '🗝️ ABRIR COFRE',
+            primary: true,
+            onClick: () => {
+                // Abrir cofre
+                totalStars -= 10;
+                totalMoney += 1000;
+                $('moneyDisplay').textContent = totalMoney;
+                saveGameData();
+                updateStarUI();
+                
+                playSound('money'); // Sonido de mucho dinero
+                
+                // Mostrar recompensa
+                showGameModal({
+                    icon: '🎁',
+                    title: '¡1000 MONEDAS!',
+                    message: `<div style="text-align:center;"><span style="font-size:50px">💰</span><br>Has recibido un gran tesoro.<br><b style="color:#10b981; font-size:24px;">+$1000</b></div>`,
+                    type: 'success',
+                    buttons: [{ text: 'Continuar Nivel', primary: true, onClick: () => { 
+                         hideGameModal();
+                         gameState = 'RUNNING'; // Reanudar
+                         gameLoop();
+                    }}]
+                });
+            }
+        }]
+    });
+}
+
+// Función para actualizar UI de Estrellas (se llamará al inicio y cada vez que cambie)
+function updateStarUI() {
+    let starContainer = document.getElementById('starContainer');
+    if (!starContainer) {
+        // Crear contenedor si no existe (junto al dinero)
+        const header = document.querySelector('header > div'); // Primer div del header
+        if (header) {
+            starContainer = document.createElement('div');
+            starContainer.id = 'starContainer';
+            starContainer.className = 'flex items-center bg-slate-800 px-3 py-1 rounded-full border border-slate-700 space-x-2';
+            starContainer.style.display = 'none'; // Oculto por defecto
+            header.appendChild(starContainer); // Agregar después del dinero
+        }
+    }
+    
+    if (starContainer) {
+        if (level >= 30 || totalStars > 0) {
+            starContainer.style.display = 'flex';
+            starContainer.innerHTML = `
+                <span style="font-size: 1.2rem;">⭐</span>
+                <span id="starCount" class="font-bold text-yellow-400">${totalStars}/10</span>
+            `;
+            
+            // Si tiene 10, animar
+            if (totalStars >= 10) {
+                 starContainer.classList.add('pulse');
+                 starContainer.style.borderColor = '#fbbf24';
+            } else {
+                 starContainer.classList.remove('pulse');
+                 starContainer.style.borderColor = '';
+            }
+        }
+    }
+}
+
 function startCountdown() {
     clearInterval(countdownTimer);
     countdownTimer = setInterval(() => {
@@ -2913,6 +3404,58 @@ function gameLoop() {
         else if (tile?.special === 'boost') car.speed = car.baseSpeed * 1.8;
         else car.speed = car.baseSpeed;
         
+        // RECOLECTAR MONEDA
+        if (tile?.hasCoin) {
+            tile.hasCoin = false;
+            playSound('money');
+            
+            // Efecto visual en el mapa (texto flotante inmediato)
+            floatingTexts.push({
+                x: car.x,
+                y: car.y - 20,
+                text: '+$20',
+                color: '#fbbf24',
+                life: 60,
+                vy: -1
+            });
+            
+            // Animación: moneda vuela y suma el dinero al llegar
+            animateCoinCollection(car.x, car.y, 20);
+        }
+        
+        // RECOLECTAR ESTRELLA (Nivel 30+)
+        if (tile?.hasStar) {
+            tile.hasStar = false;
+            totalStars++;
+            saveGameData();
+            
+            // Sonido mágico corto
+            playSound('delivery'); // Reusando el de satisfacción cortito
+            
+            // Efecto visual
+            floatingTexts.push({
+                x: car.x,
+                y: car.y - 30,
+                text: '⭐ +1',
+                color: '#facc15',
+                life: 80,
+                vy: -1.5
+            });
+            
+            // Animación directa a la UI (usando lógica similar a monedas)
+            updateStarUI();
+
+            // CHEQUEAR SI LLEGÓ A 10
+            if (totalStars >= 10) {
+                // Pausar juego o esperar un momento? Mejor al terminar el nivel o inmediatamente.
+                // Lo haremos al instante, pausando.
+                setTimeout(() => {
+                    gameState = 'PAUSED'; // Hack temporal para pausar
+                    showKeyChestModal();
+                }, 500);
+            }
+        }
+
         // CUALQUIER meta es válida - ¡GANAS!
         if (tile?.isEnd) { win(); return; }
         
@@ -3004,8 +3547,8 @@ function crash(msg) {
     gameState = 'CRASHED';
     clearInterval(countdownTimer); clearInterval(engineSoundInterval); clearInterval(deliveryTimer);
     playSound('crash');
-    $('gameContainer').classList.add('shake');
-    setTimeout(() => $('gameContainer').classList.remove('shake'), 500);
+    
+    // Eliminado el shake y el retardo, mostrar inmediatamente
     
     // Configurar layout especial FULL SCREEN (Igual que WIN pero rojo/negro)
     const overlay = $('overlay');
@@ -3101,10 +3644,9 @@ function crash(msg) {
         </button>
     `;
     
-    setTimeout(() => {
-        const btn = document.getElementById('retryBtnFooter');
-        if(btn) btn.onclick = retryLevel;
-    }, 100);
+    // Asignar evento al botón directamente
+    const btn = document.getElementById('retryBtnFooter');
+    if(btn) btn.onclick = retryLevel;
 
     // Ocultar elementos viejos
     $('overlayIcon').classList.add('hidden');
@@ -3122,10 +3664,154 @@ function crash(msg) {
 }
 
 function nextLevel() {
+    if (level >= 100) {
+        showNeighborhoodModal();
+        return;
+    }
     level++;
     saveGameData();
     hideGameModal();
     generateLevel();
+}
+
+function showNeighborhoodModal() {
+    const NEXT_NEIGHBORHOOD_COST = 50000;
+    
+    // Calcular cuánto falta
+    const missingMoney = Math.max(0, NEXT_NEIGHBORHOOD_COST - totalMoney);
+    
+    let message = `<div style="text-align:center;">
+        <strong>¡FELICITACIONES!</strong><br>
+        <span style="color:#fbbf24; font-size:1.2em;">Has completado el Nivel 100</span><br><br>
+        Para avanzar al <strong>SIGUIENTE BARRIO</strong> necesitas <span style="color:#10b981">$${NEXT_NEIGHBORHOOD_COST}</span>.<br><br>
+        💰 Tienes: <span style="color:${totalMoney >= NEXT_NEIGHBORHOOD_COST ? '#10b981' : '#fbbf24'}">$${totalMoney}</span>
+    `;
+
+    if (totalMoney < NEXT_NEIGHBORHOOD_COST) {
+        message += `<br><br>⚠️ Te faltan: <span style="color:#ef4444">$${missingMoney}</span><br>
+        <small>Sigue jugando para conseguir el dinero suficiente.</small></div>`;
+    } else {
+        message += `<br><br>¡Tienes suficiente dinero para mudarte!</div>`;
+    }
+    
+    let buttons = [];
+    
+    if (totalMoney >= NEXT_NEIGHBORHOOD_COST) {
+        buttons.push({
+            text: '🏙️ Ir al Siguiente Barrio (-$50,000)',
+            primary: true,
+            onClick: () => {
+                showConfirmModal({
+                    icon: '🚚',
+                    title: '¿Mudar al Siguiente Barrio?',
+                    message: 'Esto te costará $50,000 y comenzarás una nueva aventura en el Nivel 1 (Más difícil).',
+                    confirmText: '¡Sí, vámonos!',
+                    cancelText: 'Esperar'
+                }).then(confirmed => {
+                    if (confirmed) {
+                        totalMoney -= NEXT_NEIGHBORHOOD_COST;
+                        level = 1; 
+                        saveGameData();
+                        hideGameModal(); 
+                        
+                        showGameModal({
+                            icon: '🎉',
+                            title: '¡Bienvenido al Nuevo Barrio!',
+                            message: '¡Buena suerte en esta nueva zona!',
+                            type: 'success',
+                            buttons: [{ text: '¡A JUGAR!', primary: true, onClick: () => { hideGameModal(); generateLevel(); } }]
+                        });
+                    } else {
+                        showNeighborhoodModal();
+                    }
+                });
+            }
+        });
+    }
+    
+    buttons.push({
+        text: '🔄 Seguir Jugando (Replay)',
+        primary: false,
+        onClick: () => {
+            hideGameModal();
+            generateLevel(); // Rejugar nivel
+        }
+    });
+
+    showGameModal({
+        icon: '🏆',
+        title: 'LOGRASTE ALCANZAR EL NIVEL 100',
+        message: message,
+        type: 'warning', 
+        buttons: buttons
+    });
+}
+
+function animateCoinCollection(x, y, amount) {
+    const canvasRect = canvas.getBoundingClientRect();
+    const moneyEl = $('moneyDisplay');
+    if (!moneyEl) {
+        totalMoney += amount; 
+        return;
+    }
+
+    // Calcular coordenadas de pantalla desde coordenadas de canvas (game world)
+    const scaleX = canvasRect.width / canvas.width;
+    const scaleY = canvasRect.height / canvas.height;
+    const startScreenX = canvasRect.left + x * scaleX;
+    const startScreenY = canvasRect.top + y * scaleY;
+
+    // Coordenadas destino (centro del contador de dinero)
+    const moneyRect = moneyEl.getBoundingClientRect();
+    const targetX = moneyRect.left + moneyRect.width / 2;
+    const targetY = moneyRect.top + moneyRect.height / 2;
+    
+    // Crear elemento moneda flotante
+    const coin = document.createElement('div');
+    coin.textContent = '🪙';
+    coin.style.position = 'fixed';
+    coin.style.left = `${startScreenX}px`;
+    coin.style.top = `${startScreenY}px`;
+    coin.style.fontSize = '24px';
+    coin.style.zIndex = '9999';
+    coin.style.transform = 'translate(-50%, -50%)'; // Centrar en el punto
+    coin.style.transition = 'all 0.8s cubic-bezier(0.25, 1, 0.5, 1)';
+    coin.style.pointerEvents = 'none';
+    
+    document.body.appendChild(coin);
+    
+    // Forzar reflow
+    void coin.offsetWidth;
+    
+    // Animar hacia el destino
+    coin.style.left = `${targetX}px`;
+    coin.style.top = `${targetY}px`;
+    coin.style.opacity = '0.5';
+    
+    // Cuando llegue...
+    setTimeout(() => {
+        coin.remove();
+        
+        // Sumar dinero REALMENTE
+        totalMoney = (totalMoney || 0) + amount;
+        moneyEl.textContent = totalMoney;
+        if ($('shopMoney')) $('shopMoney').textContent = totalMoney;
+        saveGameData();
+
+        // Efecto de "golpe" en el contador
+        moneyEl.style.transition = 'transform 0.1s';
+        moneyEl.style.transform = 'scale(1.5)';
+        moneyEl.style.color = '#fbbf24';
+        
+        // Sonido de "llegada" (opcional, o reusar money)
+        // playSound('money'); // Ya suena al recoger, evitar saturación o usar un sonido más corto 'click'
+        
+        setTimeout(() => {
+            moneyEl.style.transform = 'scale(1)';
+            moneyEl.style.color = '';
+        }, 150);
+        
+    }, 800);
 }
 
 function win() {
@@ -3138,10 +3824,15 @@ function win() {
     
     // Reproducir sonido de entrega exitosa
     playSound('delivery');
-    setTimeout(() => playSound('money'), 400);
+    // Eliminado playSound('money') para evitar sonido repetitivo de moneda
     
     // Pago fijo de $50 por entrega correcta
-    const deliveryPayment = 50;
+    let deliveryPayment = 50;
+    
+    // Bono del Camión de Carga
+    if (selectedVehicle === 'camion') {
+        deliveryPayment += 30; // Bono extra de $30
+    }
     
     // Bonus por entregar en menos de la mitad del tiempo (+10)
     const halfTimeBonus = timeUsedRatio <= 0.5 ? 10 : 0;
@@ -3171,9 +3862,11 @@ function win() {
         messageStyle = 'font-size: 16px; font-weight: bold; color: #e2e8f0;';
     }
     
-    // Mostrar imagen del repartidor
+    // Mostrar imagen del repartidor (Alternando entre 4 variaciones)
     const overlayImage = $('overlayImage');
-    overlayImage.src = 'repartidor.jpeg';
+    const deliveryImages = ['repartidor.jpeg', 'repartidor1.png', 'repartidor2.png', 'repartidor3.png'];
+    const imgIndex = (level - 1) % deliveryImages.length;
+    overlayImage.src = deliveryImages[imgIndex];
     overlayImage.classList.remove('hidden');
     
     // Configurar layout especial FULL SCREEN
@@ -3274,12 +3967,10 @@ function win() {
         </button>
     `;
         // Asignar evento al botón nuevo del footer DIRECTAMENTE
-        setTimeout(() => {
-            const btn = document.getElementById('nextLevelBtnFooter');
-            if (btn) {
-                btn.onclick = nextLevel; // ARREGLADO: Llamada directa a la función
-            }
-        }, 100);
+        const btn = document.getElementById('nextLevelBtnFooter');
+        if (btn) {
+            btn.onclick = nextLevel; 
+        }
     
     // Ocultar los elementos viejos del overlay que tapan la imagen
     $('overlayIcon').classList.add('hidden');
@@ -3357,6 +4048,9 @@ function repairTile() {
 }
 
 function draw() {
+    // Actualizar UI del velocímetro
+    updateSpeedometer();
+
     if (grassImg.complete && grassImg.naturalWidth > 0) {
         ctx.fillStyle = ctx.createPattern(grassImg, 'repeat');
     } else {
@@ -3370,6 +4064,31 @@ function draw() {
     }
     
     if (car) drawCar();
+    
+    // DIBUJAR TEXTOS FLOTANTES
+    if (window.floatingTexts && window.floatingTexts.length > 0) {
+        ctx.save();
+        ctx.font = 'bold 16px monospace';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = 'black';
+        ctx.shadowBlur = 4;
+        
+        // Iterar al revés para poder borrar
+        for (let i = floatingTexts.length - 1; i >= 0; i--) {
+            const ft = floatingTexts[i];
+            ctx.fillStyle = ft.color;
+            ctx.fillText(ft.text, ft.x, ft.y);
+            
+            // Actualizar física simple (solo visual)
+            ft.y += ft.vy;
+            ft.life--;
+            
+            if (ft.life <= 0) {
+                floatingTexts.splice(i, 1);
+            }
+        }
+        ctx.restore();
+    }
 }
 
 function drawPreviewPath() {
@@ -3680,6 +4399,104 @@ function drawTile(tile) {
     }
     
     ctx.restore();
+
+    // DIBUJAR MONEDA (Si existe y no ha sido recolectada)
+    if (tile.hasCoin) {
+        // Efecto flotante usando el tiempo global
+        const time = Date.now() * 0.005;
+        const floatY = Math.sin(time) * 2;
+        
+        ctx.save();
+        ctx.translate(cx, cy + floatY);
+        
+        // Sombra en el suelo (fija, no flota con la moneda)
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.beginPath();
+        ctx.ellipse(0, 10 - floatY, 6, 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Borde moneda
+        ctx.fillStyle = '#d97706'; // Amber-600
+        ctx.beginPath();
+        ctx.arc(0, 0, 7, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Centro moneda
+        ctx.fillStyle = '#fbbf24'; // Amber-400
+        ctx.beginPath();
+        ctx.arc(0, 0, 5.5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Símbolo
+        ctx.fillStyle = '#92400e'; // Amber-800
+        ctx.font = 'bold 9px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('$', 0, 0.5);
+        
+        // Brillo
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.beginPath();
+        ctx.arc(-2, -2, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+    }
+    
+    // DIBUJAR ESTRELLA (Nivel 30+)
+    if (tile.hasStar) {
+        // Efecto flotante
+        const time = Date.now() * 0.005;
+        const floatY = Math.sin(time + Math.PI) * 2; // Desfase con moneda
+        
+        ctx.save();
+        ctx.translate(cx, cy + floatY);
+        
+        // Sombra
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.beginPath();
+        ctx.ellipse(0, 10 - floatY, 6, 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Estrella (Dibujo vectorial)
+        ctx.fillStyle = '#facc15'; // Amarillo puro
+        ctx.shadowColor = '#eab308';
+        ctx.shadowBlur = 5;
+        
+        ctx.beginPath();
+        const spikes = 5;
+        const outerRadius = 8;
+        const innerRadius = 4;
+        let rot = Math.PI / 2 * 3;
+        let x = 0;
+        let y = 0;
+        const step = Math.PI / spikes;
+
+        ctx.moveTo(0, 0 - outerRadius);
+        for (let i = 0; i < spikes; i++) {
+            x = Math.cos(rot) * outerRadius;
+            y = Math.sin(rot) * outerRadius;
+            ctx.lineTo(x, y);
+            rot += step;
+
+            x = Math.cos(rot) * innerRadius;
+            y = Math.sin(rot) * innerRadius;
+            ctx.lineTo(x, y);
+            rot += step;
+        }
+        ctx.lineTo(0, 0 - outerRadius);
+        ctx.closePath();
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        
+        // Brillo central
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(-2, -2, 1, 0, Math.PI*2);
+        ctx.fill();
+        
+        ctx.restore();
+    }
     
     // Meta - bandera MÁS GRANDE Y VISIBLE
     if (tile.isEnd) {
@@ -3859,92 +4676,116 @@ function drawCar() {
         }
 
     } else if (selectedVehicle === 'car') {
-        // --- COCHE CON IMAGEN (VISTA PERFIL) ---
-        // Usamos la imagen 'carroa.png' en lugar del dibujo vectorial
+        // --- AUTO DE REPARTO DETALLADO (VISTA PERFIL) ---
+        // Diseño tipo Mini-Van / Hatchback Comercial
         
-        ctx.scale(0.9, 0.9);
+        ctx.scale(0.95, 0.95);
 
-        // Si la imagen está cargada la dibujamos
-        if (carImg.complete && carImg.naturalWidth > 0) {
-            // Sombra suelo para realismo
-            ctx.fillStyle = 'rgba(0,0,0,0.3)';
-            ctx.beginPath(); ctx.ellipse(0, 10, 22, 4, 0, 0, Math.PI*2); ctx.fill();
-            
-            // Dibujar imagen centrada
-            // Ajustar tamaño para que quepa bien en el tile (aprox 50px ancho)
-            const w = 50;
-            const h = (carImg.naturalHeight / carImg.naturalWidth) * w;
-            ctx.drawImage(carImg, -w/2, -h/2, w, h);
-            
-            // Tintado básico si fuera necesario (Opcional, ahora solo imagen natural)
-            // Si el cliente quiere "mismas funciones", deberíamos poder cambiarle el color.
-            // Pero con un PNG directo no es fácil sin Canvas filters.
-            
-            // Dibujar Luces encima de la imagen para efecto "vivo"
-            // Delantera
-            ctx.fillStyle = waiting ? '#ef4444' : '#e0f2fe';
-            ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 10;
-            ctx.beginPath(); ctx.arc(w/2 - 2, 2, 2, 0, Math.PI*2); ctx.fill();
-            ctx.shadowBlur = 0;
-            
-            // Humo si está andando
-            if (!waiting && gameState === 'RUNNING') {
-                 ctx.fillStyle = 'rgba(100,100,100,0.3)';
-                 ctx.beginPath(); ctx.arc(-w/2 - 5, 5, 2 + Math.random(), 0, Math.PI*2); ctx.fill();
-            }
+        // 1. Sombra del suelo (más suave y realista)
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath(); ctx.ellipse(0, 11, 24, 4, 0, 0, Math.PI*2); ctx.fill();
 
-        } else {
-            // FALLBACK: Si no carga la imagen, dibujar el coche vectorial antiguo
-            // Ruedas
-            drawSideWheel(-12, 8, 5.5);
-            drawSideWheel(12, 8, 5.5);
+        // 2. Chasis Principal
+        ctx.fillStyle = mainColor;
+        
+        ctx.beginPath();
+        ctx.moveTo(-20, 8);   // Abajo atrás
+        ctx.lineTo(-21, -4);  // Atrás casi vertical (espacio carga)
+        ctx.lineTo(-18, -11); // Curva techo atrás
+        ctx.lineTo(6, -12);   // Techo largo plano
+        ctx.lineTo(18, -7);   // Inicio parabrisas
+        ctx.lineTo(24, 1);    // Fin parabrisas / Capó corto
+        ctx.lineTo(25, 4);    // Nariz
+        ctx.lineTo(24, 8);    // Abajo frente
+        // Huecos ruedas (simple línea recta por ahora, las ruedas van encima)
+        ctx.lineTo(-20, 8);
+        ctx.closePath();
+        ctx.fill();
 
-            // Sombra suelo
-            ctx.fillStyle = 'rgba(0,0,0,0.3)';
-            ctx.beginPath(); ctx.roundRect(-20, 12, 40, 2, 1); ctx.fill();
+        // 3. Molduras y Parachoques
+        ctx.fillStyle = '#374151'; // Gris oscuro bumpers
+        // Trasero
+        ctx.beginPath(); ctx.moveTo(-20, 4); ctx.lineTo(-22, 4); ctx.lineTo(-22, 8); ctx.lineTo(-18, 8); ctx.fill();
+        // Delantero
+        ctx.beginPath(); ctx.moveTo(24, 5); ctx.lineTo(26, 5); ctx.lineTo(26, 8); ctx.lineTo(22, 8); ctx.fill();
+        
+        // Protector lateral puerta
+        ctx.fillStyle = 'rgba(0,0,0,0.15)';
+        ctx.fillRect(-18, 3, 38, 2);
 
-            // Carrocería
-            ctx.fillStyle = mainColor;
-            ctx.beginPath();
-            ctx.moveTo(-18, 8);
-            ctx.lineTo(-20, 0); // Parachoques trasero
-            ctx.lineTo(-18, -6); // Maletero subida
-            ctx.lineTo(0, -9);   // Techo
-            ctx.lineTo(14, -6);  // Parabrisas bajada
-            ctx.lineTo(22, 0);   // Capó
-            ctx.lineTo(22, 8);   // Parachoques delantero
-            ctx.closePath();
-            ctx.fill();
+        // 4. Ventanas
+        ctx.fillStyle = '#1e3a8a'; // Azul oscuro
+        ctx.beginPath();
+        // Ventana Lateral Conductor
+        ctx.moveTo(8, -1);
+        ctx.lineTo(8, -9);
+        ctx.lineTo(17, -6);
+        ctx.lineTo(19, -1);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Ventana Trasera (Tipo panel o tintada)
+        ctx.fillStyle = '#172554';
+        ctx.beginPath();
+        ctx.moveTo(-16, -1);
+        ctx.lineTo(-15, -9);
+        ctx.lineTo(5, -10);
+        ctx.lineTo(5, -1);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Marcos finos
+        ctx.lineWidth = 1; ctx.strokeStyle = '#334155'; ctx.stroke();
+        
+        // Separador pilar B
+        ctx.fillStyle = mainColor;
+        ctx.fillRect(5, -10, 3, 10);
 
-            // Ventanas (Perfil)
-            ctx.fillStyle = '#1e293b';
-            ctx.beginPath();
-            ctx.moveTo(-10, -6);
-            ctx.lineTo(0, -7);
-            ctx.lineTo(12, -5);
-            ctx.lineTo(12, 0);
-            ctx.lineTo(-10, 0);
-            ctx.closePath();
-            ctx.fill();
-            // Separador puerta
-            ctx.fillStyle = mainColor;
-            ctx.fillRect(2, -7, 2, 7);
+        // 5. Detalles de Reparto
+        // Baca en el techo (Roof Rack)
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(-14, -11); ctx.lineTo(4, -12); ctx.stroke();
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(-10, -11); ctx.lineTo(-10, -13); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, -12); ctx.lineTo(0, -14); ctx.stroke();
 
-            // Luces
-            // Delantera
-            ctx.fillStyle = waiting ? '#ef4444' : '#e0f2fe';
-            ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 10;
-            ctx.beginPath(); ctx.moveTo(22, 0); ctx.lineTo(24, 2); ctx.lineTo(22, 4); ctx.fill();
-            ctx.shadowBlur = 0;
-            // Trasera
-            ctx.fillStyle = '#dc2626';
-            ctx.fillRect(-20, 0, 2, 4);
-        }
-
-
-        // Logo Puerta
+        // Logo Empresa (Círculo blanco + Letra)
+        ctx.fillStyle = 'white';
+        ctx.beginPath(); ctx.arc(0, 1, 6, 0, Math.PI*2); ctx.fill();
         ctx.fillStyle = companyColors[selectedCompany];
-        ctx.beginPath(); ctx.arc(4, 4, 3, 0, Math.PI*2); ctx.fill();
+        ctx.font = 'bold 8px sans-serif'; 
+        ctx.textAlign='center'; 
+        ctx.textBaseline='middle';
+        ctx.fillText(selectedCompany.substring(0,1).toUpperCase(), 0, 2);
+        
+        // Manija Puerta
+        ctx.fillStyle = '#1f2937';
+        ctx.fillRect(9, 1, 4, 1.5);
+
+        // 6. Luces
+        // Delantero
+        const headColor = waiting ? '#ef4444' : '#fef08a';
+        ctx.fillStyle = headColor;
+        ctx.beginPath(); ctx.moveTo(25, 1); ctx.lineTo(26, 2); ctx.lineTo(25, 4); ctx.lineTo(23, 3); ctx.fill();
+        if (!waiting) { // Brillo
+            ctx.fillStyle = 'rgba(254, 240, 138, 0.5)';
+            ctx.beginPath(); ctx.arc(26, 2, 3, 0, Math.PI*2); ctx.fill();
+        }
+        
+        // Trasero
+        ctx.fillStyle = '#b91c1c'; // Rojo oscuro
+        ctx.fillRect(-21, 0, 2, 5);
+
+        // Ruedas (Al final para superponerse correctamente al chasis)
+        drawSideWheel(-12, 8, 5.5);
+        drawSideWheel(14, 8, 5.5);
+
+        // Espejos Retrovisores (Extra detalle)
+        ctx.fillStyle = '#334155';
+        ctx.beginPath();
+        // Espejo lado conductor (visible)
+        ctx.moveTo(10, -5); ctx.lineTo(13, -6); ctx.lineTo(13, -3); ctx.fill();
 
     } else if (selectedVehicle === 'truck' || selectedVehicle === 'trucka') {
         // --- CAMIÓN DE REPARTO (VISTA PERFIL) ---
@@ -4007,48 +4848,115 @@ function drawCar() {
             ctx.font = '10px sans-serif'; ctx.fillText('⭐', 0, -14);
         }
 
-    } else if (selectedVehicle === 'bus') {
-        // --- AUTOBÚS (VISTA PERFIL) ---
-        // Largo y con muchas ventanas
-        ctx.scale(0.85, 0.85);
-
-        // Ruedas
-        drawSideWheel(-20, 10, 6);
-        drawSideWheel(22, 10, 6);
-
-        // Cuerpo Principal
-        ctx.fillStyle = mainColor;
-        ctx.beginPath(); ctx.roundRect(-28, -14, 56, 26, 4); ctx.fill();
+    } else if (selectedVehicle === 'camion') {
+        // --- CAMIÓN DE CARGA (GRANDE) ---
+        // Estilo tráiler pero compacto para caber en la tile
+        ctx.scale(0.85, 0.85); // Un poco más grande que el bus
         
-        // Franja inferior oscura
-        ctx.fillStyle = 'rgba(0,0,0,0.1)';
-        ctx.fillRect(-28, 6, 56, 6);
-
-        // Ventanas (Fila larga)
-        ctx.fillStyle = '#1e293b';
-        // Primera ventana (conductor)
-        ctx.beginPath(); 
-        ctx.moveTo(20, -8); ctx.lineTo(26, -8); ctx.lineTo(26, 2); ctx.lineTo(20, 2); ctx.fill();
-        // Ventanas pasajeros
+        // Ruedas Multiples (6 ruedas visibles)
+        drawSideWheel(-24, 10, 6);
+        drawSideWheel(-14, 10, 6);
+        drawSideWheel(20, 10, 6);
+        
+        // Chasis Largo
+        ctx.fillStyle = '#111827';
+        ctx.fillRect(-28, 6, 54, 6);
+        
+        // Contenedor de Carga 
+        ctx.fillStyle = '#f8fafc'; // Blanco/Gris claro
+        ctx.beginPath();
+        ctx.roundRect(-28, -16, 38, 22, 2);
+        ctx.fill();
+        
+        // Decoración Contenedor (Líneas verticales)
+        ctx.fillStyle = '#e2e8f0';
         for(let i=0; i<4; i++) {
-            ctx.fillRect(-22 + (i*10), -8, 8, 10);
+            ctx.fillRect(-24 + (i*8), -16, 2, 22);
         }
-
-        // Puerta (Líneas)
-        ctx.fillStyle = '#333';
-        ctx.fillRect(10, -8, 8, 16); // Puerta delantera
-        ctx.fillStyle = 'rgba(255,255,255,0.2)';
-        ctx.fillRect(11, -7, 6, 14); // Cristal puerta
-
-        // Luces Traseras
-        ctx.fillStyle = '#dc2626';
-        ctx.fillRect(-28, 0, 2, 6);
         
-        // Faros Delanteros
-        ctx.fillStyle = '#fef08a';
-        ctx.shadowBlur = 8; ctx.shadowColor = '#fef08a';
-        ctx.fillRect(27, 4, 1, 4);
+        // Logo Empresa en Contenedor
+        ctx.fillStyle = companyColors[selectedCompany];
+        ctx.beginPath();
+        ctx.arc(-10, -5, 7, 0, Math.PI*2);
+        ctx.fill();
+        
+        // Cabina (Separada visualmente)
+        ctx.fillStyle = mainColor; // Color seleccionado por usuario
+        ctx.beginPath();
+        ctx.roundRect(12, -12, 16, 18, 2);
+        ctx.fill();
+        
+        // Conector cabina-trailer
+        ctx.fillStyle = '#475569';
+        ctx.fillRect(10, 0, 4, 4);
+        
+        // Ventana Cabina
+        ctx.fillStyle = '#1e3a8a';
+        ctx.beginPath();
+        ctx.moveTo(14, -8);
+        ctx.lineTo(24, -8);
+        ctx.lineTo(24, -2);
+        ctx.lineTo(14, -2);
+        ctx.fill();
+        
+        // Luces
+        // Delanteras
+        ctx.fillStyle = waiting ? '#fbbf24' : '#fef08a';
+        ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 10;
+        ctx.fillRect(26, 4, 2, 4);
         ctx.shadowBlur = 0;
+        
+        // Traseras
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(-29, 0, 2, 6);
+
+    } else if (selectedVehicle === 'motoa') {
+        // --- MOTO PREMIUM (F1) ---
+        ctx.scale(0.9, 0.9);
+        
+        // Ruedas Anchas (Slicks)
+        drawSideWheel(-16, 8, 6);
+        drawSideWheel(16, 8, 6);
+
+        // Chasis Aerodinámico
+        ctx.fillStyle = mainColor;
+        ctx.beginPath();
+        ctx.moveTo(-20, 0);
+        ctx.lineTo(-10, -6); // Motor
+        ctx.lineTo(10, -6); // Cockpit
+        ctx.lineTo(24, 0); // Morro
+        ctx.lineTo(30, 4); // Punta
+        ctx.lineTo(24, 8); // Abajo
+        ctx.lineTo(-20, 8); // Fondo plano
+        ctx.fill();
+
+        // Alerón Trasero
+        ctx.fillStyle = '#1e293b'; // Carbono
+        ctx.fillRect(-26, -12, 6, 14);
+        
+        // Alerón Delantero
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(24, 6, 8, 2);
+
+        // Casco Piloto
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(0, -6, 5, 0, Math.PI*2); ctx.fill();
+        // Visera
+        ctx.fillStyle = '#000';
+        ctx.fillRect(2, -7, 3, 2);
+
+        // Faros (F1 no suele llevar, pero por estética del juego)
+        ctx.fillStyle = waiting ? '#fbbf24' : '#fef08a';
+        ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 10;
+        ctx.fillRect(28, 5, 2, 2);
+        ctx.shadowBlur = 0;
+
+    } else {
+        // FALLBACK
+        drawSideWheel(-12, 8, 5.5);
+        drawSideWheel(12, 8, 5.5);
+        ctx.fillStyle = mainColor;
+        ctx.fillRect(-18, -6, 36, 12);
     }
     
     // Indicador de dirección en modo edición (Flotante encima)
