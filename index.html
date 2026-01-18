@@ -538,7 +538,7 @@
     </div>
 
     <!-- WRAPPER DE LA INTERFAZ DE JUEGO (Oculto al inicio) -->
-    <div id="gameInterface" class="hidden flex flex-col h-full w-full relative">
+    <div id="gameInterface" class="hidden flex flex-col h-full w-full relative overflow-hidden">
 
         <!-- Header -->
         <div class="w-full p-1 flex justify-between items-center z-10 bg-slate-900/50 backdrop-blur-sm relative shrink-0">
@@ -576,8 +576,8 @@
             </div>
         </div>
 
-        <!-- Game Area - Ajustado height para que siempre haya espacio para los controles -->
-        <div class="relative p-1 overflow-y-auto w-full flex justify-center items-start scroll-smooth flex-grow bg-slate-900/30" id="gameContainer" style="min-height: 100px;">
+        <!-- Game Area - Flex-1, Min-Height 0 para forzar scroll interno y no expandir contenedor padre -->
+        <div class="relative p-1 overflow-y-auto overflow-x-hidden w-full flex justify-center items-start flex-1 min-h-0 bg-slate-900/30" id="gameContainer">
             <canvas id="gameCanvas"></canvas>
             
             <!-- Mensaje de salida del pedido -->
@@ -2199,42 +2199,35 @@ function resize() {
     const config = LEVEL_CONFIG[Math.min(level - 1, 99)];
     COLS = config.cols; ROWS = config.rows;
     
-    // Obtener el contenedor REAL disponible para el juego
+    // Obtener dimensiones del contenedor
     const container = $('gameContainer');
-    // Usar el ancho/alto del contenedor, o fallback a ventana si no está visible
     const availableW = container ? container.clientWidth : window.innerWidth;
     const availableH = container ? container.clientHeight : window.innerHeight;
     
-    // Margen seguro para que no toque bordes
-    const margin = 10;
+    // Ajuste de márgenes
+    const margin = 4; // Margen mínimo
     
-    // Calcular tamaño basado en ANCHO (ajustado a columnas)
-    const sizeBasedOnWidth = Math.floor((availableW - margin) / COLS);
+    // Calcular tamaño ideal para que quepa TODO el mapa sin scroll si es posible
+    const fitWidth = (availableW - margin * 2) / COLS;
+    const fitHeight = (availableH - margin * 2) / ROWS;
     
-    // Calcular tamaño basado en ALTO (ajustado a filas)
-    // Esto es clave para que "se adapte exactamente al alto"
-    const sizeBasedOnHeight = Math.floor((availableH - margin) / ROWS);
+    // Usar el menor para que quepa en ambos ejes (Fit to Screen)
+    let idealTileSize = Math.floor(Math.min(fitWidth, fitHeight));
     
-    // Elegimos el MENOR de los dos para asegurar que cabe tanto horizontal como verticalmente
-    let idealTileSize = Math.min(sizeBasedOnWidth, sizeBasedOnHeight);
-    
-    // LÍMITES:
-    // Mínimo reducido (32px) para permitir encajar en pantallas pequeñas con muchos niveles (muchas filas)
-    // Si la pantalla es MUY pequeña, ni modo, tendrá que hacer scroll (overflow-y-auto en CSS lo maneja)
-    const MIN_TILE_SIZE = 34;  // Reducido de 42
-    const MAX_TILE_SIZE = 60; // Reducido de 65
+    // LÍMITES INTELIGENTES:
+    // Nunca bajar de 22px (muy pequeño pero visible) para niveles enormes (ej. 20x20)
+    // Nunca subir de 60px (muy grande) para niveles iniciales
+    const MIN_TILE_SIZE = 28;
+    const MAX_TILE_SIZE = 60;
     
     // Aplicar límites
+    // Si idealTileSize < MIN_TILE_SIZE, se usará MIN y habrá scroll natural del div gameContainer
     TILE_SIZE = Math.min(Math.max(idealTileSize, MIN_TILE_SIZE), MAX_TILE_SIZE);
 
-    // Ajustar canvas
     canvas.width = COLS * TILE_SIZE; 
     canvas.height = ROWS * TILE_SIZE;
 
-    // Centrar canvas en el contenedor si sobra espacio
-    // Usamos márgenes automáticos en CSS (flex justify-center), pero aseguramos re-render
-    
-    // ACTUALIZAR POSICIÓN DEL CARRO
+    // Reposicionar carro
     if (car) {
         car.x = car.col * TILE_SIZE + TILE_SIZE / 2;
         car.y = car.row * TILE_SIZE + TILE_SIZE / 2;
@@ -4113,28 +4106,27 @@ function animateCoinCollection(x, y, amount) {
 
 function win() {
     gameState = 'WON';
-    clearInterval(countdownTimer); clearInterval(engineSoundInterval); clearInterval(deliveryTimer);
+    clearInterval(countdownTimer); 
+    clearInterval(engineSoundInterval); 
+    clearInterval(deliveryTimer);
+    
+    // EVITAR DOBLES PANTALLAS: Asegurar que el modal del cofre no salte
+    if(window.chestModalTimer) clearTimeout(window.chestModalTimer);
+    $('videoOverlay').classList.add('hidden');
     
     // Calcular tiempo de entrega en segundos
     const deliveryTime = Math.floor((Date.now() - deliveryStartTime) / 1000);
-    const timeUsedRatio = deliveryTime / maxTime; // Ratio del tiempo usado vs total
+    const timeUsedRatio = deliveryTime / maxTime;
     
     // Reproducir sonido de entrega exitosa
-    playSound('delivery');
-    // Eliminado playSound('money') para evitar sonido repetitivo de moneda
-    
-    // Pago fijo de $50 por entrega correcta
+    if(typeof playSound === 'function') playSound('delivery');
+
+    // Pago fijo
     let deliveryPayment = 50;
+    if (selectedVehicle === 'camion') deliveryPayment += 30; // Bono
     
-    // Bono del Camión de Carga
-    if (selectedVehicle === 'camion') {
-        deliveryPayment += 30; // Bono extra de $30
-    }
-    
-    // Bonus por entregar en menos de la mitad del tiempo (+10)
+    // Bonus
     const halfTimeBonus = timeUsedRatio <= 0.5 ? 10 : 0;
-    
-    // Bonus por tiempo restante (se mantiene para premiar la rapidez general)
     const timeBonus = Math.floor(timeLeft / 5) * 5;
     
     const totalEarned = deliveryPayment + halfTimeBonus + timeBonus;
@@ -4142,122 +4134,81 @@ function win() {
     
     // Actualizar display de dinero
     $('moneyDisplay').textContent = totalMoney;
+    
+    // GUARDADO SEGURO
     saveGameData();
     
-    // Determinar mensaje según tiempo
-    let speedMessage = '';
-    let messageStyle = '';
+    // --- PANTALLA DE VICTORIA ÚNICA Y RÁPIDA ---
     
-    // Umbral de tiempo "Rápido": menos de 15 segundos o menos del 50% del tiempo
-    const isFast = deliveryTime < 15 || timeUsedRatio < 0.5;
-
-    if (isFast) {
-        speedMessage = '🚀 ¡LLEGUÉ MUY RÁPIDO!';
-        messageStyle = 'font-size: 24px; font-weight: 900; color: #fbbf24; text-transform: uppercase; text-shadow: 0 2px 4px rgba(0,0,0,0.5); letter-spacing: 1px;';
-    } else {
-        speedMessage = '🐢 Te demoraste mucho. Pero estás a tiempo.';
-        messageStyle = 'font-size: 16px; font-weight: bold; color: #e2e8f0;';
-    }
-    
-    // Mostrar imagen del repartidor (Alternando entre 4 variaciones)
-    const overlayImage = $('overlayImage');
-    const deliveryImages = ['repartidor.jpeg', 'repartidor1.png', 'repartidor2.png', 'repartidor3.png'];
-    const imgIndex = (level - 1) % deliveryImages.length;
-    
-    // Asegurar que la imagen se cargue y se vea
-    overlayImage.src = deliveryImages[imgIndex];
-    overlayImage.className = ''; // Limpiar clases de Tailwind que puedan ocultarla (como .hidden)
-    overlayImage.style.display = 'block';
-    
-    // Configurar layout especial FULL SCREEN
-    const overlay = $('overlay');
-
-    // Ocultar elementos estándar de mensaje para modo WIN (sin destruir DOM)
-    ['overlayIcon', 'overlayTitle', 'overlaySubtitle', 'overlayBonus', 'overlayBtn'].forEach(id => {
-        const el = document.getElementById(id);
-        if(el) el.style.display = 'none';
-    });
-
-    // Forzar estilo FULL SCREEN al overlay
-    overlay.className = 'fixed inset-0 bg-black z-50 flex flex-col items-center justify-start'; 
-    overlay.style.padding = '40px 0 0 0'; // Padding superior
-    overlay.style.background = '#000';
-    overlay.classList.remove('hidden');
-    
-    // Título Superior "BUEN TRABAJO"
-
-    // --- REEMPLAZO TOTAL DEL OVERLAY DE VICTORIA ---
-    // Usamos el overlay existente pero cambiamos totalmente el contenido para la NUEVA PANTALLA DE TRANSICIÓN
-
-    $('overlay').classList.remove('hidden');
-    $('overlay').classList.remove('failure-bg');
-    
-    // Limpiar contenido previo del overlay (imágenes viejas, títulos viejos)
-    $('overlay').innerHTML = ''; // Limpieza radical
-    
-    // Configurar estilo del contenedor principal (Overlay)
     const ov = $('overlay');
+    ov.classList.remove('hidden', 'failure-bg');
+    ov.innerHTML = ''; // Limpieza total
+    
+    // Estilo full screen
+    ov.style.display = 'flex';
     ov.style.flexDirection = 'column';
     ov.style.justifyContent = 'center';
     ov.style.alignItems = 'center';
     ov.style.background = 'radial-gradient(circle at center, #1e293b 0%, #020617 100%)';
-    ov.style.padding = '20px';
+    ov.style.padding = '10px';
+    ov.style.zIndex = '1000'; // Superponer a todo
     
-    // 1. Número de Nivel (Next Level)
+    // 1. Número de Nivel (Next Level) - INSTANTÁNEO
     const nextLvlDiv = document.createElement('div');
     nextLvlDiv.className = 'level-transition-title';
-    nextLvlDiv.innerHTML = `<span class="text-slate-400 text-xl font-light uppercase tracking-widest">Nivel Completado</span><br><span class="text-7xl font-black text-white" style="text-shadow: 0 0 30px rgba(16,185,129,0.5);">${level}</span>`;
+    nextLvlDiv.innerHTML = `<span class="text-slate-400 text-lg font-light uppercase tracking-widest">Nivel Completado</span><br><span class="text-6xl font-black text-white" style="text-shadow: 0 0 30px rgba(16,185,129,0.5);">${level}</span>`;
     nextLvlDiv.style.textAlign = 'center';
-    nextLvlDiv.style.marginBottom = '20px';
-    nextLvlDiv.style.opacity = '0';
-    nextLvlDiv.style.transform = 'scale(0.8)';
-    nextLvlDiv.style.transition = 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    nextLvlDiv.style.marginBottom = '30px';
+    nextLvlDiv.style.animation = 'popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
     ov.appendChild(nextLvlDiv);
     
-    // 2. Stats (Monedas ganadas)
+    // 2. Stats (Monedas ganadas) - INSTANTÁNEO
     const statsDiv = document.createElement('div');
-    statsDiv.className = 'flex gap-4 mb-8 opacity-0 translate-y-4 transition-all duration-500 delay-300';
+    statsDiv.className = 'flex gap-4 mb-10';
+    statsDiv.style.animation = 'fadeIn 0.5s ease-out 0.2s backwards';
     statsDiv.innerHTML = `
-        <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700 backdrop-blur text-center min-w-[100px]">
+        <div class="bg-slate-800/50 p-3 rounded-2xl border border-slate-700 backdrop-blur text-center min-w-[90px]">
             <div class="text-3xl mb-1">💰</div>
             <div class="text-yellow-400 font-bold text-xl">+$${totalEarned}</div>
         </div>
         ${levelStars > 0 ? `
-        <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700 backdrop-blur text-center min-w-[100px]">
+        <div class="bg-slate-800/50 p-3 rounded-2xl border border-slate-700 backdrop-blur text-center min-w-[90px]">
             <div class="text-3xl mb-1">⭐</div>
             <div class="text-purple-400 font-bold text-xl">+${levelStars}</div>
         </div>` : ''}
     `;
     ov.appendChild(statsDiv);
 
-    // 3. Botón Continuar (Efecto Cristal)
+    // 3. Botón Continuar (Efecto Cristal) - RÁPIDO
     const btnContinue = document.createElement('button');
     btnContinue.innerHTML = `CONTINUAR <span style="font-size:1.2em">➝</span>`;
-    btnContinue.className = 'glass-btn-large opacity-0 translate-y-8 transition-all duration-500 delay-700';
+    btnContinue.className = 'glass-btn-large bounce-in';
+    btnContinue.style.animation = 'fadeInUp 0.5s ease-out 0.4s backwards';
+    
+    // LOGICA DE CLICK DIRECTO
     btnContinue.onclick = function() {
-        // Animación de salida al hacer click
-        ov.style.transition = 'opacity 0.5s ease';
-        ov.style.opacity = '0';
-        
-        // Efecto sonido
         if(typeof playSound === 'function') playSound('click');
+        
+        // Desaparición rápida
+        ov.style.transition = 'opacity 0.2s';
+        ov.style.opacity = '0';
         
         setTimeout(() => {
             ov.classList.add('hidden');
-            ov.style.opacity = '1'; // Reset para futuro
-            ov.innerHTML = ''; // Limpiar DOM
+            ov.style.opacity = '1';
+            ov.innerHTML = ''; 
             
-            // LÓGICA DE SIGUIENTE NIVEL
+            // AVANZAR
             level++;
-            // Guardar progreso del nuevo nivel alcanzado
             saveGameData(); 
-            // Generar nuevo nivel
-            generateLevel();
+            generateLevel(); // Esto llama al Anuncio de Nivel
             
-        }, 500);
+        }, 200);
     };
     
-    // Estilos inline para el botón cristal si no existen en CSS
+    ov.appendChild(btnContinue);
+    
+    // Ensure styles are injected
     if (!$('glassBtnStyles')) {
         const s = document.createElement('style');
         s.id = 'glassBtnStyles';
@@ -4265,7 +4216,6 @@ function win() {
             .glass-btn-large {
                 background: rgba(255, 255, 255, 0.1);
                 backdrop-filter: blur(10px);
-                -webkit-backdrop-filter: blur(10px);
                 border: 1px solid rgba(255, 255, 255, 0.2);
                 color: white;
                 font-size: 20px;
@@ -4273,51 +4223,18 @@ function win() {
                 padding: 18px 60px;
                 border-radius: 50px;
                 cursor: pointer;
-                box-shadow: 0 0 20px rgba(255, 255, 255, 0.1), inset 0 0 20px rgba(255, 255, 255, 0.05);
+                box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
                 text-transform: uppercase;
                 letter-spacing: 2px;
-                position: relative;
-                overflow: hidden;
-                transition: all 0.3s ease;
+                transition: all 0.2s ease;
             }
-            .glass-btn-large:active {
-                transform: scale(0.95);
-                background: rgba(255, 255, 255, 0.15);
-            }
-            .glass-btn-large::before {
-                content: '';
-                position: absolute;
-                top: 0; left: -100%;
-                width: 100%; height: 100%;
-                background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-                transition: left 0.5s;
-            }
-            .glass-btn-large:hover::before {
-                left: 100%;
-                transition: left 0.7s;
-            }
+            .glass-btn-large:active { transform: scale(0.95); background: rgba(255, 255, 255, 0.2); }
+            @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+            @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         `;
         document.head.appendChild(s);
     }
-    
-    ov.appendChild(btnContinue);
-    
-    // Trigger Animations
-    setTimeout(() => {
-        nextLvlDiv.style.opacity = '1';
-        nextLvlDiv.style.transform = 'scale(1)';
-    }, 100);
-    
-    setTimeout(() => {
-        statsDiv.classList.remove('opacity-0', 'translate-y-4');
-    }, 400);
-    
-    setTimeout(() => {
-        btnContinue.classList.remove('opacity-0', 'translate-y-8');
-    }, 800);
-    
-    // NOTA: No necesitamos cargar la imagen del repartidor ni el footer antiguo.
-    // Solo mostramos esta pantalla limpia de transición.
 }
 
 // Nueva función de reparación
