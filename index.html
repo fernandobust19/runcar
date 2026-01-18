@@ -452,115 +452,87 @@
     <div id="startScreen" class="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center z-50 overflow-y-auto" style="padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);">
         <div class="w-full max-w-md mx-auto px-4 py-6 flex flex-col min-h-full justify-between">
             
-            <!-- Header del menú -->
-            <div class="text-center mb-4">
-                <div class="text-5xl mb-2">🛵📦</div>
-                <h1 class="text-3xl font-bold text-emerald-400 mb-1">Delivery Rush</h1>
-                <p class="text-slate-400 text-sm">¡Entregas Rápidas!</p>
+            <!-- Header del menú COMPACTO -->
+            <div class="text-center mb-1 shrink-0">
+                <div class="flex items-center justify-center gap-2 mb-1">
+                    <span class="text-3xl">🛵</span>
+                    <h1 class="text-2xl font-bold text-emerald-400">Delivery Rush</h1>
+                </div>
             </div>
             
-            <!-- Contenido principal con scroll -->
-            <div class="flex-1 space-y-5">
+            <!-- Contenido principal SCROLLABLE -->
+            <div class="flex-1 overflow-y-auto space-y-2 px-1">
                 
                 <!-- Nombre del jugador -->
-                <div class="text-center">
-                    <label class="block text-slate-300 mb-2 text-sm font-medium">👤 Nombre del Repartidor</label>
-                    <input type="text" id="driverName" placeholder="Ingresa tu nombre" maxlength="12" autocomplete="off">
-                    <p id="welcomeBack" class="text-emerald-400 text-xs mt-1 hidden">¡Bienvenido de nuevo!</p>
-                    <p id="levelInfo" class="text-blue-400 text-xs mt-1 hidden">Nivel actual: <span id="currentLevel">1</span></p>
-                    <button onclick="resetPlayerProgress()" id="resetProgressBtn" class="text-red-400 text-xs mt-1 underline hover:text-red-300 hidden">🔄 Reiniciar desde nivel 1</button>
-                </div>
-                
-                <!-- Dinero guardado -->
-                <div id="savedMoneyDisplay" class="text-center hidden">
-                    <p class="text-yellow-400 font-bold text-lg">💰 Tu dinero: $<span id="savedMoneyAmount">0</span></p>
+                <div class="text-center bg-slate-800/50 p-2 rounded-lg">
+                    <input type="text" id="driverName" placeholder="Tu Nombre" maxlength="12" autocomplete="off" class="text-center bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm w-40 text-white placeholder-slate-500">
+                    <div class="flex items-center justify-center gap-2 text-[10px] mt-1">
+                        <span id="levelInfo" class="text-blue-400 hidden">Nivel: <span id="currentLevel">1</span></span>
+                        <div id="savedMoneyDisplay" class="hidden"><span class="text-yellow-400 font-bold">💰 $<span id="savedMoneyAmount">0</span></span></div>
+                    </div>
+                    <button onclick="resetPlayerProgress()" id="resetProgressBtn" class="text-red-400 text-[9px] underline mt-0.5 hidden">Reiniciar</button>
+                    <p id="welcomeBack" class="text-emerald-400 text-[10px] hidden">¡Hola de nuevo!</p>
                 </div>
                 
                 <!-- Selector de Empresa -->
-                <div>
-                    <label class="block text-slate-300 mb-2 text-sm font-medium text-center">🏢 Empresa de Delivery</label>
-                    <div class="flex justify-center gap-2 flex-wrap">
-                        <button onclick="selectCompany('rappi')" id="btn-rappi" class="company-btn selected">
-                            <img src="LOGO-RAPPI.png" alt="Rappi">
-                        </button>
-                        <button onclick="selectCompany('uber')" id="btn-uber" class="company-btn">
-                            <img src="UBER.png" alt="Uber">
-                        </button>
-                        <button onclick="selectCompany('pedidosya')" id="btn-pedidosya" class="company-btn">
-                            <img src="pedidosya.png" alt="PedidosYa">
-                        </button>
-                        <button onclick="selectCompany('indriver')" id="btn-indriver" class="company-btn">
-                            <img src="INDRIVER.png" alt="InDriver">
-                        </button>
-                        <button onclick="selectCompany('amazon')" id="btn-amazon" class="company-btn">
-                            <img src="amazon.png" alt="Amazon">
-                        </button>
-                        <button onclick="selectCompany('servientrega')" id="btn-servientrega" class="company-btn">
-                            <img src="SERVIENTREGA.png" alt="Servientrega">
-                        </button>
+                <div class="pb-1 border-b border-slate-700/50">
+                    <label class="block text-slate-400 text-[10px] font-bold text-center mb-1">EMPRESA</label>
+                    <div class="flex justify-center gap-1 flex-wrap">
+                        <button onclick="selectCompany('rappi')" id="btn-rappi" class="company-btn selected transform scale-90 m-0"><img src="LOGO-RAPPI.png" alt="Rappi"></button>
+                        <button onclick="selectCompany('uber')" id="btn-uber" class="company-btn transform scale-90 m-0"><img src="UBER.png" alt="Uber"></button>
+                        <button onclick="selectCompany('pedidosya')" id="btn-pedidosya" class="company-btn transform scale-90 m-0"><img src="pedidosya.png" alt="PY"></button>
+                        <button onclick="selectCompany('indriver')" id="btn-indriver" class="company-btn transform scale-90 m-0"><img src="INDRIVER.png" alt="In"></button>
+                        <button onclick="selectCompany('amazon')" id="btn-amazon" class="company-btn transform scale-90 m-0"><img src="amazon.png" alt="Am"></button>
+                        <button onclick="selectCompany('servientrega')" id="btn-servientrega" class="company-btn transform scale-90 m-0"><img src="SERVIENTREGA.png" alt="SE"></button>
                     </div>
                 </div>
                 
                 <!-- Selector de Vehículo -->
                 <div>
-                    <label class="block text-slate-300 mb-2 text-sm font-medium text-center">🚗 Vehículo</label>
-                    <div class="flex justify-center gap-2 flex-wrap">
-                        <button onclick="selectVehicle('moto')" id="btn-moto" class="vehicle-btn selected bg-slate-700 rounded-xl">
-                            <span class="text-2xl">🏍️</span>
-                            <p class="text-xs mt-1">Moto</p>
+                    <label class="block text-slate-400 text-[10px] font-bold text-center mb-1">VEHÍCULO</label>
+                    <div class="flex justify-center gap-1 flex-wrap">
+                        <button onclick="selectVehicle('moto')" id="btn-moto" class="vehicle-btn selected bg-slate-700 rounded-lg p-1 w-12 h-12">
+                            <span class="text-lg">🏍️</span>
                         </button>
-                        <button onclick="selectVehicle('car')" id="btn-car" class="vehicle-btn bg-slate-700 rounded-xl">
-                            <span class="text-2xl">🚗</span>
-                            <p class="text-xs mt-1">Auto</p>
+                        <button onclick="selectVehicle('car')" id="btn-car" class="vehicle-btn bg-slate-700 rounded-lg p-1 w-12 h-12">
+                            <span class="text-lg">🚗</span>
                         </button>
-                        <button onclick="selectVehicle('truck')" id="btn-truck" class="vehicle-btn bg-slate-700 rounded-xl">
-                            <span class="text-2xl">🛻</span>
-                            <p class="text-xs mt-1">Camioneta</p>
+                        <button onclick="selectVehicle('truck')" id="btn-truck" class="vehicle-btn bg-slate-700 rounded-lg p-1 w-12 h-12">
+                            <span class="text-lg">🛻</span>
                         </button>
-                    </div>
-                    
-                    <!-- Vehículos Premium -->
-                    <p class="text-yellow-400 text-xs text-center mt-3 mb-2">⭐ Vehículos Premium</p>
-                    <div class="flex justify-center gap-3">
-                        <button onclick="selectPremiumMoto()" id="btn-motoa" class="vehicle-btn bg-slate-700 rounded-xl relative">
-                            <img src="motoa.gif" alt="Moto Premium" class="w-10 h-10 object-contain mx-auto">
-                            <p class="text-xs text-yellow-400 mt-1">Moto PRO</p>
-                            <span id="motoLock" class="absolute -top-2 -right-2 text-lg">🔒</span>
-                            <span id="motoPrice" class="absolute -bottom-2 left-0 right-0 text-[9px] text-yellow-300 bg-slate-900/90 rounded-full py-0.5">$3,000</span>
+                        
+                        <!-- Premium integrados en la misma fila -->
+                        <button onclick="selectPremiumMoto()" id="btn-motoa" class="vehicle-btn bg-slate-800 rounded-lg p-1 w-12 h-12 relative border border-yellow-500/30">
+                            <img src="motoa.gif" class="w-6 h-6 object-contain mx-auto">
+                            <span id="motoLock" class="absolute top-0 right-0 text-[10px]">🔒</span>
                         </button>
-                        <button onclick="selectPremiumTruck()" id="btn-trucka" class="vehicle-btn bg-slate-700 rounded-xl relative">
-                            <img src="camionetaa.png" alt="Camioneta Premium" class="w-10 h-10 object-contain mx-auto">
-                            <p class="text-xs text-yellow-400 mt-1">Cami. PRO</p>
-                            <span id="truckLock" class="absolute -top-2 -right-2 text-lg">🔒</span>
-                            <span id="truckPrice" class="absolute -bottom-2 left-0 right-0 text-[9px] text-yellow-300 bg-slate-900/90 rounded-full py-0.5">$4,000</span>
+                        <button onclick="selectPremiumTruck()" id="btn-trucka" class="vehicle-btn bg-slate-800 rounded-lg p-1 w-12 h-12 relative border border-yellow-500/30">
+                            <img src="camionetaa.png" class="w-6 h-6 object-contain mx-auto">
+                            <span id="truckLock" class="absolute top-0 right-0 text-[10px]">🔒</span>
                         </button>
-                        <button onclick="selectPremiumCamion()" id="btn-camion" class="vehicle-btn bg-slate-700 rounded-xl relative">
-                            <img src="camion.png" alt="Camión Carga" class="w-10 h-10 object-contain mx-auto">
-                            <p class="text-xs text-yellow-400 mt-1">Camión</p>
-                            <span id="camionLock" class="absolute -top-2 -right-2 text-lg">🔒</span>
-                            <span id="camionPrice" class="absolute -bottom-2 left-0 right-0 text-[9px] text-yellow-300 bg-slate-900/90 rounded-full py-0.5">$5,000</span>
+                        <button onclick="selectPremiumCamion()" id="btn-camion" class="vehicle-btn bg-slate-800 rounded-lg p-1 w-12 h-12 relative border border-yellow-500/30">
+                            <img src="camion.png" class="w-6 h-6 object-contain mx-auto">
+                            <span id="camionLock" class="absolute top-0 right-0 text-[10px]">🔒</span>
                         </button>
                     </div>
                 </div>
                 
                 <!-- Selector de Color -->
-                <div>
-                    <label class="block text-slate-300 mb-2 text-sm font-medium text-center">🎨 Color del Vehículo</label>
-                    <div class="color-slider-container">
-                        <input type="range" min="0" max="100" value="0" class="color-slider" id="colorSlider" oninput="updateColorFromSlider(this.value)">
-                        <div class="color-preview" id="colorPreview" style="background: #1a1a1a;"></div>
+                <div class="px-4">
+                    <label class="block text-slate-400 text-[10px] font-bold text-center mb-1">COLOR</label>
+                    <div class="color-slider-container h-8">
+                        <input type="range" min="0" max="100" value="0" class="color-slider h-2" id="colorSlider" oninput="updateColorFromSlider(this.value)">
+                        <div class="color-preview w-4 h-4" id="colorPreview" style="background: #1a1a1a;"></div>
                     </div>
                 </div>
             </div>
             
-            <!-- Botón de inicio y footer -->
-            <div class="text-center mt-6 pb-4">
-                <button onclick="startGame()" class="btn-game bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 px-10 rounded-xl text-lg shadow-xl border-b-4 border-emerald-800 w-full max-w-xs">
-                    🛵 ¡A REPARTIR!
+            <!-- Botón de inicio y footer COMPACTO -->
+            <div class="text-center mt-2 pb-2 shrink-0">
+                <button onclick="startGame()" class="btn-game bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded-full text-base shadow-lg border-b-4 border-emerald-800 w-full max-w-[200px] mx-auto transform active:scale-95 transition-transform">
+                    PLAY ▶
                 </button>
-                
-                <p class="mt-4 text-slate-500 text-xs">👆 Toca fichas para girar | 📦 Entrega a tiempo</p>
-                <p class="text-slate-600 text-[10px] mt-1">Versión 1.0</p>
+                <p class="text-slate-600 text-[9px] mt-1">v1.2</p>
             </div>
         </div>
     </div>
@@ -674,8 +646,8 @@
         </div>
     
     <!-- Level Announcement Overlay -->
-    <div id="levelAnnouncement" class="hidden absolute inset-0 z-[60] bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center pointer-events-none transition-opacity duration-300">
-        <div class="transform scale-0 transition-transform duration-500 cubic-bezier(0.175, 0.885, 0.32, 1.275)" id="levelMsgBox">
+    <div id="levelAnnouncement" class="hidden absolute inset-0 z-[60] bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center transition-opacity duration-300 cursor-pointer">
+        <div class="transform scale-50 transition-transform duration-500 cubic-bezier(0.175, 0.885, 0.32, 1.275)" id="levelMsgBox">
             <h1 class="text-5xl font-black text-white drop-shadow-[0_0_15px_rgba(16,185,129,0.8)] tracking-tighter text-center">
                 <span class="block text-2xl text-emerald-400 font-bold mb-2 tracking-widest uppercase">Preparado para el</span>
                 NIVEL <span id="announceLevelNum" class="text-emerald-500">1</span>
@@ -2227,25 +2199,42 @@ function resize() {
     const config = LEVEL_CONFIG[Math.min(level - 1, 99)];
     COLS = config.cols; ROWS = config.rows;
     
-    // Priorizar ANCHO para móviles, pero mantener un tamaño tocable
-    const maxW = window.innerWidth - 10; // Margen pequeño
+    // Obtener el contenedor REAL disponible para el juego
+    const container = $('gameContainer');
+    // Usar el ancho/alto del contenedor, o fallback a ventana si no está visible
+    const availableW = container ? container.clientWidth : window.innerWidth;
+    const availableH = container ? container.clientHeight : window.innerHeight;
     
-    // Calcular tamaño ideal basado en ancho
-    let idealTileSize = Math.floor(maxW / COLS);
+    // Margen seguro para que no toque bordes
+    const margin = 10;
     
-    // ESTANDARIZACIÓN: Definir límites estrictos para evitar distorsión o "encogimiento" excesivo
-    // Mínimo 42px para garantizar jugabilidad (área de toque) y visibilidad de gráficos
-    const MIN_TILE_SIZE = 42; 
-    const MAX_TILE_SIZE = 65; // No demasiado grande en niveles iniciales
+    // Calcular tamaño basado en ANCHO (ajustado a columnas)
+    const sizeBasedOnWidth = Math.floor((availableW - margin) / COLS);
     
-    // Ajustar TILE_SIZE dentro de los rangos estándares
+    // Calcular tamaño basado en ALTO (ajustado a filas)
+    // Esto es clave para que "se adapte exactamente al alto"
+    const sizeBasedOnHeight = Math.floor((availableH - margin) / ROWS);
+    
+    // Elegimos el MENOR de los dos para asegurar que cabe tanto horizontal como verticalmente
+    let idealTileSize = Math.min(sizeBasedOnWidth, sizeBasedOnHeight);
+    
+    // LÍMITES:
+    // Mínimo reducido (32px) para permitir encajar en pantallas pequeñas con muchos niveles (muchas filas)
+    // Si la pantalla es MUY pequeña, ni modo, tendrá que hacer scroll (overflow-y-auto en CSS lo maneja)
+    const MIN_TILE_SIZE = 34;  // Reducido de 42
+    const MAX_TILE_SIZE = 60; // Reducido de 65
+    
+    // Aplicar límites
     TILE_SIZE = Math.min(Math.max(idealTileSize, MIN_TILE_SIZE), MAX_TILE_SIZE);
 
+    // Ajustar canvas
     canvas.width = COLS * TILE_SIZE; 
     canvas.height = ROWS * TILE_SIZE;
 
-    // ACTUALIZAR POSICIÓN DEL CARRO: Si se redimensiona, hay que recalcular su posición en píxeles
-    // para que siga en el centro de su celda (col, row).
+    // Centrar canvas en el contenedor si sobra espacio
+    // Usamos márgenes automáticos en CSS (flex justify-center), pero aseguramos re-render
+    
+    // ACTUALIZAR POSICIÓN DEL CARRO
     if (car) {
         car.x = car.col * TILE_SIZE + TILE_SIZE / 2;
         car.y = car.row * TILE_SIZE + TILE_SIZE / 2;
@@ -2564,7 +2553,11 @@ function generateLevel() {
     // Actualizar UI de Estrellas
     updateStarUI();
     
+    // Forzar redibujado múltiple para evitar pantallas negras en móviles
     resize();
+    setTimeout(resize, 50);
+    setTimeout(draw, 100);
+
     grid = new Array(COLS * ROWS).fill(null);
     specialTiles = [];
     
@@ -2586,41 +2579,53 @@ function generateLevel() {
 }
 
 // Nueva función de anuncio de nivel
+let announcementTimer = null; // Timer global para control
+
 function showLevelAnnouncement() {
     const overlay = $('levelAnnouncement');
     const msgBox = $('levelMsgBox');
     const levelNum = $('announceLevelNum');
     
+    // Limpiar timer anterior si existe
+    if (announcementTimer) clearTimeout(announcementTimer);
+
     // Set content
     if(levelNum) levelNum.textContent = level;
     
-    // Reset state
+    // Reset state visual
     overlay.classList.remove('hidden');
     overlay.classList.remove('opacity-0');
+    msgBox.classList.remove('scale-150'); // Reset exit zoom
     msgBox.classList.remove('scale-100');
-    msgBox.classList.add('scale-0');
+    msgBox.classList.add('scale-50'); // Start slightly smaller
     
-    // Animate In
-    requestAnimationFrame(() => {
-        msgBox.classList.remove('scale-0');
+    // Habilitar salto al tocar
+    overlay.onclick = function() {
+        if (announcementTimer) clearTimeout(announcementTimer);
+        overlay.classList.add('hidden'); // Ocultar inmediatamente
+        startCountdown(); // Empezar juego ya
+    };
+    
+    // Animate In (usar setTimeout para asegurar transición CSS)
+    setTimeout(() => {
+        msgBox.classList.remove('scale-50');
         msgBox.classList.add('scale-100');
-        
-        // Play sound if available
         if(typeof playSound === 'function') playSound('start');
-    });
+    }, 50);
     
     // Wait and Hide
-    setTimeout(() => {
+    announcementTimer = setTimeout(() => {
         overlay.classList.add('opacity-0'); // Fade out overlay
         msgBox.classList.remove('scale-100');
         msgBox.classList.add('scale-150'); // Zoom out effect
         
-        setTimeout(() => {
+        // Final removal
+        announcementTimer = setTimeout(() => {
             overlay.classList.add('hidden');
-            startCountdown(); // Start the game timer only after announcement
+            startCountdown(); 
         }, 300); // Wait for fade out
         
-    }, 1500); // Duration of message
+    }, 1800); // Tiempo visible un poco más largo para leer
 }
 
 function placeStart() {
@@ -4181,212 +4186,138 @@ function win() {
     
     // Título Superior "BUEN TRABAJO"
 
-    let titleHeader = $('winTitleHeader');
-    if (!titleHeader) {
-        titleHeader = document.createElement('div');
-        titleHeader.id = 'winTitleHeader';
-        overlay.appendChild(titleHeader);
-    }
-    titleHeader.style.display = 'block';
-    titleHeader.style.order = '1'; // FLEX ORDER 1
-    titleHeader.style.width = '100%';
-    titleHeader.style.textAlign = 'center';
-    titleHeader.style.zIndex = '60';
-    titleHeader.style.marginBottom = '20px';
-    
-    titleHeader.innerHTML = `
-        <h1 style="
-            color: #fbbf24; 
-            font-size: 36px; 
-            font-weight: 900; 
-            text-shadow: 3px 3px 6px rgba(0,0,0,0.9); 
-            letter-spacing: 2px; 
-            margin: 0;
-            font-family: 'Segoe UI', sans-serif;
-            text-transform: uppercase;
-        ">¡EXCELENTE TRABAJO!</h1>
-        <p style="color:white; font-size:20px; font-weight:600; text-shadow: 2px 2px 4px black; margin-top:10px;">Entrega completada con éxito</p>
-    `;
+    // --- REEMPLAZO TOTAL DEL OVERLAY DE VICTORIA ---
+    // Usamos el overlay existente pero cambiamos totalmente el contenido para la NUEVA PANTALLA DE TRANSICIÓN
 
-    // --- SECCIÓN DE ESTADÍSTICAS (Nuevo Requerimiento) ---
-    // Agregamos esto antes de la imagen
-    let statsContainer = $('winStatsContainer');
-    if (!statsContainer) {
-        statsContainer = document.createElement('div');
-        statsContainer.id = 'winStatsContainer';
-        overlay.appendChild(statsContainer);
-    }
-    statsContainer.style.display = 'flex'; // Reset display
-    statsContainer.style.order = '2'; // FLEX ORDER 2
-
-    // Estilos del contenedor de stats
-    statsContainer.style.position = 'relative'; // Cambio a position relative
-    statsContainer.style.width = '100%';
-    statsContainer.style.display = 'flex';
-    statsContainer.style.justifyContent = 'center';
-    statsContainer.style.gap = '20px';
-    statsContainer.style.zIndex = '60';
-    statsContainer.style.marginBottom = '20px'; // Espaciado entre stats e imagen
-
+    $('overlay').classList.remove('hidden');
+    $('overlay').classList.remove('failure-bg');
     
-    const moneyEarnedInRun = levelCoins * 20; // 20 por moneda
-    // TIEMPO SOBRANTE (Lo que faltó para terminar el tiempo total)
-    const timeSaved = timeLeft; 
+    // Limpiar contenido previo del overlay (imágenes viejas, títulos viejos)
+    $('overlay').innerHTML = ''; // Limpieza radical
     
-    // Generar HTML de las stats con animaciones CSS inline (REDUCIDO TAMAÑO)
-    statsContainer.innerHTML = `
-        <!-- ITEM 1: Monedas -->
-        <div class="stat-bubble pop-in" style="animation-delay: 0.2s">
-            <div style="font-size: 24px;">🪙</div>
-            <div class="stat-val text-yellow-400" style="font-size: 20px;">${levelCoins}</div>
-            <div class="stat-label" style="font-size: 10px;">Monedas</div>
+    // Configurar estilo del contenedor principal (Overlay)
+    const ov = $('overlay');
+    ov.style.flexDirection = 'column';
+    ov.style.justifyContent = 'center';
+    ov.style.alignItems = 'center';
+    ov.style.background = 'radial-gradient(circle at center, #1e293b 0%, #020617 100%)';
+    ov.style.padding = '20px';
+    
+    // 1. Número de Nivel (Next Level)
+    const nextLvlDiv = document.createElement('div');
+    nextLvlDiv.className = 'level-transition-title';
+    nextLvlDiv.innerHTML = `<span class="text-slate-400 text-xl font-light uppercase tracking-widest">Nivel Completado</span><br><span class="text-7xl font-black text-white" style="text-shadow: 0 0 30px rgba(16,185,129,0.5);">${level}</span>`;
+    nextLvlDiv.style.textAlign = 'center';
+    nextLvlDiv.style.marginBottom = '20px';
+    nextLvlDiv.style.opacity = '0';
+    nextLvlDiv.style.transform = 'scale(0.8)';
+    nextLvlDiv.style.transition = 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    ov.appendChild(nextLvlDiv);
+    
+    // 2. Stats (Monedas ganadas)
+    const statsDiv = document.createElement('div');
+    statsDiv.className = 'flex gap-4 mb-8 opacity-0 translate-y-4 transition-all duration-500 delay-300';
+    statsDiv.innerHTML = `
+        <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700 backdrop-blur text-center min-w-[100px]">
+            <div class="text-3xl mb-1">💰</div>
+            <div class="text-yellow-400 font-bold text-xl">+$${totalEarned}</div>
         </div>
-        
-        <!-- ITEM 2: Tiempo Sobrante -->
-        <div class="stat-bubble pop-in" style="animation-delay: 0.5s">
-             <div style="font-size: 24px;">⏱️</div>
-             <div class="stat-val text-blue-400" style="font-size: 20px;">${timeSaved}s</div>
-             <div class="stat-label" style="font-size: 10px;">Sobrante</div>
-        </div>
-        
-        <!-- ITEM 3: Estrellas (Solo si hay) -->
         ${levelStars > 0 ? `
-        <div class="stat-bubble pop-in" style="animation-delay: 0.8s">
-             <div style="font-size: 24px;">⭐</div>
-             <div class="stat-val text-purple-400" style="font-size: 20px;">${levelStars}</div>
-             <div class="stat-label" style="font-size: 10px;">Estrellas</div>
+        <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700 backdrop-blur text-center min-w-[100px]">
+            <div class="text-3xl mb-1">⭐</div>
+            <div class="text-purple-400 font-bold text-xl">+${levelStars}</div>
         </div>` : ''}
     `;
+    ov.appendChild(statsDiv);
+
+    // 3. Botón Continuar (Efecto Cristal)
+    const btnContinue = document.createElement('button');
+    btnContinue.innerHTML = `CONTINUAR <span style="font-size:1.2em">➝</span>`;
+    btnContinue.className = 'glass-btn-large opacity-0 translate-y-8 transition-all duration-500 delay-700';
+    btnContinue.onclick = function() {
+        // Animación de salida al hacer click
+        ov.style.transition = 'opacity 0.5s ease';
+        ov.style.opacity = '0';
+        
+        // Efecto sonido
+        if(typeof playSound === 'function') playSound('click');
+        
+        setTimeout(() => {
+            ov.classList.add('hidden');
+            ov.style.opacity = '1'; // Reset para futuro
+            ov.innerHTML = ''; // Limpiar DOM
+            
+            // LÓGICA DE SIGUIENTE NIVEL
+            level++;
+            // Guardar progreso del nuevo nivel alcanzado
+            saveGameData(); 
+            // Generar nuevo nivel
+            generateLevel();
+            
+        }, 500);
+    };
     
-    // Inyectar estilos CSS para las burbujas si no existen
-    if (!$('statsStyles')) {
+    // Estilos inline para el botón cristal si no existen en CSS
+    if (!$('glassBtnStyles')) {
         const s = document.createElement('style');
-        s.id = 'statsStyles';
+        s.id = 'glassBtnStyles';
         s.innerHTML = `
-            .stat-bubble {
-                background: rgba(15, 23, 42, 0.9);
-                border: 2px solid #475569;
-                border-radius: 15px;
-                padding: 10px 15px; /* Reducido padding */
-                min-width: 80px; /* Reducido ancho mínimo */
-                text-align: center;
-                backdrop-filter: blur(8px);
-                transform: scale(0);
-                animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-                box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            .glass-btn-large {
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                color: white;
+                font-size: 20px;
+                font-weight: 800;
+                padding: 18px 60px;
+                border-radius: 50px;
+                cursor: pointer;
+                box-shadow: 0 0 20px rgba(255, 255, 255, 0.1), inset 0 0 20px rgba(255, 255, 255, 0.05);
+                text-transform: uppercase;
+                letter-spacing: 2px;
+                position: relative;
+                overflow: hidden;
+                transition: all 0.3s ease;
             }
-            .stat-val { font-weight: 900; margin: 2px 0; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
-            .stat-label { color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; }
-            @keyframes popIn {
-                0% { transform: scale(0) translateY(40px); opacity: 0; }
-                100% { transform: scale(1) translateY(0); opacity: 1; }
+            .glass-btn-large:active {
+                transform: scale(0.95);
+                background: rgba(255, 255, 255, 0.15);
+            }
+            .glass-btn-large::before {
+                content: '';
+                position: absolute;
+                top: 0; left: -100%;
+                width: 100%; height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+                transition: left 0.5s;
+            }
+            .glass-btn-large:hover::before {
+                left: 100%;
+                transition: left 0.7s;
             }
         `;
         document.head.appendChild(s);
     }
     
-    // Sonidos secuenciales para cada stat que aparece
-    setTimeout(() => playSound('pop'), 200);
-    setTimeout(() => playSound('pop'), 500);
-    if(levelStars > 0) setTimeout(() => playSound('pop'), 800);
+    ov.appendChild(btnContinue);
     
-    // Imagen full screen (AJUSTADO: Completa y más pequeña)
-    overlayImage.style.display = 'block';
-    overlayImage.style.order = '3'; // FLEX ORDER 3
+    // Trigger Animations
+    setTimeout(() => {
+        nextLvlDiv.style.opacity = '1';
+        nextLvlDiv.style.transform = 'scale(1)';
+    }, 100);
     
-    overlayImage.style.width = 'auto'; // Auto width para mantener ratio
-    overlayImage.style.maxWidth = '90%'; // No exceder ancho pantalla
-    overlayImage.style.maxHeight = '45vh'; // Reducido un poco para dar espacio al botón abajo
-    overlayImage.style.height = 'auto'; 
-    overlayImage.style.objectFit = 'contain'; 
-    overlayImage.style.objectPosition = 'center'; 
-    overlayImage.style.borderRadius = '10px';
-    overlayImage.style.margin = '10px auto 0 auto'; // Reducido margen superior
-    overlayImage.style.border = '2px solid #334155'; // Borde sutil para ver si carga
-    overlayImage.style.zIndex = '55'; // Asegurar que esté por encima del fondo
+    setTimeout(() => {
+        statsDiv.classList.remove('opacity-0', 'translate-y-4');
+    }, 400);
     
-    // Aseguramos que la imagen está añadida al overlay después de los stats para que quede abajo en Flex
-    // PERO, solo si no está ya
-    if(overlayImage.parentNode !== overlay) {
-       overlay.appendChild(overlayImage);
-    }
-    // NOTA: Con Flex Order ya no necesitamos reordenar el DOM manualmente con appends, 
-    // pero nos aseguramos que estén en el overlay.
+    setTimeout(() => {
+        btnContinue.classList.remove('opacity-0', 'translate-y-8');
+    }, 800);
     
-    overlayImage.onerror = function() {
-        this.onerror = null;
-        this.src = 'INDRIVER.png'; // Fallback a una imagen que sabemos que existe
-    };
-
-    // Footer negro abajo con texto
-    let footer = $('overlayFooter');
-    if (!footer) {
-         footer = document.createElement('div');
-         footer.id = 'overlayFooter';
-         overlay.appendChild(footer);
-    }
-    footer.style.display = 'flex'; // Asegurar visible
-    footer.style.order = '4'; // FLEX ORDER 4
-    
-    footer.style.width = '100%';
-    footer.style.marginTop = 'auto'; // Empujarlo al fondo si es flex column
-    footer.style.paddingBottom = '80px'; // Mas espacio abajo para no chocar con barra de navegacion
-    footer.style.background = 'transparent'; // Reset default styles
-    footer.style.height = 'auto'; // Reset default styles
-    footer.className = '';
-    footer.style.position = 'static';
-    footer.style.borderTop = 'none';
-    footer.style.flexDirection = 'column';
-    footer.style.alignItems = 'center';
-    footer.style.justifyContent = 'center';
-    footer.style.zIndex = '60';
-    footer.style.boxSizing = 'border-box';
-    
-    // Botones (Mantener contenido pero ajustar contenedor)
-    // El contenido se define por innerHTML abajo, así que está bien resetear estilos aquí.
-    
-    footer.innerHTML = `
-        <div style="text-align: center; width: 100%;">
-             <div style="${messageStyle} margin-bottom: 5px;">${speedMessage}</div>
-             <div style="font-size: 20px; color: #4ade80; font-weight: bold;">
-                💰 Ganaste: $${totalEarned}
-             </div>
-        </div>
-        <button id="nextLevelBtnFooter" style="
-            background: linear-gradient(to right, #10b981, #059669); 
-            border: none; 
-            color: white; 
-            width: 90%;
-            height: 55px;
-            border-radius: 50px; 
-            font-weight: 800; 
-            font-size: 20px; 
-            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4); 
-            cursor: pointer; 
-            text-transform: uppercase;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        ">
-            CONTINUAR ➡
-        </button>
-    `;
-        // Asignar evento al botón nuevo del footer DIRECTAMENTE
-        const btn = document.getElementById('nextLevelBtnFooter');
-        if (btn) {
-            btn.onclick = nextLevel; 
-        }
-    
-    // Ocultar los elementos viejos del overlay que tapan la imagen
-    $('overlayIcon').classList.add('hidden');
-    $('overlayTitle').style.display = 'none'; 
-    $('overlaySubtitle').style.display = 'none'; 
-    $('overlayBonus').style.display = 'none'; 
-    $('overlayBtn').style.display = 'none'; 
-    
-    $('overlay').classList.remove('failure-bg');
-    $('overlay').classList.remove('hidden');
+    // NOTA: No necesitamos cargar la imagen del repartidor ni el footer antiguo.
+    // Solo mostramos esta pantalla limpia de transición.
 }
 
 // Nueva función de reparación
