@@ -4213,6 +4213,7 @@ function win() {
     
     // Estilo full screen
     ov.style.display = 'flex';
+    ov.style.opacity = '1'; // <--- CRÍTICO: Restaurar visibilidad por si quedó oculta
     ov.style.flexDirection = 'column';
     ov.style.justifyContent = 'center';
     ov.style.alignItems = 'center';
