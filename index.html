@@ -443,7 +443,7 @@
         }
     </style>
 </head>
-<body class="h-screen w-screen flex flex-col items-center justify-start pt-2 overflow-hidden">
+<body class="w-screen flex flex-col items-center justify-start pt-2 overflow-hidden bg-slate-900" style="height: 100vh; height: 100dvh;">
 
     <!-- PANTALLA DE INICIO - FULLSCREEN RESPONSIVE -->
     <div id="startScreen" class="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center z-50 overflow-y-auto" style="padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);">
@@ -1757,6 +1757,14 @@ class Tile {
 }
 
 function startGame() {
+    // Intentar activar pantalla completa
+    const doc = window.document;
+    const docEl = doc.documentElement;
+    const requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
+    if(requestFullScreen) {
+        try { requestFullScreen.call(docEl); } catch(e){}
+    }
+
     initAudio();
     driverName = $('driverName').value.trim() || "Repartidor";
     
@@ -2209,10 +2217,8 @@ function resize() {
     COLS = config.cols; ROWS = config.rows;
     
     // RESERVAR ESPACIO VERTICAL para UI (Header + Footer)
-    // Header: ~80px
-    // Footer (Dashboard + Botón + Apps): ~170px
-    // Total seguro: 250px
-    const footerSpace = 250;
+    // Aumentado a 350px para evitar que botones se oculten tras barra de navegación
+    const footerSpace = 350; 
     const availableHeight = window.innerHeight - footerSpace;
     const maxW = window.innerWidth - 8;
     
