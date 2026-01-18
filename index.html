@@ -672,12 +672,17 @@
     <img id="transitionMoto" src="motoa.gif" alt="Moto Transition">
 
     <!-- CAMBIO CRÍTICO: bg-slate-900 (Opaco) para tapar la carga -->
-    <div id="levelAnnouncement" class="hidden absolute inset-0 z-[60] bg-slate-900 flex flex-col items-center justify-center transition-opacity duration-300 cursor-pointer">
+    <div id="levelAnnouncement" class="hidden absolute inset-0 z-[60] bg-slate-900 flex flex-col items-center justify-center transition-opacity duration-300">
         <div class="transform scale-50 transition-transform duration-500 cubic-bezier(0.175, 0.885, 0.32, 1.275)" id="levelMsgBox">
             <h1 class="text-5xl font-black text-white drop-shadow-[0_0_15px_rgba(16,185,129,0.8)] tracking-tighter text-center">
                 <span class="block text-2xl text-emerald-400 font-bold mb-2 tracking-widest uppercase">Preparado para el</span>
                 NIVEL <span id="announceLevelNum" class="text-emerald-500">1</span>
             </h1>
+        </div>
+        <div id="levelStartBtn" class="absolute bottom-16 cursor-pointer">
+            <div class="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center text-white text-5xl animate-pulse shadow-lg ring-4 ring-emerald-500 ring-opacity-50 transition-transform active:scale-90">
+                <span>▶</span>
+            </div>
         </div>
     </div>
     
@@ -2316,8 +2321,8 @@ function generateLevel(showLoading = true) {
     resize();
     draw();
 
-    // Iniciar countdown
-    startCountdown();
+    // Mostrar anuncio de nivel
+    showLevelAnnouncement();
 
     // Ocultar overlay de carga en el siguiente frame
     if (lvlLoading && showLoading) {
@@ -2680,6 +2685,7 @@ function showLevelAnnouncement() {
     const overlay = $('levelAnnouncement');
     const msgBox = $('levelMsgBox');
     const levelNum = $('announceLevelNum');
+    const startBtn = $('levelStartBtn'); // Obtener el nuevo botón
     
     // Limpiar timer anterior si existe
     if (announcementTimer) clearTimeout(announcementTimer);
@@ -2688,53 +2694,45 @@ function showLevelAnnouncement() {
     if(levelNum) levelNum.textContent = level;
     
     // Asegurar que el juego está dibujado DEBAJO antes de mostrar el overlay
-    // Esto previene que al desaparecer el overlay se vea negro
     setTimeout(() => { resize(); draw(); }, 10);
 
     // Reset state visual
-    overlay.classList.remove('hidden');
-    overlay.classList.remove('opacity-0');
-    msgBox.classList.remove('scale-150'); // Reset exit zoom
-    msgBox.classList.remove('scale-100');
-    msgBox.classList.add('scale-50'); // Start slightly smaller
+    overlay.classList.remove('hidden', 'opacity-0');
+    msgBox.className = 'transform scale-50 transition-transform duration-500 cubic-bezier(0.175, 0.885, 0.32, 1.275)';
     
     // Función de cierre seguro
     const closeAnnouncement = () => {
         if (announcementTimer) clearTimeout(announcementTimer);
-        overlay.classList.add('hidden'); 
+        startBtn.onclick = null; // Limpiar listener del botón
+
+        overlay.classList.add('opacity-0'); // Iniciar fade out
+        msgBox.classList.remove('scale-100');
+        msgBox.classList.add('scale-150'); // Efecto de zoom out
         
-        // CRÍTICO: Redibujar TODO al ocultar para evitar pantalla negra
-        resize();
-        draw();
-        // Doble check por si acaso (mobile rendering glitches)
-        requestAnimationFrame(() => {
+        setTimeout(() => {
+            overlay.classList.add('hidden'); 
+            
+            // CRÍTICO: Redibujar TODO al ocultar para evitar pantalla negra
             resize();
             draw();
-        });
-        
-        startCountdown();
+            requestAnimationFrame(() => {
+                resize();
+                draw();
+            });
+            
+            startCountdown(); // Iniciar el timer del juego AHORA
+        }, 300); // Esperar que termine la animación de fade-out
     };
 
-    // Habilitar salto al tocar
-    overlay.onclick = closeAnnouncement;
-    
-    // Animate In
+    // Animar entrada
     setTimeout(() => {
         msgBox.classList.remove('scale-50');
         msgBox.classList.add('scale-100');
         if(typeof playSound === 'function') playSound('start');
     }, 50);
     
-    // Wait and Hide AUTOMATICALLY
-    announcementTimer = setTimeout(() => {
-        overlay.classList.add('opacity-0'); // Fade out overlay
-        msgBox.classList.remove('scale-100');
-        msgBox.classList.add('scale-150'); // Zoom out effect
-        
-        // Final removal
-        announcementTimer = setTimeout(closeAnnouncement, 300); 
-        
-    }, 1500); // 1.5s (un poco más rápido)
+    // Lógica de cierre: Asignar el click únicamente al nuevo botón
+    startBtn.onclick = closeAnnouncement;
 }
 
 function placeStart() {
