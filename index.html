@@ -3686,26 +3686,16 @@ function crash(msg) {
     
     // Eliminado el shake y el retardo, mostrar inmediatamente
     
-    // Configurar layout especial FULL SCREEN (Igual que WIN pero rojo/negro)
+    // Configurar layout especial FULL SCREEN (Igual que WIN - Alineado arriba)
     const overlay = $('overlay');
-    overlay.className = 'fixed inset-0 bg-black z-50 flex flex-col items-center justify-center'; 
-    overlay.style.padding = '0';
+    overlay.className = 'fixed inset-0 bg-black z-50 flex flex-col items-center justify-start'; 
+    overlay.style.padding = '40px 0 0 0'; // Padding superior
     overlay.style.background = 'black';
     
     // Imagen de fallo
     const overlayImage = $('overlayImage');
     overlayImage.src = 'fallo.jpeg';
     overlayImage.classList.remove('hidden');
-    
-    // ESTILOS AJUSTADOS (Completa y visible)
-    overlayImage.style.width = 'auto'; 
-    overlayImage.style.maxWidth = '95%'; 
-    overlayImage.style.height = 'auto'; 
-    overlayImage.style.maxHeight = '50vh'; 
-    overlayImage.style.objectFit = 'contain'; 
-    overlayImage.style.margin = '0 auto';
-    overlayImage.style.borderRadius = '10px';
-    overlayImage.style.display = 'block';
     
     // Título Superior "ALGO VA MAL"
     let titleHeader = $('winTitleHeader'); // Reutilizamos ID o creamos nuevo
@@ -3714,12 +3704,12 @@ function crash(msg) {
         titleHeader.id = 'winTitleHeader';
         overlay.appendChild(titleHeader);
     }
-    // Resetear estilos base
-    titleHeader.style.position = 'absolute';
-    titleHeader.style.top = '20px';
+    // ESTILOS AJUSTADOS AL DISEÑO DE WIN
+    titleHeader.style.position = 'static'; // Relativo al flujo
     titleHeader.style.width = '100%';
     titleHeader.style.textAlign = 'center';
     titleHeader.style.zIndex = '60';
+    titleHeader.style.marginBottom = '20px';
     
     titleHeader.innerHTML = `
         <h1 style="
@@ -3732,22 +3722,66 @@ function crash(msg) {
             font-family: 'Segoe UI', sans-serif;
             text-transform: uppercase;
         ">¡PEDIDO CANCELADO!</h1>
-        <p style="color:#fca5a5; font-size:14px; text-shadow: 1px 1px 3px black; margin-top:5px;">${msg}</p>
+        <p style="color:#fca5a5; font-size:18px; font-weight: 600; text-shadow: 1px 1px 3px black; margin-top:10px;">${msg}</p>
     `;
+
+    // Reordenar elementos para que la imagen quede debajo del título
+    overlay.innerHTML = ''; // Limpiamos para reordenar bien
+    // (Ojo: al limpiar perdemos los elementos, mejor re-append)
+    overlay.appendChild(titleHeader);
+    overlay.appendChild(overlayImage);
+
+    // ESTILOS DE IMAGEN
+    overlayImage.style.width = 'auto'; 
+    overlayImage.style.maxWidth = '90%'; 
+    overlayImage.style.height = 'auto'; 
+    overlayImage.style.maxHeight = '40vh'; // Igual que en WIN
+    overlayImage.style.objectFit = 'contain'; 
+    overlayImage.style.margin = '20px auto 0 auto';
+    overlayImage.style.borderRadius = '10px';
+    overlayImage.style.display = 'block';
+    overlayImage.style.border = '2px solid #ef4444'; // Borde rojo
 
     // Footer
     let footer = $('overlayFooter');
     if (!footer) {
          footer = document.createElement('div');
          footer.id = 'overlayFooter';
-         overlay.appendChild(footer);
+         // overlay.appendChild(footer); // Lo agregamos al final
     }
-    
-    footer.style.position = 'absolute';
-    footer.style.bottom = '0';
-    footer.style.left = '0';
+    overlay.appendChild(footer); // Agregamos footer al final
+
     footer.style.width = '100%';
-    footer.style.height = '40vh'; 
+    footer.style.marginTop = 'auto'; // Empujarlo al fondo si es flex column
+    footer.style.paddingBottom = '30px'; // Un poco de aire abajo
+    footer.style.position = 'static'; // Ya no absolute
+    footer.style.textAlign = 'center'; // Centrar botones
+    
+    // Botones
+    footer.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 15px; align-items: center; width: 100%;">
+            <button onclick="hideGameModal(); generateLevel();" class="btn-game" style="
+                background: #ef4444; 
+                color: white; 
+                padding: 15px 40px; 
+                border-radius: 50px; 
+                font-weight: bold; 
+                font-size: 18px; 
+                box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+                border-bottom: 4px solid #b91c1c;
+                min-width: 200px;
+            ">🔄 REINTENTAR</button>
+            
+            <button onclick="location.reload()" class="btn-game" style="
+                background: transparent; 
+                border: 2px solid #64748b; 
+                color: #94a3b8; 
+                padding: 10px 30px; 
+                border-radius: 50px; 
+                font-size: 14px;
+            ">🏠 Menú Principal</button>
+        </div>
+    `; 
     footer.style.background = '#1f1212'; // Rojo muy oscuro
     footer.style.borderTop = '4px solid #7f1d1d';
     footer.style.display = 'flex';
@@ -4069,28 +4103,28 @@ function win() {
     // TIEMPO SOBRANTE (Lo que faltó para terminar el tiempo total)
     const timeSaved = timeLeft; 
     
-    // Generar HTML de las stats con animaciones CSS inline
+    // Generar HTML de las stats con animaciones CSS inline (REDUCIDO TAMAÑO)
     statsContainer.innerHTML = `
         <!-- ITEM 1: Monedas -->
         <div class="stat-bubble pop-in" style="animation-delay: 0.2s">
-            <div style="font-size: 32px;">🪙</div>
-            <div class="stat-val text-yellow-400" style="font-size: 28px;">+${moneyEarnedInRun}</div>
-            <div class="stat-label" style="font-size: 12px;">Monedas</div>
+            <div style="font-size: 24px;">🪙</div>
+            <div class="stat-val text-yellow-400" style="font-size: 20px;">+${moneyEarnedInRun}</div>
+            <div class="stat-label" style="font-size: 10px;">Monedas</div>
         </div>
         
         <!-- ITEM 2: Tiempo Sobrante -->
         <div class="stat-bubble pop-in" style="animation-delay: 0.5s">
-             <div style="font-size: 32px;">⏱️</div>
-             <div class="stat-val text-blue-400" style="font-size: 28px;">${timeSaved}s</div>
-             <div class="stat-label" style="font-size: 12px;">Sobrante</div>
+             <div style="font-size: 24px;">⏱️</div>
+             <div class="stat-val text-blue-400" style="font-size: 20px;">${timeSaved}s</div>
+             <div class="stat-label" style="font-size: 10px;">Sobrante</div>
         </div>
         
         <!-- ITEM 3: Estrellas (Solo si hay) -->
         ${levelStars > 0 ? `
         <div class="stat-bubble pop-in" style="animation-delay: 0.8s">
-             <div style="font-size: 32px;">⭐</div>
-             <div class="stat-val text-purple-400" style="font-size: 28px;">${levelStars}</div>
-             <div class="stat-label" style="font-size: 12px;">Estrellas</div>
+             <div style="font-size: 24px;">⭐</div>
+             <div class="stat-val text-purple-400" style="font-size: 20px;">${levelStars}</div>
+             <div class="stat-label" style="font-size: 10px;">Estrellas</div>
         </div>` : ''}
     `;
     
@@ -4102,16 +4136,16 @@ function win() {
             .stat-bubble {
                 background: rgba(15, 23, 42, 0.9);
                 border: 2px solid #475569;
-                border-radius: 20px;
-                padding: 15px 20px;
-                min-width: 100px;
+                border-radius: 15px;
+                padding: 10px 15px; /* Reducido padding */
+                min-width: 80px; /* Reducido ancho mínimo */
                 text-align: center;
                 backdrop-filter: blur(8px);
                 transform: scale(0);
                 animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
                 box-shadow: 0 10px 25px rgba(0,0,0,0.5);
             }
-            .stat-val { font-weight: 900; margin: 5px 0; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+            .stat-val { font-weight: 900; margin: 2px 0; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
             .stat-label { color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; }
             @keyframes popIn {
                 0% { transform: scale(0) translateY(40px); opacity: 0; }
@@ -4129,12 +4163,12 @@ function win() {
     // Imagen full screen (AJUSTADO: Completa y más pequeña)
     overlayImage.style.width = 'auto'; // Auto width para mantener ratio
     overlayImage.style.maxWidth = '90%'; // No exceder ancho pantalla
-    overlayImage.style.maxHeight = '40vh'; // Un poco más grande ahora que hay espacio
+    overlayImage.style.maxHeight = '50vh'; // AGUJERO MAS GRANDE para la imagen (era 40vh)
     overlayImage.style.height = 'auto'; 
     overlayImage.style.objectFit = 'contain'; 
     overlayImage.style.objectPosition = 'center'; 
     overlayImage.style.borderRadius = '10px';
-    overlayImage.style.margin = '20px auto 0 auto'; // Margen arriba para separar de stats
+    overlayImage.style.margin = '10px auto 0 auto'; // Reducido margen superior
     overlayImage.style.display = 'block';
     overlayImage.style.border = '2px solid #334155'; // Borde sutil para ver si carga
     overlayImage.style.zIndex = '55'; // Asegurar que esté por encima del fondo
