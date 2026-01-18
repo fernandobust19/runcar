@@ -4880,6 +4880,26 @@ function drawCar() {
     const wheelColor = '#1f2937';
     const rimColor = '#9ca3af';
 
+    // Función auxiliar para dibujar imagenes manteniendo proporción (Contain)
+    const drawImageCentered = (img, maxSize) => {
+        if (!img.complete || img.naturalWidth === 0) return;
+        
+        const ratio = img.naturalWidth / img.naturalHeight;
+        let finalW = maxSize;
+        let finalH = maxSize;
+        
+        // Si es más ancho que alto
+        if (ratio > 1) {
+            finalH = maxSize / ratio;
+        } else {
+            // Si es más alto que ancho (o cuadrado)
+            finalW = maxSize * ratio;
+        }
+        
+        // Dibujar centrado
+        ctx.drawImage(img, -finalW / 2, -finalH / 2, finalW, finalH);
+    };
+
     // Función auxiliar para dibujar ruedas de perfil detalladas
     const drawSideWheel = (x, y, size) => {
         ctx.fillStyle = '#171717'; // Caucho
@@ -4902,18 +4922,9 @@ function drawCar() {
 
     if (selectedVehicle === 'motoa') {
         // MOTO PREMIUM: GIF animado
-        // Dibujamos centrado (-25, -25) con tamaño 50x50 (casi el tamaño base de 55)
-        // Como ya aplicamos ctx.scale arriba, se ajustará solo.
-        
-        // Ajuste de "Left" para motoa (flip si va a la izquierda)
-        // La imagen original mira a la derecha por defecto? Asumimos que sí.
-        // Si la imagen original mira a la izquierda, habría que invertir.
-        // Asumimos standar: mira a derecha.
-        
-        // CORRECCIÓN VISUAL: Centrado perfecto
-        ctx.scale(1, 1); // Reset de la escala interna si hubiera
-        // Dibujar imagen centrada en (0,0)
-        ctx.drawImage(vImgMoto, -27.5, -27.5, 55, 55); 
+        // CORRECCIÓN VISUAL: Usar escalado proporcional
+        ctx.scale(1, 1); 
+        drawImageCentered(vImgMoto, 55);
 
     } else if (selectedVehicle === 'moto') {
         // --- MOTO DE REPARTO (VISTA PERFIL) ---
@@ -5084,8 +5095,9 @@ function drawCar() {
 
     } else if (selectedVehicle === 'trucka') {
         // CAMIONETA PREMIUM
-        // Centrada en 0,0. Tamaño base ligeramente mayor al tile para que se vea imponente
-        ctx.drawImage(vImgTruck, -30, -30, 60, 60); 
+        // Centrada y proporcional. Usamos un area un poco mas grande porque suelen ser largas
+        drawImageCentered(vImgTruck, 65);
+        
     } else if (selectedVehicle === 'truck') {
         // --- CAMIÓN DE REPARTO (VISTA PERFIL) ---
         // Se debe ver el lado largo de la caja
@@ -5150,9 +5162,9 @@ function drawCar() {
     } else if (selectedVehicle === 'camion') {
         // CAMION CARGA (GRANDE)
         ctx.shadowBlur = 0;
-        // Centrado. Puede ser un poco más largo que alto.
-        // Base 55px. Le damos 70px de largo para que parezca camión.
-        ctx.drawImage(vImgCamion, -35, -35, 70, 70); 
+        // Proporcional. Max Size 75px
+        drawImageCentered(vImgCamion, 75);
+        
     } else if (selectedVehicle === 'motoa') {
 
     } else {
