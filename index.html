@@ -1440,19 +1440,12 @@ function buyVehicle(vehicleType) {
                 if (confirmed) {
                     totalMoney -= PREMIUM_CAMION_PRICE;
                     premiumCamionUnlocked = true;
-                    // Actualizar UI y guardar
                     $('moneyDisplay').textContent = totalMoney;
-                    $('shopMoney').textContent = totalMoney;
-                    if ($('camionLock')) $('camionLock').textContent = '⭐';
-                    if ($('camionPrice')) {
-                        $('camionPrice').textContent = 'TUYO';
-                        $('camionPrice').classList.add('text-emerald-400');
-                    }
-                    playSound('money');
-                    updateShopUI();
-                    saveGameData();
-                    // Seleccionar automáticamente el vehículo comprado
+                    $('camionLock').textContent = '⭐';
+                    $('camionPrice').textContent = 'TUYO';
+                    $('camionPrice').classList.add('text-emerald-400');
                     selectVehicle('camion');
+                    playSound('money');
                     showGameModal({
                         iconImage: 'camion.png',
                         title: '¡Compra Exitosa!',
@@ -1756,6 +1749,7 @@ const PREMIUM_CAMION_PRICE = 5000;
 let deliveryStartTime = 0; // Tiempo cuando comenzó la entrega
 let deliveryTimer = null; // Timer para la entrega
 let bridgesOwned = 0; // Número de puentes que tiene el jugador
+let semaphoreTimers = []; // Para gestionar y limpiar los ciclos de semáforos
 const BRIDGE_PRICE = 100; // Precio de cada puente
 
 const $ = id => document.getElementById(id);
@@ -2133,6 +2127,11 @@ function clearGameData() {
     }
 }
 
+function clearSemaphoreTimers() {
+    semaphoreTimers.forEach(t => clearTimeout(t));
+    semaphoreTimers = [];
+}
+
 function showMenu() {
     showConfirmModal({
         icon: '☰',
@@ -2146,6 +2145,8 @@ function showMenu() {
             cancelAnimationFrame(animationId);
             clearInterval(countdownTimer);
             clearInterval(engineSoundInterval);
+            clearInterval(deliveryTimer); // Corrección: Limpiar timer de entrega
+            clearSemaphoreTimers();
             
             // Guardar progreso antes de salir
             saveGameData();
@@ -2298,44 +2299,47 @@ function handleClick(e) {
         // Modo puente: convertir pieza en puente
         if (bridgeModeActive && tile && !tile.locked && tile.type !== TILE_TYPES.BLOCKED) {
             if (tile.type === TILE_TYPES.BRIDGE) {
-                showGameModal({
-                    icon: '🌉',
-                    title: 'Puente Existente',
-                    message: '<strong>Esta pieza ya es un puente</strong><br>🔗 Conecta con cualquier pieza',
-                    type: 'warning'
-                });
+                showGameModal({ icon: '🌉', title: 'Puente Existente', message: '<strong>Esta pieza ya es un puente</strong>', type: 'warning' });
                 return;
             }
             
-            // Verificar dinero antes de nada
-            if (totalMoney < BRIDGE_PRICE) {
+            // Verificar si puede pagar (Inventario o Dinero)
+            const canAfford = (bridgesOwned > 0) || (totalMoney >= BRIDGE_PRICE);
+
+            if (!canAfford) {
                 showGameModal({
                     icon: '💸',
-                    title: 'Dinero Insuficiente',
-                    message: `<strong>Necesitas $${BRIDGE_PRICE} para construir un puente</strong><br><br>💰 Tu dinero: <span style="color:#ef4444">$${totalMoney}</span>`,
+                    title: 'Recursos Insuficientes',
+                    message: `<strong>Necesitas $${BRIDGE_PRICE} o 1 puente</strong><br><br>💰 Tu dinero: <span style="color:#ef4444">$${totalMoney}</span><br>🌉 Inventario: 0`,
                     type: 'error'
                 });
                 return;
             }
 
+            const costMsg = bridgesOwned > 0 ? "Usar 1 de inventario" : `$${BRIDGE_PRICE}`;
+            const btnMsg = bridgesOwned > 0 ? "Usar Puente" : `Comprar (-$${BRIDGE_PRICE})`;
+
             showConfirmModal({
                 icon: '🌉',
                 title: 'Construir Puente',
-                message: `<strong>¿Construir puente aquí?</strong><br><br>🔗 Conecta todas las direcciones<br>💰 Costo: <span style="color:#fbbf24">$${BRIDGE_PRICE}</span>`,
+                message: `<strong>¿Construir puente aquí?</strong><br><br>🔗 Conecta todas las direcciones<br>💳 Costo: ${costMsg}`,
                 type: 'warning',
-                confirmText: `🔨 Construir (-$${BRIDGE_PRICE})`,
+                confirmText: btnMsg,
                 cancelText: '❌ Cancelar'
             }).then(confirmed => {
                 if (confirmed) {
-                    if (totalMoney < BRIDGE_PRICE) return;
-                    
-                    totalMoney -= BRIDGE_PRICE;
-                    $('moneyDisplay').textContent = totalMoney;
+                    if (bridgesOwned > 0) {
+                        bridgesOwned--;
+                    } else {
+                         if (totalMoney < BRIDGE_PRICE) return;
+                         totalMoney -= BRIDGE_PRICE;
+                         $('moneyDisplay').textContent = totalMoney;
+                    }
+                    if ($('bridgeCount')) $('bridgeCount').textContent = bridgesOwned;
                     
                     const oldType = tile.type;
                     tile.type = TILE_TYPES.BRIDGE;
                     tile.isBridge = true;
-                    // bridgesOwned ya no se usa como inventario
                     
                     saveGameData();
                     playSound('money');
@@ -2386,7 +2390,7 @@ function resetLevel() {
         showGameModal({
             icon: '💸',
             title: 'Dinero Insuficiente',
-            message: `<strong>No tienes suficiente dinero para reiniciar</strong><br><br>🎯 Necesitas: <span style="color:#fbbf24">$${RESET_COST}</span><br>💰 Tu dinero: $${totalMoney}<br><br>💡 Continúa jugando para ganar más dinero`,
+            message: `<strong>No tienes suficiente dinero para reiniciar</strong><br><br>🎯 Necesitas: <span style="color:#fbbf24">$${RESET_COST}</span><br>💰 Tu dinero: $${totalMoney}`,
             type: 'error'
         });
         return;
@@ -2403,12 +2407,13 @@ function resetLevel() {
         if (confirmed) {
             totalMoney -= RESET_COST;
             $('moneyDisplay').textContent = totalMoney;
-            saveGameData(); // Guardar el cambio de dinero
             
+            // Reiniciar manteniendo la posición de la casa
             cancelAnimationFrame(animationId);
             clearInterval(countdownTimer);
             clearInterval(engineSoundInterval);
             stopPrepAnimation();
+            clearSemaphoreTimers(); // Limpiar semáforos
             $('orderReady').classList.add('hidden');
         
             playSound('rotate'); // Sonido de confirmación
@@ -2526,55 +2531,13 @@ function instantDeliver() {
 function retryLevel() {
     const config = LEVEL_CONFIG[Math.min(level - 1, 99)];
     gameState = 'EDITING';
-    $('overlay').classList.add('hidden');
-    $('overlay').classList.remove('failure-bg');
+    
+    // FIX: Restaurar completamente el overlay (quitar estilos inline y clases de crash)
+    const ov = $('overlay');
+    ov.removeAttribute('style'); // Quitar estilos inline (display: flex, padding, etc)
+    ov.className = 'hidden absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-20 rounded-xl p-3';
+    
     $('btnStart').classList.remove('opacity-50', 'pointer-events-none');
-    
-    maxTime = config.time; timeLeft = maxTime;
-    $('timerDisplay').textContent = `⏱️ ${timeLeft}`;
-    $('timerDisplay').classList.remove('timer-warning');
-    $('progressBar').style.width = '100%';
-    $('progressBar').className = 'progress-bar h-full bg-emerald-500 rounded-full';
-    $('statusText').textContent = 'PREPARANDO PEDIDO';
-    $('statusText').className = 'text-yellow-400 font-bold text-xs';
-    $('levelHint').textContent = `📦 Pedido #${level} | 👆 Prepara la ruta de entrega`;
-    
-    startPrepAnimation();
-    
-    resize();
-    grid = new Array(COLS * ROWS).fill(null);
-    specialTiles = [];
-    
-    placeStart();
-    placeEnd(); // Usará la posición guardada porque el nivel no cambió
-    placeObstacles(config.obstacles);
-    
-    fillEmpty(config.deadEnds);
-    randomizeRotations();
-    addSpecials(config.features);
-    placeCoins(); // Colocar monedas al final
-    
-    resetCar();
-    checkConnections();
-    draw();
-    startCountdown();
-}
-
-function generateLevel() {
-    // 1. Mostrar anuncio PRIMERO (Queda debajo del overlay actual si existe, pero tapa el juego)
-    showLevelAnnouncement();
-
-    const config = LEVEL_CONFIG[Math.min(level - 1, 99)];
-    gameState = 'EDITING';
-    
-    // Las líneas para ocultar el overlay se han movido al FINAL de esta función
-    // para evitar que se vea el juego antes de estar listo.
-    
-    // Si cambió el nivel, limpiar la posición guardada de la casa
-    if (level !== currentLevelForEnd) {
-        savedEndPosition = null;
-        currentLevelForEnd = level;
-    }
     
     maxTime = config.time; timeLeft = maxTime;
     $('timerDisplay').textContent = `⏱️ ${timeLeft}`;
@@ -2617,10 +2580,11 @@ function generateLevel() {
     draw();
     
     // 2. REVELAR ESCENA FINAL
-    // Ocultamos el overlay de victoria/gameover AHORA, cuando ya tenemos
-    // el nivel generado y el anuncio de "Nivel X" puesto encima.
-    $('overlay').classList.add('hidden');
-    $('overlay').classList.remove('failure-bg');
+    // FIX CRÍTICO: Limpiar el overlay de residuos visuales de Crash/Win
+    // const ov = $('overlay'); // Usamos la variable ya definida al inicio
+    ov.removeAttribute('style'); // Borrar estilos persistentes
+    ov.className = 'hidden absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-20 rounded-xl p-3';
+
     if($('btnStart')) $('btnStart').classList.remove('opacity-50', 'pointer-events-none');
 }
 
@@ -2835,10 +2799,13 @@ function canReachEnd() {
             const key = `${nc},${nr}`;
             if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS && !visited.has(key)) {
                 const t = grid[nr * COLS + nc];
-                if (!t || t.type !== TILE_TYPES.BLOCKED) {
-                    visited.add(key);
-                    queue.push({ col: nc, row: nr });
-                }
+                if (!t || t.type === TILE_TYPES.BLOCKED) return;
+
+                const g = Math.abs(nc - startTile.col) + Math.abs(nr - startTile.row);
+                const h = Math.abs(nc - endTile.col) + Math.abs(nr - endTile.row);
+                
+                visited.add(key);
+                queue.push({ col: nc, row: nr, g: g, h: h });
             }
         });
     }
@@ -2928,10 +2895,7 @@ function ensureSolvablePath() {
             const nc = current.c + delta.dc;
             const nr = current.r + delta.dr;
 
-            if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS) {
-                const nKey = `${nc},${nr}`;
-                if (closedSet.has(nKey)) continue;
-
+            if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS && !closedSet.has(`${nc},${nr}`)) {
                 const tile = grid[nr * COLS + nc];
                 // Obstáculos bloquean
                 if (tile && tile.type === TILE_TYPES.BLOCKED) continue;
@@ -2949,7 +2913,6 @@ function ensureSolvablePath() {
                         // Dirección desde donde venimos hacia este nodo nuevo 
                         // (ej. si venimos del N, entramos por N a este nodo? No, 
                         // si venimos de (0,0) hacia (0,1) S, entramos por N en (0,1))
-                        // dir es direccion de movimiento. OPPOSITE[dir] es lado de entrada.
                         fromDir: OPPOSITE[dir] 
                     });
                 } else {
@@ -3068,19 +3031,19 @@ function orientPathTiles(path) {
         // Conexión con la pieza anterior
         if (i > 0) {
             const prev = path[i - 1];
-            if (prev.col < curr.col) neededConnections.push(DIR.W);
-            else if (prev.col > curr.col) neededConnections.push(DIR.E);
-            else if (prev.row < curr.row) neededConnections.push(DIR.N);
-            else if (prev.row > curr.row) neededConnections.push(DIR.S);
+            if (prev.col < curr.col) neededConnections.push(DIR.E); // Entrada por el Este
+            else if (prev.col > curr.col) neededConnections.push(DIR.W); // Entrada por el Oeste
+            else if ( prev.row < curr.row) neededConnections.push(DIR.S); // Entrada por el Sur
+            else if (prev.row > curr.row) neededConnections.push(DIR.N); // Entrada por el Norte
         }
         
         // Conexión con la pieza siguiente
         if (i < path.length - 1) {
             const next = path[i + 1];
-            if (next.col < curr.col) neededConnections.push(DIR.W);
-            else if (next.col > curr.col) neededConnections.push(DIR.E);
-            else if (next.row < curr.row) neededConnections.push(DIR.N);
-            else if (next.row > curr.row) neededConnections.push(DIR.S);
+            if (next.col < curr.col) neededConnections.push(DIR.E); // Salida por el Este
+            else if (next.col > curr.col) neededConnections.push(DIR.W); // Salida por el Oeste
+            else if (next.row < curr.row) neededConnections.push(DIR.S); // Salida por el Sur
+            else if (next.row > curr.row) neededConnections.push(DIR.N); // Salida por el Norte
         }
         
         // GARANTIZAR que la pieza tenga la rotación correcta
@@ -3145,7 +3108,8 @@ function checkConnections() {
         [DIR.N, DIR.E, DIR.S, DIR.W].forEach(dir => {
             if (conn & dir) {
                 const d = DIR_DELTA[dir];
-                const nc = curr.col + d.dc, nr = curr.row + d.dr;
+                const nc = curr.col + d.dc;
+                const nr = curr.row + d.dr;
                 if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS) {
                     const neighbor = grid[nr * COLS + nc];
                     if (neighbor && !neighbor.powered && neighbor.type !== TILE_TYPES.BLOCKED) {
@@ -3191,7 +3155,7 @@ function calculatePreviewPath() {
     // Si no detectamos dirección válida (ej. rotando), no mostramos nada
     if (currentFacingDir === null) return;
     
-    // VALIDAR PRIMER PASO FÍSICO
+    // VALIDACIÓN PRIMER PASO FÍSICO
     // La casilla actual debe tener salida ("connection") en esa direcciónFacing
     const startTile = grid[car.row * COLS + car.col];
     if (!startTile) return;
@@ -3223,10 +3187,10 @@ function calculatePreviewPath() {
     
     const nextIsPermissive = nextTile.type === TILE_TYPES.CROSS || nextTile.type === TILE_TYPES.BRIDGE || nextTile.isBridge;
     const nextConn = nextTile.getConnections();
-    const entrieNeeded = OPPOSITE[currentFacingDir];
+    const entryNeed = OPPOSITE[currentFacingDir];
     
     // Si el vecino es un tubo normal, debe tener conexión hacia mí
-    if (!nextIsPermissive && !(nextConn & entrieNeeded)) return;
+    if (!nextIsPermissive && !(nextConn & entryNeed)) return;
     
     // --- FIN VALIDACIÓN INICIAL ---
     // Si pasamos aquí, el primer paso es válido y alineado con la moto.
@@ -3573,6 +3537,9 @@ function timeExpired() {
 
 // Función para mostrar mensaje de salida del pedido
 function showOrderReady() {
+    // Verificar si el juego ya terminó (por tiempo) antes de mostrar
+    if (gameState === 'CRASHED') return;
+
     $('orderReady').classList.remove('hidden');
     $('statusText').textContent = '¡SALE EL PEDIDO!';
     $('statusText').className = 'text-emerald-400 font-bold text-xs pulse';
@@ -3581,6 +3548,13 @@ function showOrderReady() {
     
     // Después de mostrar el mensaje, iniciar el vehículo
     setTimeout(() => {
+        // PREVENCIÓN DE BUG: Si el tiempo se acabó durante la animación (gameState='CRASHED'),
+        // NO iniciar el auto.
+        if (gameState === 'CRASHED') {
+            $('orderReady').classList.add('hidden');
+            return;
+        }
+        
         $('orderReady').classList.add('hidden');
         actuallyStartCar();
     }, 1500);
@@ -3656,19 +3630,42 @@ function actuallyStartCar() {
         }
     }, 100);
     
+    // Limpiar timers anteriores por seguridad
+    clearSemaphoreTimers();
+
     specialTiles.forEach(tile => {
         if (tile.special === 'semaphore') {
-            const cycle = () => {
+            const runCycle = () => {
                 if (gameState !== 'RUNNING') return;
-                setTimeout(() => {
+                
+                // Ciclo: Rojo -> Amarillo -> Verde -> Rojo
+                // Empezamos asumiendo que está en rojo (establecido en generateLevel/addSpecials) o el estado actual
+                
+                // Tiempo de ROJO variable para desincronizar semáforos
+                const redTime = 1500 + Math.random() * 2000;
+                
+                const t1 = setTimeout(() => {
                     tile.semaphoreState = 'yellow'; draw();
-                    setTimeout(() => {
+                    
+                    const t2 = setTimeout(() => {
                         tile.semaphoreState = 'green'; draw();
-                        setTimeout(() => { tile.semaphoreState = 'red'; draw(); cycle(); }, 2500);
-                    }, 800);
-                }, 1500 + Math.random() * 1500);
+                        
+                        // Tiempo de VERDE
+                        const t3 = setTimeout(() => {
+                            tile.semaphoreState = 'red'; draw();
+                            runCycle(); // Reiniciar ciclo
+                        }, 2500); 
+                        semaphoreTimers.push(t3);
+                        
+                    }, 800); // Tiempo de AMARILLO (previo a verde)
+                    semaphoreTimers.push(t2);
+                    
+                }, redTime); // Tiempo inicial de ROJO
+                semaphoreTimers.push(t1);
             };
-            cycle();
+            
+            // Iniciar ciclo
+            runCycle();
         }
     });
     
@@ -3778,7 +3775,7 @@ function gameLoop() {
         const isMultiWay = tile?.type === TILE_TYPES.CROSS;
         
         if (!isBridge && !tile?.locked && !isMultiWay && !(conn & entry)) { 
-             crash('¡Sin entrada!'); return; 
+             crash('¡Ruta incorrecta!'); return; 
         }
         
         // Para CROSS, todas las direcciones son salidas válidas.
@@ -3857,167 +3854,77 @@ function crash(msg) {
     
     const overlay = $('overlay');
     
-    // Ocultar elementos estándar para no destruir el DOM
-    ['overlayIcon', 'overlayTitle', 'overlaySubtitle', 'overlayBonus', 'overlayBtn'].forEach(id => {
-        const el = document.getElementById(id);
-        if(el) el.classList.add('hidden');
-    });
-
-    // Configurar layout especial FULL SCREEN
+    // Configurar layout especial FULL SCREEN y asegurar visibilidad
     overlay.className = 'fixed inset-0 bg-black z-50 flex flex-col items-center justify-start'; 
     overlay.style.padding = '40px 0 0 0';
     overlay.style.background = 'black';
     overlay.classList.remove('hidden');
+    overlay.style.display = 'flex';
     
-    // Imagen de fallo
-    const overlayImage = $('overlayImage');
-    if (!overlayImage) return; // Seguridad
-    overlayImage.src = 'fallo.jpeg';
-    overlayImage.classList.remove('hidden');
-    
-    // Título Superior
-    let titleHeader = $('winTitleHeader');
-    if (!titleHeader) {
-        titleHeader = document.createElement('div');
-        titleHeader.id = 'winTitleHeader';
-        overlay.appendChild(titleHeader);
-    }
-    titleHeader.style.display = 'block'; // Asegurar visible
-    titleHeader.style.position = 'static';
-    titleHeader.style.width = '100%';
-    titleHeader.style.textAlign = 'center';
-    titleHeader.style.zIndex = '60';
-    titleHeader.style.marginBottom = '20px';
-    
-    titleHeader.innerHTML = `
-        <h1 style="
-            color: #ef4444; 
-            font-size: 32px; 
-            font-weight: 900; 
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.9); 
-            letter-spacing: 1px; 
-            margin: 0;
-            font-family: 'Segoe UI', sans-serif;
-            text-transform: uppercase;
-        ">¡PEDIDO CANCELADO!</h1>
-        <p style="color:#fca5a5; font-size:18px; font-weight: 600; text-shadow: 1px 1px 3px black; margin-top:10px;">${msg}</p>
-    `;
+    // Descontar dinero real
+    totalMoney = Math.max(0, totalMoney - 50);
+    $('moneyDisplay').textContent = totalMoney;
+    saveGameData();
 
-    // Footer
-    let footer = $('overlayFooter');
-    if (!footer) {
-         footer = document.createElement('div');
-         footer.id = 'overlayFooter';
-         overlay.appendChild(footer);
-    }
-    footer.classList.remove('hidden');
-    footer.style.display = 'block';
+    // RECONSTRUIR EL CONTENIDO COMPLETAMENTE para evitar errores si el DOM fue limpiado previamente
+    overlay.innerHTML = `
+        <div style="width:100%; text-align:center; margin-bottom:20px; z-index:60;">
+            <h1 style="color:#ef4444; font-size:32px; font-weight:900; text-shadow:2px 2px 4px rgba(0,0,0,0.9); text-transform:uppercase; margin:0; font-family:'Segoe UI', sans-serif;">
+                ¡PEDIDO CANCELADO!
+            </h1>
+            <p style="color:#fca5a5; font-size:18px; font-weight:600; text-shadow:1px 1px 3px black; margin-top:10px;">${msg}</p>
+        </div>
 
-    // REORDENAMIENTO VISUAL USANDO FLEX ORDER (Sin borrar DOM)
-    titleHeader.style.order = '1';
-    overlayImage.style.order = '2';
-    footer.style.order = '3';
-    
-    // Si hay stats container (del win), ocultarlo
-    if($('winStatsContainer')) $('winStatsContainer').style.display = 'none';
+        <img src="fallo.jpeg" style="
+            width: auto; 
+            max-width: 90%; 
+            height: auto; 
+            max-height: 45vh; 
+            object-fit: contain; 
+            margin: 10px auto;
+            border-radius: 10px;
+            border: 2px solid #ef4444;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        ">
 
-    // ESTILOS DE IMAGEN
-    overlayImage.style.width = 'auto'; 
-    overlayImage.style.maxWidth = '90%'; 
-    overlayImage.style.height = 'auto'; 
-    overlayImage.style.maxHeight = '50vh'; 
-    overlayImage.style.objectFit = 'contain'; 
-    overlayImage.style.margin = '20px auto 0 auto';
-    overlayImage.style.borderRadius = '10px';
-    overlayImage.style.border = '2px solid #ef4444'; // Borde rojo
-
-    // Asegurar que footer esté bien
-    footer.style.width = '100%';
-    footer.style.marginTop = 'auto'; // Empujarlo al fondo si es flex column
-    footer.style.paddingBottom = '30px'; // Un poco de aire abajo
-    footer.style.position = 'static'; // Ya no absolute
-    footer.style.textAlign = 'center';
-    footer.style.textAlign = 'center'; // Centrar botones
-    
-    // Botones
-    footer.innerHTML = `
-        <div style="display: flex; flex-direction: column; gap: 15px; align-items: center; width: 100%;">
-            <button onclick="hideGameModal(); generateLevel();" class="btn-game" style="
-                background: #ef4444; 
-                color: white; 
-                padding: 15px 40px; 
-                border-radius: 50px; 
-                font-weight: bold; 
-                font-size: 18px; 
-                box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
-                border-bottom: 4px solid #b91c1c;
-                min-width: 200px;
-            ">🔄 REINTENTAR</button>
+        <div style="width:100%; margin-top:auto; padding-bottom:30px; display:flex; flex-direction:column; align-items:center; z-index:60; background:#1f1212; border-top:4px solid #7f1d1d; padding-top:20px;">
+            <div style="font-size:14px; color:#fca5a5; margin-bottom:20px; display:flex; gap:10px; align-items:center;">
+                 <span>💥 Penalización: <b style="color:#ef4444">-$50</b></span>
+                 <span>🏦 Total: <b style="color:#ffffff">$${totalMoney}</b></span>
+            </div>
             
-            <button onclick="location.reload()" class="btn-game" style="
+            <button onclick="retryLevel()" style="
+                background: linear-gradient(to right, #f59e0b, #d97706); 
+                border: none; 
+                color: white; 
+                width: 85%; 
+                padding: 18px;
+                border-radius: 50px; 
+                font-weight: 800; 
+                font-size: 20px; 
+                box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); 
+                cursor: pointer; 
+                text-transform: uppercase;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+                margin-bottom: 15px;
+            ">
+                🔄 REINTENTAR
+            </button>
+            
+            <button onclick="location.reload()" style="
                 background: transparent; 
                 border: 2px solid #64748b; 
                 color: #94a3b8; 
                 padding: 10px 30px; 
                 border-radius: 50px; 
                 font-size: 14px;
+                cursor: pointer;
             ">🏠 Menú Principal</button>
         </div>
-    `; 
-    footer.style.background = '#1f1212'; // Rojo muy oscuro
-    footer.style.borderTop = '4px solid #7f1d1d';
-    footer.style.display = 'flex';
-    footer.style.flexDirection = 'column';
-    footer.style.alignItems = 'center';
-    footer.style.justifyContent = 'center';
-    footer.style.zIndex = '60';
-    footer.style.padding = '20px';
-    footer.style.boxSizing = 'border-box';
-    
-    // Reutilizamos el botón del footer pero con acción REINTENTAR
-    footer.innerHTML = `
-        <div style="font-size:14px; color:#fca5a5; margin-bottom:20px; display:flex; gap:10px; align-items:center;">
-             <span>💥 Penalización: <b style="color:#ef4444">-$50</b></span>
-             <span>🏦 Total: <b style="color:#ffffff">$${Math.max(0, totalMoney - 50)}</b></span>
-        </div>
-        <button id="retryBtnFooter" style="
-            background: linear-gradient(to right, #f59e0b, #d97706); 
-            border: none; 
-            color: white; 
-            width: 85%; 
-            padding: 18px;
-            border-radius: 50px; 
-            font-weight: 800; 
-            font-size: 20px; 
-            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); 
-            cursor: pointer; 
-            text-transform: uppercase;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        ">
-            🛵 OTRO PEDIDO
-        </button>
     `;
-    
-    // Asignar evento al botón directamente
-    const btn = document.getElementById('retryBtnFooter');
-    if(btn) btn.onclick = retryLevel;
-
-    // Ocultar elementos viejos
-    $('overlayIcon').classList.add('hidden');
-    $('overlayTitle').textContent = '';
-    $('overlaySubtitle').textContent = '';
-    $('overlayBonus').textContent = '';
-    $('overlayBtn').style.display = 'none'; 
-    
-    // Descontar dinero real
-    totalMoney = Math.max(0, totalMoney - 50);
-    $('moneyDisplay').textContent = totalMoney;
-    saveGameData();
-    
-    $('overlay').classList.remove('hidden');
 }
 
 function nextLevel() {
@@ -4401,7 +4308,16 @@ function draw() {
         drawPreviewPath();
     }
     
-    if (car) drawCar();
+    if (car) {
+        drawCar();
+        
+        // --- LÓGICA DE SEMÁFORO SOBREPUESTO ---
+        // Si el coche está en un semáforo ROJO, lo dibujamos encima y grande
+        const carTile = grid[car.row * COLS + car.col];
+        if (carTile && carTile.special === 'semaphore' && carTile.semaphoreState === 'red') {
+            drawGiantSemaphore(carTile);
+        }
+    }
     
     // DIBUJAR TEXTOS FLOTANTES
     if (window.floatingTexts && window.floatingTexts.length > 0) {
@@ -4451,7 +4367,6 @@ function drawPreviewPath() {
         
         // Si hay desplazamiento diagonal, dibujar en dos segmentos
         if (prevX !== currX && prevY !== currY) {
-            // Primero horizontal, luego vertical
             ctx.lineTo(currX, prevY);
             ctx.lineTo(currX, currY);
         } else {
@@ -4472,12 +4387,7 @@ function drawPreviewPath() {
         const currY = previewPath[i].y;
         
         // Si hay desplazamiento diagonal, dibujar en dos segmentos
-        if (prevX !== currX && prevY !== currY) {
-            ctx.lineTo(currX, prevY);
-            ctx.lineTo(currX, currY);
-        } else {
-            ctx.lineTo(currX, currY);
-        }
+        ctx.lineTo(currX, currY);
     }
     ctx.stroke();
     ctx.setLineDash([]);
@@ -4623,7 +4533,7 @@ function drawTile(tile) {
     if (!hasN) { ctx.moveTo(-h, -h); ctx.lineTo(h, -h); } // Tapa Sup
     if (!hasS) { ctx.moveTo(-h, h);  ctx.lineTo(h, h); }  // Tapa Inf
     if (!hasE) { ctx.moveTo(h, -h);  ctx.lineTo(h, h); }  // Tapa Der
-    if (!hasW) { ctx.moveTo(-h, -h); ctx.lineTo(-h, h); } // Tapa Izq
+    if (!hasW) { ctx.moveTo(-s/2, -h); ctx.lineTo(-s/2, h); } // Tapa Izq
     
     ctx.stroke();
     
@@ -4654,7 +4564,7 @@ function drawTile(tile) {
         // Sombra en el suelo (fija, no flota con la moneda)
         ctx.fillStyle = 'rgba(0,0,0,0.2)';
         ctx.beginPath();
-        ctx.ellipse(0, 10 - floatY, 6, 2, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 10 - floatY, 6, 2, 0, 0, Math.PI*2);
         ctx.fill();
         
         // Borde moneda
@@ -4793,7 +4703,8 @@ function drawTile(tile) {
         ctx.beginPath(); ctx.arc(cx, cy + 6, 2.5, 0, Math.PI * 2); ctx.fillStyle = cols.green; ctx.fill();
     } else if (tile.special === 'puddle') {
         ctx.fillStyle = 'rgba(59, 130, 246, 0.5)';
-        ctx.beginPath(); ctx.ellipse(cx, cy, TILE_SIZE * 0.12, TILE_SIZE * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(cx, cy, TILE_SIZE * 0.12, TILE_SIZE * 0.08, 0, 0, Math.PI * 2);
+        ctx.fill();
     } else if (tile.special === 'boost') {
         ctx.font = `${TILE_SIZE * 0.22}px sans-serif`;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -5058,7 +4969,7 @@ function drawCar() {
 
         // Ruedas (Al final para superponerse correctamente al chasis)
         drawSideWheel(-12, 8, 5.5);
-        drawSideWheel(14, 8, 5.5);
+        drawSideWheel(12, 8, 5.5);
 
         // Espejos Retrovisores (Extra detalle)
         ctx.fillStyle = '#334155';
@@ -5178,9 +5089,67 @@ function shadeColor(color, percent) {
     return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
 }
 
+function drawGiantSemaphore(tile) {
+    const cx = tile.col * TILE_SIZE + TILE_SIZE / 2;
+    const cy = tile.row * TILE_SIZE + TILE_SIZE / 2;
+    
+    ctx.save();
+    ctx.translate(cx, cy - 10); // Un poco hacia arriba para centrar mejor visualmente
+    
+    // Efecto de latido (Pulse) para urgencia
+    // Hacemos que sea "un poco más grande" como pidió el usuario (aprox 1.5x a 2x el tamaño normal visual)
+    const scale = 1.8 + Math.sin(Date.now() / 150) * 0.1; 
+    ctx.scale(scale, scale);
+    
+    // Sombra fuerte para dar efecto de "levitación" sobre el coche
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 15;
+    ctx.shadowOffsetY = 10;
+    
+    // Caja del semáforo (Estilo moderno)
+    ctx.fillStyle = '#111827'; // Negro casi puro
+    ctx.strokeStyle = '#fff'; // Borde blanco fino para contraste máximo
+    ctx.lineWidth = 0.5;
+    
+    ctx.beginPath();
+    // Usamos roundRect (polyfill incluido arriba)
+    ctx.roundRect(-6, -16, 12, 32, 3);
+    ctx.fill();
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+    
+    // LUCES
+    // ROJO (Activo y Brillante - ESTADO DE ALERTA)
+    const isRed = tile.semaphoreState === 'red';
+    ctx.fillStyle = isRed ? '#ff0000' : '#300';
+    if(isRed) {
+        ctx.shadowColor = '#ff0000';
+        ctx.shadowBlur = 15;
+    }
+    ctx.beginPath(); ctx.arc(0, -9, 3.5, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+    
+    // AMARILLO (Apagado generalmente en el estado gigante rojo, pero por si acaso)
+    const isYellow = tile.semaphoreState === 'yellow';
+    ctx.fillStyle = isYellow ? '#fbbf24' : '#221100';
+    ctx.beginPath(); ctx.arc(0, 0, 3.5, 0, Math.PI*2); ctx.fill();
+    
+    // VERDE (Apagado)
+    const isGreen = tile.semaphoreState === 'green';
+    ctx.fillStyle = isGreen ? '#22c55e' : '#001100';
+    ctx.beginPath(); ctx.arc(0, 9, 3.5, 0, Math.PI*2); ctx.fill();
+    
+    // Indicador Texto "STOP" pequeño
+    if(isRed) {
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 4px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText("STOP", 0, 19);
+    }
+    
+    ctx.restore();
+}
+
 window.onload = init;
-</script>
-</div>
-</body>
-</html>
 
