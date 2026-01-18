@@ -2619,63 +2619,10 @@ function instantDeliver() {
 
 // Función para reintentar el nivel manteniendo la posición de la casa
 function retryLevel() {
-    const config = LEVEL_CONFIG[Math.min(level - 1, 99)];
-    gameState = 'EDITING';
-    
-    // FIX: Restaurar completamente el overlay (quitar estilos inline y clases de crash)
-    const ov = $('overlay');
-    ov.removeAttribute('style'); // Quitar estilos inline (display: flex, padding, etc)
-    ov.className = 'hidden absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-20 rounded-xl p-3';
-    
-    $('btnStart').classList.remove('opacity-50', 'pointer-events-none');
-    
-    maxTime = config.time; timeLeft = maxTime;
-    $('timerDisplay').textContent = `⏱️ ${timeLeft}`;
-    $('timerDisplay').classList.remove('timer-warning');
-    $('progressBar').style.width = '100%';
-    $('progressBar').className = 'progress-bar h-full bg-emerald-500 rounded-full';
-    $('statusText').textContent = 'PREPARANDO PEDIDO';
-    $('statusText').className = 'text-yellow-400 font-bold text-xs';
-    $('levelHint').textContent = `📦 Pedido #${level} | 👆 Prepara la ruta de entrega`;
-    
-    // Actualizar indicador superior de nivel
-    const lvlDisplay = $('levelDisplay');
-    if (lvlDisplay) lvlDisplay.textContent = level;
-
-    // Mostrar animación de preparación
-    startPrepAnimation();
-    
-    // Actualizar UI de Estrellas
-    updateStarUI();
-    
-    // Forzar redibujado múltiple para evitar pantallas negras en móviles
-    resize();
-    setTimeout(resize, 50);
-    setTimeout(draw, 100);
-
-    grid = new Array(COLS * ROWS).fill(null);
-    specialTiles = [];
-    
-    placeStart();
-    placeEnd();
-    placeObstacles(config.obstacles);
-    ensureSolvablePath();
-    fillEmpty(config.deadEnds);
-    randomizeRotations();
-    addSpecials(config.features);
-    placeCoins(); // Agregar monedas al final cuando ya hay calles
-    
-    resetCar();
-    checkConnections();
-    draw();
-    
-    // 2. REVELAR ESCENA FINAL
-    // FIX CRÍTICO: Limpiar el overlay de residuos visuales de Crash/Win
-    // const ov = $('overlay'); // Usamos la variable ya definida al inicio
-    ov.removeAttribute('style'); // Borrar estilos persistentes
-    ov.className = 'hidden absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-20 rounded-xl p-3';
-
-    if($('btnStart')) $('btnStart').classList.remove('opacity-50', 'pointer-events-none');
+    // Se llama a generateLevel() para asegurar un comportamiento consistente
+    // al reiniciar o pasar de nivel, incluyendo la pantalla "Preparado para el nivel".
+    // Esto también reduce la duplicación de código.
+    generateLevel();
 }
 
 // Nueva función de anuncio de nivel
