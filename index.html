@@ -614,6 +614,8 @@
                 <button id="overlayBtn" class="bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-2 px-6 rounded-full shadow-lg btn-game text-sm">Siguiente</button>
                 <p class="text-white text-xs mt-3 opacity-90" id="overlayFooter"></p>
             </div>
+            <!-- Overlay de carga corto para evitar flicker al generar niveles -->
+            <div id="levelLoading" class="hidden fixed inset-0 z-[80] bg-black/95"></div>
         </div>
 
         <!-- ZONA INFERIOR FIJA: Contenedor para todos los controles -->
@@ -754,6 +756,9 @@
     </div>
 
 <script>
+// Helper function para obtener elementos por ID
+const $ = id => document.getElementById(id);
+
 // --- SISTEMA DE MÚSICA Y VELOCÍMETRO ---
 // Variables Globales
 let musicPlaylist = [];
@@ -1752,8 +1757,6 @@ let bridgesOwned = 0; // Número de puentes que tiene el jugador
 let semaphoreTimers = []; // Para gestionar y limpiar los ciclos de semáforos
 const BRIDGE_PRICE = 100; // Precio de cada puente
 
-const $ = id => document.getElementById(id);
-
 class Tile {
     constructor(col, row, type, rotation = 0) {
         this.col = col; this.row = row; this.type = type;
@@ -1806,7 +1809,8 @@ function startGame() {
         level = 1;
     }
     $('levelDisplay').textContent = level;
-    generateLevel();
+    // Generar nivel sin overlay de carga para evitar pantalla negra inicial
+    generateLevel(false);
     
     // Forzar un resize inicial para asegurar layouts correctos
     setTimeout(resize, 100);
@@ -2240,6 +2244,87 @@ function init() {
     
     window.addEventListener('resize', () => { if (gameState !== 'START') { resize(); draw(); } });
     canvas.addEventListener('pointerdown', handleClick);
+}
+
+// Genera el nivel actual: prepara grid, UI y piezas
+function generateLevel(showLoading = true) {
+    // Configuración por nivel
+    const config = LEVEL_CONFIG[Math.min(level - 1, 99)];
+    COLS = config.cols; ROWS = config.rows;
+
+    // Estado del juego y limpieza de overlay
+    gameState = 'EDITING';
+    bridgeModeActive = false;
+    const ov = $('overlay');
+    if (ov) {
+        ov.removeAttribute('style');
+        ov.className = 'hidden absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-20 rounded-xl p-3';
+        ov.style.display = '';
+    }
+    // Rehabilitar botón ENTREGAR por si quedó deshabilitado tras el nivel previo
+    const startBtn = $('btnStart');
+    if (startBtn) startBtn.classList.remove('opacity-50', 'pointer-events-none');
+    // Ocultar mensaje "SALE" si quedó visible
+    const orderReadyEl = $('orderReady');
+    if (orderReadyEl) orderReadyEl.classList.add('hidden');
+    // Mostrar overlay de carga muy breve para evitar flicker
+    const lvlLoading = $('levelLoading');
+    if (lvlLoading && showLoading) lvlLoading.classList.remove('hidden');
+
+    // Inicializar tablero
+    grid = new Array(COLS * ROWS).fill(null);
+    specialTiles = [];
+
+    // Timers y UI
+    maxTime = config.time; 
+    timeLeft = maxTime;
+    if ($('timerDisplay')) {
+        $('timerDisplay').textContent = `⏱️ ${timeLeft}`;
+        $('timerDisplay').classList.remove('timer-warning');
+    }
+    if ($('progressBar')) {
+        $('progressBar').style.width = '100%';
+        $('progressBar').className = 'progress-bar h-full bg-emerald-500 rounded-full';
+    }
+    if ($('statusText')) {
+        $('statusText').textContent = 'PREPARANDO PEDIDO';
+        $('statusText').className = 'text-yellow-400 font-bold text-xs';
+    }
+    if ($('levelHint')) {
+        $('levelHint').textContent = `📦 Pedido #${level} | 👆 Prepara la ruta de entrega`;
+    }
+
+    // Animación de preparación y estrellas
+    startPrepAnimation();
+    updateStarUI();
+
+    // Construcción del nivel
+    placeStart();
+    placeEnd();
+    placeObstacles(config.obstacles);
+    ensureSolvablePath();
+    fillEmpty(config.deadEnds);
+    randomizeRotations();
+    addSpecials(config.features);
+    placeCoins();
+
+    // Carro y conexiones
+    resetCar();
+    checkConnections();
+
+    // Ajuste visual y dibujado
+    resize();
+    draw();
+
+    // Iniciar countdown
+    startCountdown();
+
+    // Ocultar overlay de carga en el siguiente frame
+    if (lvlLoading && showLoading) {
+        requestAnimationFrame(() => {
+            lvlLoading.classList.add('hidden');
+        });
+    }
 }
 
 function resize() {
@@ -3849,6 +3934,7 @@ function gameLoop() {
 
 function crash(msg) {
     gameState = 'CRASHED';
+    cancelAnimationFrame(animationId); // Detener el loop del juego
     clearInterval(countdownTimer); clearInterval(engineSoundInterval); clearInterval(deliveryTimer);
     playSound('crash');
     
@@ -4502,6 +4588,8 @@ function drawTile(tile) {
     // pero SIN cerrar las conexiones (entradas/salidas).
     ctx.strokeStyle = '#cccccc'; 
     ctx.lineWidth = 3;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
     ctx.beginPath();
     
     const hasN = (conn & DIR.N);
@@ -4533,7 +4621,7 @@ function drawTile(tile) {
     if (!hasN) { ctx.moveTo(-h, -h); ctx.lineTo(h, -h); } // Tapa Sup
     if (!hasS) { ctx.moveTo(-h, h);  ctx.lineTo(h, h); }  // Tapa Inf
     if (!hasE) { ctx.moveTo(h, -h);  ctx.lineTo(h, h); }  // Tapa Der
-    if (!hasW) { ctx.moveTo(-s/2, -h); ctx.lineTo(-s/2, h); } // Tapa Izq
+    if (!hasW) { ctx.moveTo(-h, -h); ctx.lineTo(-h, h); } // Tapa Izq (corregido)
     
     ctx.stroke();
     
@@ -5153,3 +5241,6 @@ function drawGiantSemaphore(tile) {
 
 window.onload = init;
 
+</script>
+</body>
+</html>
