@@ -562,109 +562,112 @@
         </div>
     </div>
 
-    <!-- Header -->
-    <div class="w-full p-1 flex justify-between items-center z-10 bg-slate-900/50 backdrop-blur-sm relative">
-        <div class="bg-slate-800/95 px-2 py-1 rounded-lg border border-slate-600 shadow-md flex items-center gap-1.5">
-            <img id="companyLogo" src="LOGO-RAPPI.png" alt="Empresa" class="w-8 h-8 rounded-md object-contain bg-white p-0.5">
-            <div>
-                <p class="text-emerald-400 font-bold text-xs"><span id="vehicleIcon">🏍️</span> <span id="driverDisplay">Repartidor</span></p>
-                <p class="text-[10px] text-slate-400">Pedido <span id="levelDisplay">1</span>/100</p>
-                <p class="text-yellow-400 font-bold text-xs">💰 $<span id="moneyDisplay">0</span></p>
-            </div>
-        </div>
-        
-        <!-- Preparación del pedido - En el header -->
-        <div id="prepContainer" class="prep-container hidden">
-            <div class="prep-icon text-2xl">📦</div>
-            <div class="prep-info">
-                <span class="prep-text text-[10px]" id="prepText">Preparando...</span>
-                <div class="prep-bar-container w-20 h-1.5">
-                    <div class="prep-bar filling" id="prepBar"></div>
+    <!-- WRAPPER DE LA INTERFAZ DE JUEGO (Oculto al inicio) -->
+    <div id="gameInterface" class="hidden flex flex-col h-full w-full relative">
+
+        <!-- Header -->
+        <div class="w-full p-1 flex justify-between items-center z-10 bg-slate-900/50 backdrop-blur-sm relative shrink-0">
+            <div class="bg-slate-800/95 px-2 py-1 rounded-lg border border-slate-600 shadow-md flex items-center gap-1.5">
+                <img id="companyLogo" src="LOGO-RAPPI.png" alt="Empresa" class="w-8 h-8 rounded-md object-contain bg-white p-0.5">
+                <div>
+                    <p class="text-emerald-400 font-bold text-xs"><span id="vehicleIcon">🏍️</span> <span id="driverDisplay">Repartidor</span></p>
+                    <p class="text-[10px] text-slate-400">Pedido <span id="levelDisplay">1</span>/100</p>
+                    <p class="text-yellow-400 font-bold text-xs">💰 $<span id="moneyDisplay">0</span></p>
                 </div>
             </div>
-        </div>
-        
-        <div id="statusContainer" class="bg-slate-800/95 px-2 py-1 rounded-lg border border-slate-600 shadow-md flex flex-col items-center">
-            <span id="statusText" class="text-yellow-400 font-bold text-[10px]">PREPARA LA RUTA</span>
-            <div class="w-20 h-1 bg-slate-700 rounded-full mt-0.5 overflow-hidden">
-                <div id="progressBar" class="progress-bar h-full bg-emerald-500 rounded-full" style="width: 100%"></div>
-            </div>
-        </div>
-        <div class="bg-slate-800/95 px-2 py-1 rounded-lg border border-slate-600 shadow-md">
-            <span id="timerDisplay" class="text-blue-400 font-bold text-sm">⏱️ 30</span>
-        </div>
-    </div>
-
-    <!-- Game Area - Ajustado height para que siempre haya espacio para los controles -->
-    <div class="relative p-1 overflow-y-auto w-full flex justify-center items-start scroll-smooth flex-grow" id="gameContainer" style="min-height: 200px;">
-        <canvas id="gameCanvas"></canvas>
-        
-        <!-- Mensaje de salida del pedido -->
-        <div id="orderReady" class="order-ready hidden">
-            <img src="sale.jpg" alt="¡SALE EL PEDIDO!">
-        </div>
-        
-        <div id="overlay" class="hidden absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-20 rounded-xl p-3">
-            <img id="overlayImage" src="" alt="" class="hidden w-48 h-48 object-cover rounded-2xl border-4 border-emerald-400 mb-3 shadow-2xl">
-            <div class="text-5xl mb-2 animate-bounce" id="overlayIcon">🏆</div>
-            <h2 class="text-xl font-bold mb-1 text-white text-center" id="overlayTitle"></h2>
-            <p class="text-slate-300 text-xs mb-1 text-center" id="overlaySubtitle"></p>
-            <p class="text-yellow-400 text-[10px] mb-3" id="overlayBonus"></p>
-            <button id="overlayBtn" class="bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-2 px-6 rounded-full shadow-lg btn-game text-sm">Siguiente</button>
-            <p class="text-white text-xs mt-3 opacity-90" id="overlayFooter"></p>
-        </div>
-    </div>
-
-    <!-- ZONA INFERIOR FIJA: Contenedor para todos los controles -->
-    <!-- shrink-0 evita que flex reduzca su tamaño -->
-    <div class="w-full shrink-0 flex flex-col gap-1 z-30 bg-slate-900 pb-1" style="box-shadow: 0 -4px 10px rgba(0,0,0,0.3);">
-        
-        <!-- Hint -->
-        <div class="text-center text-slate-400 text-[10px] mt-0.5 px-2">
-            <p id="levelHint">Prepara la ruta de entrega 📦</p>
-        </div>
-
-        <!-- DASHBOARD: Velocímetro y Música -->
-        <div class="w-full flex justify-between items-end px-2 mb-1 gap-1" style="max-height: 50px;">
-            <!-- Velocímetro Analógico -->
-            <div class="bg-slate-800/90 border border-slate-600 rounded-lg p-0 flex items-center justify-center w-[90px] h-[50px] relative overflow-hidden">
-                <canvas id="speedoCanvas" width="90" height="50"></canvas>
-            </div>
-            <!-- Reproductor -->
-            <div class="flex-1 bg-slate-800/90 border border-slate-600 rounded-lg p-1 flex flex-col justify-center h-[45px]">
-                <div class="overflow-hidden w-full whitespace-nowrap mb-0.5"><div id="trackInfo" class="text-[9px] text-cyan-300 font-mono">🎵 Música</div></div>
-                <div class="flex justify-between items-center px-1">
-                   <button onclick="$('musicInput').click()" class="text-slate-300 hover:text-white text-[10px] bg-slate-700/50 px-1 rounded">📂</button>
-                   <input type="file" id="musicInput" accept="audio/*" multiple class="hidden" onchange="handleMusicUpload(this)">
-                    <div class="flex gap-2">
-                        <button onclick="prevTrack()" class="text-slate-300 hover:text-white text-xs">⏮️</button>
-                        <button onclick="toggleMusicPlay()" id="playBtn" class="text-emerald-400 hover:text-emerald-300 text-sm leading-none font-bold">▶️</button>
-                        <button onclick="nextTrack()" class="text-slate-300 hover:text-white text-xs">⏭️</button>
+            
+            <!-- Preparación del pedido - En el header -->
+            <div id="prepContainer" class="prep-container hidden">
+                <div class="prep-icon text-2xl">📦</div>
+                <div class="prep-info">
+                    <span class="prep-text text-[10px]" id="prepText">Preparando...</span>
+                    <div class="prep-bar-container w-20 h-1.5">
+                        <div class="prep-bar filling" id="prepBar"></div>
                     </div>
                 </div>
             </div>
+            
+            <div id="statusContainer" class="bg-slate-800/95 px-2 py-1 rounded-lg border border-slate-600 shadow-md flex flex-col items-center">
+                <span id="statusText" class="text-yellow-400 font-bold text-[10px]">PREPARA LA RUTA</span>
+                <div class="w-20 h-1 bg-slate-700 rounded-full mt-0.5 overflow-hidden">
+                    <div id="progressBar" class="progress-bar h-full bg-emerald-500 rounded-full" style="width: 100%"></div>
+                </div>
+            </div>
+            <div class="bg-slate-800/95 px-2 py-1 rounded-lg border border-slate-600 shadow-md">
+                <span id="timerDisplay" class="text-blue-400 font-bold text-sm">⏱️ 30</span>
+            </div>
         </div>
 
-        <!-- Botón Principal ENTREGAR -->
-        <div class="w-full flex justify-center px-4 mt-0.5 mb-1 z-20">
-            <button onclick="startCar()" id="btnStart" class="btn-game bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-8 rounded-xl text-base shadow-lg border-b-4 border-emerald-800 w-full max-w-xs transition-transform active:scale-95">
-                📦 ENTREGAR
-            </button>
+        <!-- Game Area - Ajustado height para que siempre haya espacio para los controles -->
+        <div class="relative p-1 overflow-y-auto w-full flex justify-center items-start scroll-smooth flex-grow bg-slate-900/30" id="gameContainer" style="min-height: 100px;">
+            <canvas id="gameCanvas"></canvas>
+            
+            <!-- Mensaje de salida del pedido -->
+            <div id="orderReady" class="order-ready hidden">
+                <img src="sale.jpg" alt="¡SALE EL PEDIDO!">
+            </div>
+            
+            <div id="overlay" class="hidden absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-20 rounded-xl p-3">
+                <img id="overlayImage" src="" alt="" class="hidden w-48 h-48 object-cover rounded-2xl border-4 border-emerald-400 mb-3 shadow-2xl">
+                <div class="text-5xl mb-2 animate-bounce" id="overlayIcon">🏆</div>
+                <h2 class="text-xl font-bold mb-1 text-white text-center" id="overlayTitle"></h2>
+                <p class="text-slate-300 text-xs mb-1 text-center" id="overlaySubtitle"></p>
+                <p class="text-yellow-400 text-[10px] mb-3" id="overlayBonus"></p>
+                <button id="overlayBtn" class="bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-2 px-6 rounded-full shadow-lg btn-game text-sm">Siguiente</button>
+                <p class="text-white text-xs mt-3 opacity-90" id="overlayFooter"></p>
+            </div>
         </div>
 
-        <!-- Controls -->
-        <div class="w-full flex justify-center gap-2 px-2 z-10 mb-1">
-            <button onclick="resetLevel()" class="glass-btn w-12 h-12" title="Reiniciar ($100)"><span class="glass-icon">🔄</span></button>
-            <button onclick="instantDeliver()" class="glass-btn w-12 h-12" title="Entregar Ya ($500)"><span class="glass-icon" style="filter: drop-shadow(0 0 5px #f472b6);">⚡</span></button>
-            <button onclick="addExtraTime()" class="glass-btn w-12 h-12" title="+5 seg ($5)"><span class="glass-icon" style="filter: drop-shadow(0 0 5px #f97316);">⏱️</span></button>
-            <button onclick="toggleBridgeMode()" id="btnBridge" class="glass-btn w-12 h-12 relative" title="Puente ($100)"><span class="glass-icon" style="filter: drop-shadow(0 0 5px #a855f7);">🌉</span></button>
-            <button onclick="repairTile()" class="glass-btn w-12 h-12" title="Constructora"><span class="glass-icon">🏗️</span></button>
-            <button onclick="toggleSound()" class="glass-btn w-12 h-12"><span id="soundIcon" class="glass-icon" style="filter: drop-shadow(0 0 5px #3b82f6);">🔊</span></button>
-            <button onclick="openShop()" class="glass-btn w-12 h-12"><span class="glass-icon" style="filter: drop-shadow(0 0 5px #eab308);">🛍️</span></button>
-            <button onclick="showMenu()" class="glass-btn w-12 h-12"><span class="glass-icon">☰</span></button>
+        <!-- ZONA INFERIOR FIJA: Contenedor para todos los controles -->
+        <!-- shrink-0 evita que flex reduzca su tamaño -->
+        <div class="w-full shrink-0 flex flex-col gap-1 z-30 bg-slate-900 pb-1 border-t border-slate-700" style="box-shadow: 0 -4px 20px rgba(0,0,0,0.5);">
+            
+            <!-- Hint -->
+            <div class="text-center text-slate-400 text-[10px] mt-0.5 px-2">
+                <p id="levelHint">Prepara la ruta de entrega 📦</p>
+            </div>
+
+            <!-- DASHBOARD COMPACTO: Velocímetro, Entregar y Música en UNA sola fila -->
+            <div class="w-full flex items-center justify-between px-2 gap-2" style="height: 50px;">
+                
+                <!-- Velocímetro -->
+                <div class="bg-slate-800/90 border border-slate-600 rounded-lg flex items-center justify-center w-[80px] h-[45px] relative overflow-hidden shrink-0">
+                    <canvas id="speedoCanvas" width="80" height="45"></canvas>
+                </div>
+
+                <!-- Botón Principal ENTREGAR (Ahora al centro y más ancho) -->
+                <button onclick="startCar()" id="btnStart" class="btn-game bg-emerald-600 hover:bg-emerald-500 text-white font-bold h-[45px] rounded-xl text-sm shadow-lg border-b-4 border-emerald-800 flex-1 transition-transform active:scale-95 flex items-center justify-center gap-2">
+                    📦 ENTREGAR
+                </button>
+
+                <!-- Reproductor Mini -->
+                <div class="bg-slate-800/90 border border-slate-600 rounded-lg p-1 flex flex-col justify-center h-[45px] w-[90px] shrink-0">
+                    <div class="overflow-hidden w-full whitespace-nowrap mb-0.5 text-center"><div id="trackInfo" class="text-[8px] text-cyan-300 font-mono">🎵 Música</div></div>
+                    <div class="flex justify-center items-center gap-2">
+                    <button onclick="$('musicInput').click()" class="text-slate-300 hover:text-white text-[10px] bg-slate-700/50 px-1 rounded">📂</button>
+                    <input type="file" id="musicInput" accept="audio/*" multiple class="hidden" onchange="handleMusicUpload(this)">
+                        <button onclick="toggleMusicPlay()" id="playBtn" class="text-emerald-400 hover:text-emerald-300 text-xs leading-none font-bold scale-125">▶️</button>
+                        <button onclick="nextTrack()" class="text-slate-300 hover:text-white text-[10px]">⏭️</button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Controls (Barra inferior de herramientas) -->
+            <div class="w-full flex justify-center gap-1.5 px-1 py-1 overflow-x-auto">
+                <button onclick="resetLevel()" class="glass-btn w-10 h-10 rounded-lg" title="Reiniciar ($100)"><span class="glass-icon text-lg">🔄</span></button>
+                <button onclick="instantDeliver()" class="glass-btn w-10 h-10 rounded-lg" title="Entregar Ya ($500)"><span class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #f472b6);">⚡</span></button>
+                <button onclick="addExtraTime()" class="glass-btn w-10 h-10 rounded-lg" title="+5 seg ($5)"><span class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #f97316);">⏱️</span></button>
+                <button onclick="toggleBridgeMode()" id="btnBridge" class="glass-btn w-10 h-10 rounded-lg relative" title="Puente ($100)"><span class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #a855f7);">🌉</span></button>
+                <button onclick="repairTile()" class="glass-btn w-10 h-10 rounded-lg" title="Constructora"><span class="glass-icon text-lg">🏗️</span></button>
+                <button onclick="toggleSound()" class="glass-btn w-10 h-10 rounded-lg"><span id="soundIcon" class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #3b82f6);">🔊</span></button>
+                <button onclick="openShop()" class="glass-btn w-10 h-10 rounded-lg"><span class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #eab308);">🛍️</span></button>
+                <button onclick="showMenu()" class="glass-btn w-10 h-10 rounded-lg"><span class="glass-icon text-lg">☰</span></button>
+            </div>
+            
         </div>
-        
-    </div>
+    
+    </div> <!-- FIN GAME INTERFACE -->
 
     <!-- MODAL DE NOTIFICACIÓN PERSONALIZADO -->
     <div id="gameModal" class="game-modal hidden">
@@ -1764,7 +1767,11 @@ function startGame() {
         $('vehicleIcon').textContent = vehicleEmojis[selectedVehicle] || '🏍️';
     }
     $('companyLogo').src = companyLogos[selectedCompany] || 'LOGO-RAPPI.png';
-    $('startScreen').classList.add('hidden');
+    
+    // CAMBIO DE PANTALLA
+    $('startScreen').classList.add('hidden'); // Ocultar Menú
+    $('gameInterface').classList.remove('hidden'); // Mostrar Interfaz de Juego
+    
     // Mantener el nivel guardado (ya cargado por loadGameData)
     // Solo reiniciar a nivel 1 si es un jugador completamente nuevo
     if (level === undefined || level === null) {
@@ -1772,6 +1779,9 @@ function startGame() {
     }
     $('levelDisplay').textContent = level;
     generateLevel();
+    
+    // Forzar un resize inicial para asegurar layouts correctos
+    setTimeout(resize, 100);
 }
 
 // ============ FUNCIONES DE GUARDADO LOCAL ============
@@ -2106,7 +2116,9 @@ function showMenu() {
             // Guardar progreso antes de salir
             saveGameData();
             
-            $('startScreen').classList.remove('hidden');
+            // CAMBIO DE PANTALLA
+            $('gameInterface').classList.add('hidden'); // Ocultar Juego
+            $('startScreen').classList.remove('hidden'); // Mostrar Menú
             
             // Actualizar visualización de dinero en el menú
             $('savedMoneyDisplay').classList.remove('hidden');
@@ -2122,7 +2134,7 @@ function showMenu() {
             updatePremiumMotoUI(); // Actualizar UI de moto premium y camión
             gameState = 'START';
             bridgeModeActive = false;
-            if ($('btnBridge')) $('btnBridge').classList.remove('ring-4', 'ring-yellow-400');
+            if ($('btnBridge')) $('btnBridge').classList.remove('ring-4', 'ring-yellow-400', 'box-shadow-bridge');
             
             // Limpiar overlays por si acaso
             $('overlay').classList.add('hidden');
