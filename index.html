@@ -183,7 +183,27 @@
             font-size: 14px;
             max-width: 200px;
         }
-        
+
+        /* MOTO DE TRANSICIÓN */
+        #transitionMoto {
+            position: fixed;
+            top: 50%;
+            left: -300px;
+            transform: translateY(-50%) scale(1.5); /* 50% Más grande */
+            width: 250px;
+            z-index: 9999;
+            pointer-events: none;
+            display: none; /* Hidden by default */
+        }
+        .moto-passing {
+            display: block !important;
+            animation: motoPass 1.2s cubic-bezier(0.5, 0.0, 0.2, 1) forwards;
+        }
+        @keyframes motoPass {
+            0% { left: -300px; }
+            100% { left: 150%; } 
+        }
+
         /* Preparación del pedido - Fuera del área de juego */
         .prep-container {
             display: flex;
@@ -646,7 +666,11 @@
         </div>
     
     <!-- Level Announcement Overlay -->
-    <div id="levelAnnouncement" class="hidden absolute inset-0 z-[60] bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center transition-opacity duration-300 cursor-pointer">
+    <!-- MOTO TRANSITION IMG -->
+    <img id="transitionMoto" src="motoa.gif" alt="Moto Transition">
+
+    <!-- CAMBIO CRÍTICO: bg-slate-900 (Opaco) para tapar la carga -->
+    <div id="levelAnnouncement" class="hidden absolute inset-0 z-[60] bg-slate-900 flex flex-col items-center justify-center transition-opacity duration-300 cursor-pointer">
         <div class="transform scale-50 transition-transform duration-500 cubic-bezier(0.175, 0.885, 0.32, 1.275)" id="levelMsgBox">
             <h1 class="text-5xl font-black text-white drop-shadow-[0_0_15px_rgba(16,185,129,0.8)] tracking-tighter text-center">
                 <span class="block text-2xl text-emerald-400 font-bold mb-2 tracking-widest uppercase">Preparado para el</span>
@@ -1571,6 +1595,28 @@ function playSound(type) {
         else if (type === 'crash') { osc.type = 'square'; osc.frequency.setValueAtTime(150, t); osc.frequency.exponentialRampToValueAtTime(40, t + 0.3); gain.gain.setValueAtTime(0.2, t); osc.start(t); osc.stop(t + 0.3); }
         else if (type === 'win') { [523,659,784,1047].forEach((f,i) => { const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); o.frequency.setValueAtTime(f, t+i*0.15); g.gain.setValueAtTime(0.1, t+i*0.15); o.start(t+i*0.15); o.stop(t+i*0.15+0.2); }); }
         else if (type === 'warning') { osc.frequency.setValueAtTime(400, t); gain.gain.setValueAtTime(0.1, t); osc.start(t); osc.stop(t + 0.1); }
+        else if (type === 'moto_pass') {
+             // SONIDO DE MOTO PASANDO (Doppler Effect simulado)
+             const o = audioCtx.createOscillator();
+             const g = audioCtx.createGain();
+             o.connect(g);
+             g.connect(audioCtx.destination);
+             
+             o.type = 'sawtooth'; // Motor
+             
+             // Frecuencia baja sube y luego baja (Doppler)
+             o.frequency.setValueAtTime(100, t);
+             o.frequency.linearRampToValueAtTime(180, t + 0.3); // Acercándose (pitch up)
+             o.frequency.linearRampToValueAtTime(80, t + 1.0); // Alejándose (pitch down graaaave)
+             
+             // Volumen sube y baja
+             g.gain.setValueAtTime(0.01, t);
+             g.gain.linearRampToValueAtTime(0.2, t + 0.3); // Máximo al centro
+             g.gain.linearRampToValueAtTime(0.01, t + 1.0);
+             
+             o.start(t);
+             o.stop(t + 1.2);
+        }
         else if (type === 'delivery') {
             // Sonido de entrega exitosa - FANFARRIA DE SATISFACCIÓN
             // Acorde triunfal (C Mayor: C4, E4, G4, C5)
@@ -2726,8 +2772,8 @@ function placeCoins() {
     if (!startTile) return;
 
     // --- MONEDAS ---
-    let extraCoins = level >= 30 ? 2 : 0; // Más monedas a partir del lvl 30
-    let coinsToPlace = Math.min(3 + extraCoins, Math.floor(level / 3) + 1); // 1 a 3 (o 5) monedas
+    // Aumentado a 10 por nivel para permitir mayor recolección
+    let coinsToPlace = 10;
     let attempts = 0;
     
     while (coinsToPlace > 0 && attempts < 100) {
@@ -4210,21 +4256,29 @@ function win() {
     btnContinue.onclick = function() {
         if(typeof playSound === 'function') playSound('click');
         
-        // Desaparición rápida
-        ov.style.transition = 'opacity 0.2s';
-        ov.style.opacity = '0';
-        
+        // 1. DISPARAR MOTO TRANSITION
+        const moto = $('transitionMoto');
+        if (moto) {
+            moto.classList.remove('moto-passing');
+            void moto.offsetWidth; // Trigger reflow
+            moto.classList.add('moto-passing');
+            // Sonido de moto pasando
+            if(typeof playSound === 'function') playSound('moto_pass');
+        }
+
+        // 2. Esperar un momento (cuando la moto tapa la pantalla ~400ms) para hacer el cambio
         setTimeout(() => {
+            // Desaparición rápida del overlay de victoria
+            ov.style.transition = 'opacity 0.2s';
+            ov.style.opacity = '0';
+            
             // LIMPIEZA CRÍTICA DE ESTILOS INLINE
-            // Si no quitamos 'display: flex', la clase 'hidden' NO funciona
             ov.style.display = ''; 
             ov.style.background = '';
             ov.style.zIndex = '';
-            ov.style.transition = '';
             
             // Ocultar y limpiar DOM
             ov.classList.add('hidden');
-            ov.style.opacity = ''; 
             ov.innerHTML = ''; 
             
             // AVANZAR
@@ -4232,7 +4286,7 @@ function win() {
             saveGameData(); 
             generateLevel(); 
             
-        }, 200);
+        }, 500); // 500ms delay para sincronizar con la moto cruzando
     };
     
     ov.appendChild(btnContinue);
