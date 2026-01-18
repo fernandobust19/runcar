@@ -2293,7 +2293,14 @@ function handleClick(e) {
                     saveGameData();
                     playSound('money');
                     
-                    // Mantenemos el modo activo para poner más si se quiere
+                    // DESACTIVAR MODO PUENTE AUTOMÁTICAMENTE
+                    bridgeModeActive = false;
+                    const btn = $('btnBridge');
+                    if(btn) {
+                        btn.classList.remove('ring-4', 'ring-yellow-400');
+                        btn.style.boxShadow = "";
+                    }
+                    if($('levelHint')) $('levelHint').textContent = `📦 Pedido #${level} | 👆 Prepara la ruta de entrega`;
                     
                     checkConnections();
                     draw();
@@ -3684,28 +3691,35 @@ function crash(msg) {
     clearInterval(countdownTimer); clearInterval(engineSoundInterval); clearInterval(deliveryTimer);
     playSound('crash');
     
-    // Eliminado el shake y el retardo, mostrar inmediatamente
-    
-    // Configurar layout especial FULL SCREEN (Igual que WIN - Alineado arriba)
     const overlay = $('overlay');
+    
+    // Ocultar elementos estándar para no destruir el DOM
+    ['overlayIcon', 'overlayTitle', 'overlaySubtitle', 'overlayBonus', 'overlayBtn'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.classList.add('hidden');
+    });
+
+    // Configurar layout especial FULL SCREEN
     overlay.className = 'fixed inset-0 bg-black z-50 flex flex-col items-center justify-start'; 
-    overlay.style.padding = '40px 0 0 0'; // Padding superior
+    overlay.style.padding = '40px 0 0 0';
     overlay.style.background = 'black';
+    overlay.classList.remove('hidden');
     
     // Imagen de fallo
     const overlayImage = $('overlayImage');
+    if (!overlayImage) return; // Seguridad
     overlayImage.src = 'fallo.jpeg';
     overlayImage.classList.remove('hidden');
     
-    // Título Superior "ALGO VA MAL"
-    let titleHeader = $('winTitleHeader'); // Reutilizamos ID o creamos nuevo
+    // Título Superior
+    let titleHeader = $('winTitleHeader');
     if (!titleHeader) {
         titleHeader = document.createElement('div');
         titleHeader.id = 'winTitleHeader';
         overlay.appendChild(titleHeader);
     }
-    // ESTILOS AJUSTADOS AL DISEÑO DE WIN
-    titleHeader.style.position = 'static'; // Relativo al flujo
+    titleHeader.style.display = 'block'; // Asegurar visible
+    titleHeader.style.position = 'static';
     titleHeader.style.width = '100%';
     titleHeader.style.textAlign = 'center';
     titleHeader.style.zIndex = '60';
@@ -3725,36 +3739,40 @@ function crash(msg) {
         <p style="color:#fca5a5; font-size:18px; font-weight: 600; text-shadow: 1px 1px 3px black; margin-top:10px;">${msg}</p>
     `;
 
-    // Reordenar elementos para que la imagen quede debajo del título
-    overlay.innerHTML = ''; // Limpiamos para reordenar bien
-    // (Ojo: al limpiar perdemos los elementos, mejor re-append)
-    overlay.appendChild(titleHeader);
-    overlay.appendChild(overlayImage);
-
-    // ESTILOS DE IMAGEN
-    overlayImage.style.width = 'auto'; 
-    overlayImage.style.maxWidth = '90%'; 
-    overlayImage.style.height = 'auto'; 
-    overlayImage.style.maxHeight = '40vh'; // Igual que en WIN
-    overlayImage.style.objectFit = 'contain'; 
-    overlayImage.style.margin = '20px auto 0 auto';
-    overlayImage.style.borderRadius = '10px';
-    overlayImage.style.display = 'block';
-    overlayImage.style.border = '2px solid #ef4444'; // Borde rojo
-
     // Footer
     let footer = $('overlayFooter');
     if (!footer) {
          footer = document.createElement('div');
          footer.id = 'overlayFooter';
-         // overlay.appendChild(footer); // Lo agregamos al final
+         overlay.appendChild(footer);
     }
-    overlay.appendChild(footer); // Agregamos footer al final
+    footer.classList.remove('hidden');
+    footer.style.display = 'block';
 
+    // REORDENAMIENTO VISUAL USANDO FLEX ORDER (Sin borrar DOM)
+    titleHeader.style.order = '1';
+    overlayImage.style.order = '2';
+    footer.style.order = '3';
+    
+    // Si hay stats container (del win), ocultarlo
+    if($('winStatsContainer')) $('winStatsContainer').style.display = 'none';
+
+    // ESTILOS DE IMAGEN
+    overlayImage.style.width = 'auto'; 
+    overlayImage.style.maxWidth = '90%'; 
+    overlayImage.style.height = 'auto'; 
+    overlayImage.style.maxHeight = '50vh'; 
+    overlayImage.style.objectFit = 'contain'; 
+    overlayImage.style.margin = '20px auto 0 auto';
+    overlayImage.style.borderRadius = '10px';
+    overlayImage.style.border = '2px solid #ef4444'; // Borde rojo
+
+    // Asegurar que footer esté bien
     footer.style.width = '100%';
     footer.style.marginTop = 'auto'; // Empujarlo al fondo si es flex column
     footer.style.paddingBottom = '30px'; // Un poco de aire abajo
     footer.style.position = 'static'; // Ya no absolute
+    footer.style.textAlign = 'center';
     footer.style.textAlign = 'center'; // Centrar botones
     
     // Botones
@@ -4050,22 +4068,33 @@ function win() {
     // Configurar layout especial FULL SCREEN
     const overlay = $('overlay');
 
+    // Ocultar elementos estándar de mensaje para modo WIN (sin destruir DOM)
+    ['overlayIcon', 'overlayTitle', 'overlaySubtitle', 'overlayBonus', 'overlayBtn'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.style.display = 'none';
+    });
+
     // Forzar estilo FULL SCREEN al overlay
-    overlay.className = 'fixed inset-0 bg-black z-50 flex flex-col items-center justify-start'; // justify-start ALINEA TODO ARRIBA
-    overlay.style.padding = '40px 0 0 0'; // Padding superior para bajarlo un poco desde el borde
+    overlay.className = 'fixed inset-0 bg-black z-50 flex flex-col items-center justify-start'; 
+    overlay.style.padding = '40px 0 0 0'; // Padding superior
     overlay.style.background = '#000';
+    overlay.classList.remove('hidden');
     
     // Título Superior "BUEN TRABAJO"
+
     let titleHeader = $('winTitleHeader');
     if (!titleHeader) {
         titleHeader = document.createElement('div');
         titleHeader.id = 'winTitleHeader';
-        titleHeader.style.width = '100%';
-        titleHeader.style.textAlign = 'center';
-        titleHeader.style.zIndex = '60';
-        titleHeader.style.marginBottom = '20px'; // Espacio debajo del título
         overlay.appendChild(titleHeader);
     }
+    titleHeader.style.display = 'block';
+    titleHeader.style.order = '1'; // FLEX ORDER 1
+    titleHeader.style.width = '100%';
+    titleHeader.style.textAlign = 'center';
+    titleHeader.style.zIndex = '60';
+    titleHeader.style.marginBottom = '20px';
+    
     titleHeader.innerHTML = `
         <h1 style="
             color: #fbbf24; 
@@ -4088,7 +4117,9 @@ function win() {
         statsContainer.id = 'winStatsContainer';
         overlay.appendChild(statsContainer);
     }
-    
+    statsContainer.style.display = 'flex'; // Reset display
+    statsContainer.style.order = '2'; // FLEX ORDER 2
+
     // Estilos del contenedor de stats
     statsContainer.style.position = 'relative'; // Cambio a position relative
     statsContainer.style.width = '100%';
@@ -4108,7 +4139,7 @@ function win() {
         <!-- ITEM 1: Monedas -->
         <div class="stat-bubble pop-in" style="animation-delay: 0.2s">
             <div style="font-size: 24px;">🪙</div>
-            <div class="stat-val text-yellow-400" style="font-size: 20px;">+${moneyEarnedInRun}</div>
+            <div class="stat-val text-yellow-400" style="font-size: 20px;">${levelCoins}</div>
             <div class="stat-label" style="font-size: 10px;">Monedas</div>
         </div>
         
@@ -4161,15 +4192,17 @@ function win() {
     if(levelStars > 0) setTimeout(() => playSound('pop'), 800);
     
     // Imagen full screen (AJUSTADO: Completa y más pequeña)
+    overlayImage.style.display = 'block';
+    overlayImage.style.order = '3'; // FLEX ORDER 3
+    
     overlayImage.style.width = 'auto'; // Auto width para mantener ratio
     overlayImage.style.maxWidth = '90%'; // No exceder ancho pantalla
-    overlayImage.style.maxHeight = '50vh'; // AGUJERO MAS GRANDE para la imagen (era 40vh)
+    overlayImage.style.maxHeight = '50vh';
     overlayImage.style.height = 'auto'; 
     overlayImage.style.objectFit = 'contain'; 
     overlayImage.style.objectPosition = 'center'; 
     overlayImage.style.borderRadius = '10px';
     overlayImage.style.margin = '10px auto 0 auto'; // Reducido margen superior
-    overlayImage.style.display = 'block';
     overlayImage.style.border = '2px solid #334155'; // Borde sutil para ver si carga
     overlayImage.style.zIndex = '55'; // Asegurar que esté por encima del fondo
     
@@ -4178,10 +4211,9 @@ function win() {
     if(overlayImage.parentNode !== overlay) {
        overlay.appendChild(overlayImage);
     }
-    // Reordenamos visualmente usando el append
-    overlay.appendChild(titleHeader);
-    overlay.appendChild(statsContainer);
-    overlay.appendChild(overlayImage);
+    // NOTA: Con Flex Order ya no necesitamos reordenar el DOM manualmente con appends, 
+    // pero nos aseguramos que estén en el overlay.
+    
     overlayImage.onerror = function() {
         this.onerror = null;
         this.src = 'INDRIVER.png'; // Fallback a una imagen que sabemos que existe
@@ -4194,23 +4226,25 @@ function win() {
          footer.id = 'overlayFooter';
          overlay.appendChild(footer);
     }
+    footer.style.display = 'flex'; // Asegurar visible
+    footer.style.order = '4'; // FLEX ORDER 4
     
-    // Estilizar footer (Compacto pero con botón grande)
-    footer.className = ''; 
-    footer.style.position = 'absolute';
-    footer.style.bottom = '0';
-    footer.style.left = '0';
     footer.style.width = '100%';
-    footer.style.height = '25vh'; 
-    footer.style.background = '#0f172a'; 
-    footer.style.borderTop = '4px solid #334155';
-    footer.style.display = 'flex';
+    footer.style.marginTop = 'auto'; // Empujarlo al fondo si es flex column
+    footer.style.paddingBottom = '30px'; // Un poco de aire abajo
+    footer.style.background = 'transparent'; // Reset default styles
+    footer.style.height = 'auto'; // Reset default styles
+    footer.className = '';
+    footer.style.position = 'static';
+    footer.style.borderTop = 'none';
     footer.style.flexDirection = 'column';
     footer.style.alignItems = 'center';
-    footer.style.justifyContent = 'space-evenly';
+    footer.style.justifyContent = 'center';
     footer.style.zIndex = '60';
-    footer.style.padding = '10px 20px'; 
     footer.style.boxSizing = 'border-box';
+    
+    // Botones (Mantener contenido pero ajustar contenedor)
+    // El contenido se define por innerHTML abajo, así que está bien resetear estilos aquí.
     
     footer.innerHTML = `
         <div style="text-align: center; width: 100%;">
