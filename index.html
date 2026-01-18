@@ -443,7 +443,7 @@
         }
     </style>
 </head>
-<body class="w-screen flex flex-col items-center justify-start pt-2 overflow-hidden bg-slate-900" style="height: 100vh; height: 100dvh;">
+<body class="h-screen w-screen flex flex-col items-center justify-start pt-2 overflow-hidden bg-slate-900">
 
     <!-- PANTALLA DE INICIO - FULLSCREEN RESPONSIVE -->
     <div id="startScreen" class="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center z-50 overflow-y-auto" style="padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);">
@@ -693,6 +693,15 @@
             <div class="game-modal-message" id="gameModalMessage">Mensaje</div>
             <div class="game-modal-buttons" id="gameModalButtons"></div>
         </div>
+    </div>
+
+    <!-- VIDEO OVERLAY (Para el Cofre) -->
+    <div id="videoOverlay" class="hidden fixed inset-0 z-[110] bg-black flex items-center justify-center">
+        <video id="chestVideo" class="w-full h-full object-contain" playsinline>
+            <source src="cofre.mp4" type="video/mp4">
+        </video>
+        <!-- Botón invisible gigante para saltar si falla -->
+        <div onclick="skipVideo()" class="absolute inset-0 bg-transparent"></div>
     </div>
 
     <!-- TIENDA / SHOP MODAL -->
@@ -1659,7 +1668,8 @@ for (let i = 1; i <= 100; i++) {
     const isHard = i > 60;
     
     LEVEL_CONFIG.push({
-        // Aumentar tamaño progresivamente
+        // Aumentar tamaño progresivamente PERO LÍMITE FIJO para evitar scroll excesivo
+        // Nivel 40: 9x11 es el máximo y funciona bien. Mantenemos eso.
         cols: Math.min(5 + Math.floor(i / 5), 9), 
         rows: Math.min(6 + Math.floor(i / 4), 11),
         
@@ -1757,14 +1767,6 @@ class Tile {
 }
 
 function startGame() {
-    // Intentar activar pantalla completa
-    const doc = window.document;
-    const docEl = doc.documentElement;
-    const requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
-    if(requestFullScreen) {
-        try { requestFullScreen.call(docEl); } catch(e){}
-    }
-
     initAudio();
     driverName = $('driverName').value.trim() || "Repartidor";
     
@@ -3278,7 +3280,7 @@ function showKeyChestModal() {
         <div style="text-align:center;">
             <div style="font-size:60px; margin-bottom:10px;">🔑</div>
             <strong>¡HAS CONSEGUIDO UNA LLAVE!</strong><br>
-            <p style="color:#fbbf24; margin:10px 0;">Recolectaste 10 Estrellas</p>
+            <p style="color:#fbbf24; margin:10px 0;">Recolectaste 20 Estrellas</p>
             <p>Puedes usar esta llave para abrir el <strong>Cofre del Tesoro</strong>.</p>
         </div>
     `;
@@ -3292,29 +3294,77 @@ function showKeyChestModal() {
             text: '🗝️ ABRIR COFRE',
             primary: true,
             onClick: () => {
-                // Abrir cofre
-                totalStars -= 10;
-                totalMoney += 1000;
-                $('moneyDisplay').textContent = totalMoney;
-                saveGameData();
-                updateStarUI();
-                
-                playSound('money'); // Sonido de mucho dinero
-                
-                // Mostrar recompensa
-                showGameModal({
-                    icon: '🎁',
-                    title: '¡1000 MONEDAS!',
-                    message: `<div style="text-align:center;"><span style="font-size:50px">💰</span><br>Has recibido un gran tesoro.<br><b style="color:#10b981; font-size:24px;">+$1000</b></div>`,
-                    type: 'success',
-                    buttons: [{ text: 'Continuar Nivel', primary: true, onClick: () => { 
-                         hideGameModal();
-                         gameState = 'RUNNING'; // Reanudar
-                         gameLoop();
-                    }}]
-                });
+                hideGameModal(); // Ocultar modal de llave
+                playChestVideo(); // Reproducir video del cofre
             }
         }]
+    });
+}
+
+function playChestVideo() {
+    const overlay = document.getElementById('videoOverlay');
+    const video = document.getElementById('chestVideo');
+    if(overlay && video) {
+        overlay.classList.remove('hidden');
+        video.currentTime = 0;
+        
+        // Manejar fin del video
+        video.onended = () => {
+            finishChestOpening();
+        };
+        // Fallback por si acaso
+        video.onerror = () => {
+            finishChestOpening();
+        };
+
+        video.play().catch(e => {
+            console.log("Autoplay bloqueado o error", e);
+            finishChestOpening(); // Si falla, abrir directamente
+        });
+    } else {
+        finishChestOpening();
+    }
+}
+
+function skipVideo() {
+    // Permite saltar al tocar la pantalla
+    const video = document.getElementById('chestVideo');
+    if(video && !video.paused) {
+        video.pause();
+        finishChestOpening();
+    }
+}
+
+function finishChestOpening() {
+    const overlay = document.getElementById('videoOverlay');
+    if(overlay) overlay.classList.add('hidden');
+
+    // LÓGICA DE PREMIO: Cada estrella vale $1,000 en el cofre.
+    // 20 estrellas * $1,000 = $20,000
+    const prizeAmount = 20 * 1000;
+    
+    totalStars -= 20;
+    totalMoney += prizeAmount;
+    
+    const moneyDisplay = $('moneyDisplay');
+    if(moneyDisplay) moneyDisplay.textContent = totalMoney;
+    
+    saveGameData();
+    updateStarUI();
+    
+    playSound('money'); // Sonido de mucho dinero
+    
+    // Mostrar recompensa
+    showGameModal({
+        icon: '🎁',
+        title: `¡$${prizeAmount.toLocaleString()} MONEDAS!`,
+        message: `<div style="text-align:center;"><span style="font-size:50px">💰</span><br>Has recibido un gran tesoro.<br><b style="color:#10b981; font-size:24px;">+$${prizeAmount.toLocaleString()}</b></div>`,
+        type: 'success',
+        buttons: [{ text: 'Continuar Nivel', primary: true, onClick: () => { 
+                hideGameModal();
+                gameState = 'RUNNING'; // Reanudar
+                gameLoop();
+        }}]
     });
 }
 
@@ -3338,11 +3388,11 @@ function updateStarUI() {
             starContainer.style.display = 'flex';
             starContainer.innerHTML = `
                 <span style="font-size: 1.2rem;">⭐</span>
-                <span id="starCount" class="font-bold text-yellow-400">${totalStars}/10</span>
+                <span id="starCount" class="font-bold text-yellow-400">${totalStars}/20</span>
             `;
             
-            // Si tiene 10, animar
-            if (totalStars >= 10) {
+            // Si tiene 20, animar
+            if (totalStars >= 20) {
                  starContainer.classList.add('pulse');
                  starContainer.style.borderColor = '#fbbf24';
             } else {
@@ -3601,8 +3651,8 @@ function gameLoop() {
             // Animación directa a la UI (usando lógica similar a monedas)
             updateStarUI();
 
-            // CHEQUEAR SI LLEGÓ A 10
-            if (totalStars >= 10) {
+            // CHEQUEAR SI LLEGÓ A 20
+            if (totalStars >= 20) {
                 // Pausar juego o esperar un momento? Mejor al terminar el nivel o inmediatamente.
                 // Lo haremos al instante, pausando.
                 setTimeout(() => {
