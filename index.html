@@ -596,7 +596,7 @@
     </div>
 
     <!-- Game Area -->
-    <div class="relative p-1" id="gameContainer">
+    <div class="relative p-1 flex-1 overflow-y-auto w-full flex justify-center items-start scroll-smooth" id="gameContainer">
         <canvas id="gameCanvas"></canvas>
         
         <!-- Mensaje de salida del pedido -->
@@ -2218,27 +2218,22 @@ function resize() {
     const config = LEVEL_CONFIG[Math.min(level - 1, 99)];
     COLS = config.cols; ROWS = config.rows;
     
-    // RESERVAR ESPACIO VERTICAL para UI (Header + Footer)
-    // Aumentado a 350px para evitar que botones se oculten tras barra de navegación
-    const footerSpace = 350; 
-    const availableHeight = window.innerHeight - footerSpace;
-    const maxW = window.innerWidth - 8;
+    // Priorizar ANCHO para móviles, pero mantener un tamaño tocable
+    const maxW = window.innerWidth - 10; // Margen pequeño
     
-    // Calcular TILE_SIZE para que quepa TODO en la pantalla sin scroll vertical si es posible
-    let calculatedTileSize = Math.min(
-        Math.floor(maxW / COLS), 
-        Math.floor(availableHeight / ROWS), 
-        60
-    );
-
-    // Mínimos absolutos para legibilidad
-    const isSmallScreen = window.innerWidth < 400 || window.innerHeight < 700;
-    const minTileSize = isSmallScreen ? 12 : 18; // Permitir que sea muy pequeño en mapas grandes
+    // Calcular tamaño ideal basado en ancho
+    let idealTileSize = Math.floor(maxW / COLS);
     
-    // Si el cálculo da menos del mínimo, usamos el mínimo (habrá un poco de scroll si es necesario)
-    TILE_SIZE = Math.max(calculatedTileSize, minTileSize);
+    // ESTANDARIZACIÓN: Definir límites estrictos para evitar distorsión o "encogimiento" excesivo
+    // Mínimo 42px para garantizar jugabilidad (área de toque) y visibilidad de gráficos
+    const MIN_TILE_SIZE = 42; 
+    const MAX_TILE_SIZE = 65; // No demasiado grande en niveles iniciales
+    
+    // Ajustar TILE_SIZE dentro de los rangos estándares
+    TILE_SIZE = Math.min(Math.max(idealTileSize, MIN_TILE_SIZE), MAX_TILE_SIZE);
 
-    canvas.width = COLS * TILE_SIZE; canvas.height = ROWS * TILE_SIZE;
+    canvas.width = COLS * TILE_SIZE; 
+    canvas.height = ROWS * TILE_SIZE;
 
     // ACTUALIZAR POSICIÓN DEL CARRO: Si se redimensiona, hay que recalcular su posición en píxeles
     // para que siga en el centro de su celda (col, row).
