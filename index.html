@@ -54,6 +54,44 @@
         .timer-warning { animation: timerPulse 0.5s infinite; color: #ef4444 !important; }
         @keyframes timerPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
         .progress-bar { transition: width 1s linear; }
+        
+        /* ESTILO BOTONES DE CRISTAL (Glassmorphism) */
+        .glass-btn {
+            background: rgba(30, 41, 59, 0.7); /* Slate-800 con transparencia */
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-top: 1px solid rgba(255, 255, 255, 0.3); /* Brillo superior */
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2), 
+                        0 1px 3px rgba(0, 0, 0, 0.1),
+                        inset 0 0 10px rgba(0,0,0,0.1); 
+            border-radius: 14px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .glass-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 50%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.08), transparent);
+            pointer-events: none;
+        }
+        .glass-btn:active {
+            transform: scale(0.92);
+            background: rgba(30, 41, 59, 0.9);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        /* Icono con efecto neón/brillo */
+        .glass-icon {
+            filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.5));
+            font-size: 1.25rem;
+            z-index: 10;
+        }
+
         input[type="text"] {
             background: #1e293b; 
             border: 2px solid #475569; 
@@ -620,21 +658,31 @@
     </div>
 
     <!-- Controls -->
-    <div class="w-full flex justify-center gap-1 px-2 z-10 shrink-0 mb-1">
-        <button onclick="resetLevel()" class="btn-game bg-slate-600 hover:bg-slate-500 text-white p-2 rounded-lg shadow-md border-b-2 border-slate-800 text-sm" title="Reiniciar ($100)">🔄</button>
-        <button onclick="instantDeliver()" class="btn-game bg-pink-600 hover:bg-pink-500 text-white p-2 rounded-lg shadow-md border-b-2 border-pink-800 text-xs" title="Entregar Ya ($500)">⚡</button>
-        <button onclick="addExtraTime()" class="btn-game bg-orange-600 hover:bg-orange-500 text-white p-2 rounded-lg shadow-md border-b-2 border-orange-800 text-xs" title="+5 seg ($5)">⏱️+5</button>
-        <button onclick="toggleBridgeMode()" id="btnBridge" class="btn-game bg-purple-600 hover:bg-purple-500 text-white p-2 rounded-lg shadow-md border-b-2 border-purple-800 relative text-sm" title="Puente">
-            🌉
-            <span id="bridgeCount" class="absolute -top-1 -right-1 bg-yellow-400 text-black text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">0</span>
+    <div class="w-full flex justify-center gap-2 px-2 z-10 shrink-0 mb-1">
+        <button onclick="resetLevel()" class="glass-btn w-12 h-12" title="Reiniciar ($100)">
+            <span class="glass-icon">🔄</span>
         </button>
-        <button onclick="repairTile()" class="repair-btn btn-game text-xs" title="Constructora">
-            🏗️
+        <button onclick="instantDeliver()" class="glass-btn w-12 h-12" title="Entregar Ya ($500)">
+            <span class="glass-icon" style="filter: drop-shadow(0 0 5px #f472b6);">⚡</span>
         </button>
+        <button onclick="addExtraTime()" class="glass-btn w-12 h-12" title="+5 seg ($5)">
+            <span class="glass-icon" style="filter: drop-shadow(0 0 5px #f97316);">⏱️</span>
         </button>
-        <button onclick="toggleSound()" class="btn-game bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-lg shadow-md border-b-2 border-blue-800 text-sm"><span id="soundIcon">🔊</span></button>
-        <button onclick="openShop()" class="btn-game bg-yellow-600 hover:bg-yellow-500 text-white p-2 rounded-lg shadow-md border-b-2 border-yellow-800 text-sm">🛍️</button>
-        <button onclick="showMenu()" class="btn-game bg-purple-600 hover:bg-purple-500 text-white p-2 rounded-lg shadow-md border-b-2 border-purple-800 text-sm">☰</button>
+        <button onclick="toggleBridgeMode()" id="btnBridge" class="glass-btn w-12 h-12 relative" title="Puente ($100)">
+            <span class="glass-icon" style="filter: drop-shadow(0 0 5px #a855f7);">🌉</span>
+        </button>
+        <button onclick="repairTile()" class="glass-btn w-12 h-12" title="Constructora">
+            <span class="glass-icon">🏗️</span>
+        </button>
+        <button onclick="toggleSound()" class="glass-btn w-12 h-12">
+            <span id="soundIcon" class="glass-icon" style="filter: drop-shadow(0 0 5px #3b82f6);">🔊</span>
+        </button>
+        <button onclick="openShop()" class="glass-btn w-12 h-12">
+            <span class="glass-icon" style="filter: drop-shadow(0 0 5px #eab308);">🛍️</span>
+        </button>
+        <button onclick="showMenu()" class="glass-btn w-12 h-12">
+            <span class="glass-icon">☰</span>
+        </button>
     </div>
 
     <!-- MODAL DE NOTIFICACIÓN PERSONALIZADO -->
@@ -691,19 +739,6 @@
                         </div>
                     </div>
                     <span id="shopCamionIcon" class="text-2xl">🔒</span>
-                </div>
-                
-                <!-- Puente -->
-                <div id="shopBridge" class="flex items-center justify-between bg-slate-700 p-3 rounded-xl border-2 border-transparent hover:border-yellow-400 cursor-pointer transition-all" onclick="buyBridge()">
-                    <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 flex items-center justify-center text-3xl">🌉</div>
-                        <div>
-                            <p class="text-white font-bold">Puente</p>
-                            <p class="text-yellow-400 text-sm" id="shopBridgeStatus">$100 c/u</p>
-                            <p class="text-emerald-400 text-xs" id="shopBridgeOwned">Tienes: 0</p>
-                        </div>
-                    </div>
-                    <span id="shopBridgeIcon" class="text-2xl">💰</span>
                 </div>
             </div>
             
@@ -1279,18 +1314,6 @@ function updateShopUI() {
         $('shopCamionStatus').className = 'text-red-400 text-sm';
         $('shopCamionIcon').textContent = '🔒';
     }
-    
-    // Puentes
-    $('shopBridgeOwned').textContent = `Tienes: ${bridgesOwned}`;
-    if (totalMoney >= BRIDGE_PRICE) {
-        $('shopBridgeStatus').textContent = '$100 c/u - ¡Disponible!';
-        $('shopBridgeStatus').className = 'text-yellow-400 text-sm';
-        $('shopBridgeIcon').textContent = '💰';
-    } else {
-        $('shopBridgeStatus').textContent = `$100 c/u (Faltan $${BRIDGE_PRICE - totalMoney})`;
-        $('shopBridgeStatus').className = 'text-red-400 text-sm';
-        $('shopBridgeIcon').textContent = '🔒';
-    }
 }
 
 function buyVehicle(vehicleType) {
@@ -1705,7 +1728,7 @@ const PREMIUM_CAMION_PRICE = 12000;
 let deliveryStartTime = 0; // Tiempo cuando comenzó la entrega
 let deliveryTimer = null; // Timer para la entrega
 let bridgesOwned = 0; // Número de puentes que tiene el jugador
-const BRIDGE_PRICE = 500; // Precio de cada puente
+const BRIDGE_PRICE = 100; // Precio de cada puente
 
 const $ = id => document.getElementById(id);
 
@@ -2121,54 +2144,6 @@ function showMenu() {
 let bridgeModeActive = false;
 
 function toggleBridgeMode() {
-    if (bridgesOwned <= 0) {
-        // Ofrecer compra directa de puentes
-        if (totalMoney >= BRIDGE_PRICE) {
-            showConfirmModal({
-                icon: '🌉',
-                title: 'Comprar Puente',
-                message: `<strong>No tienes puentes disponibles</strong><br><br>¿Comprar un puente por $${BRIDGE_PRICE}?<br><br>🔗 Permite conectar piezas sin importar sus salidas<br>💰 Tu dinero: <span style="color:#fbbf24">$${totalMoney}</span>`,
-                type: 'warning',
-                confirmText: '🛒 Comprar Ahora',
-                cancelText: '❌ Cancelar'
-            }).then(confirmed => {
-                if (confirmed) {
-                    totalMoney -= BRIDGE_PRICE;
-                    bridgesOwned++;
-                    $('moneyDisplay').textContent = totalMoney;
-                    if ($('bridgeCount')) $('bridgeCount').textContent = bridgesOwned;
-                    if ($('shopMoney')) $('shopMoney').textContent = totalMoney;
-                    if ($('shopBridgeOwned')) $('shopBridgeOwned').textContent = `Tienes: ${bridgesOwned}`;
-                    playSound('money');
-                    saveGameData();
-                    
-                    // Activar modo puente automáticamente
-                    if (gameState === 'EDITING') {
-                        bridgeModeActive = true;
-                        const btn = $('btnBridge');
-                        btn.classList.add('ring-4', 'ring-yellow-400');
-                        $('levelHint').textContent = '🌉 MODO PUENTE: Click en una pieza para convertirla en puente';
-                    }
-                    
-                    showGameModal({
-                        icon: '✅',
-                        title: '¡Puente Comprado!',
-                        message: `<strong>🌉 Ahora tienes ${bridgesOwned} puente(s)</strong><br><br>💡 Click en una pieza para colocarlo`,
-                        type: 'success'
-                    });
-                }
-            });
-        } else {
-            showGameModal({
-                icon: '💸',
-                title: 'Dinero Insuficiente',
-                message: `<strong>No tienes suficiente dinero para comprar un puente</strong><br><br>🎯 Necesitas: <span style="color:#fbbf24">$${BRIDGE_PRICE}</span><br>💰 Tu dinero: $${totalMoney}<br>🚫 Te faltan: <span style="color:#ef4444">$${BRIDGE_PRICE - totalMoney}</span>`,
-                type: 'error'
-            });
-        }
-        return;
-    }
-    
     if (gameState !== 'EDITING') {
         showGameModal({
             icon: '⚠️',
@@ -2178,14 +2153,36 @@ function toggleBridgeMode() {
         });
         return;
     }
-    
+
+    // Modo "Instantáneo" - Comprobamos si tiene saldo para al menos un puente
+    if (totalMoney < BRIDGE_PRICE && !bridgeModeActive) { // Solo avisar al activar
+        showGameModal({
+            icon: '💸',
+            title: 'Dinero Insuficiente',
+            message: `<strong>Necesitas $${BRIDGE_PRICE} para construir un puente</strong><br><br>💰 Tu dinero: <span style="color:#ef4444">$${totalMoney}</span>`,
+            type: 'error'
+        });
+        return;
+    }
+
     bridgeModeActive = !bridgeModeActive;
     const btn = $('btnBridge');
+    
     if (bridgeModeActive) {
         btn.classList.add('ring-4', 'ring-yellow-400');
-        $('levelHint').textContent = '🌉 MODO PUENTE: Click en una pieza para convertirla en puente';
+        btn.style.boxShadow = "0 0 15px #a855f7"; // Brillo extra
+        $('levelHint').textContent = '🌉 MODO PUENTE: Click en una pieza ($100)';
+        
+        // Notificación visual
+        const toast = document.createElement('div');
+        toast.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-purple-600/90 text-white px-6 py-2 rounded-full shadow-lg z-50 animate-bounce backdrop-blur-sm border border-white/20 font-bold';
+        toast.innerHTML = '🌉 Modo Puente Activado ($100 c/u)';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2500);
+        
     } else {
         btn.classList.remove('ring-4', 'ring-yellow-400');
+        btn.style.boxShadow = "";
         $('levelHint').textContent = `📦 Pedido #${level} | 👆 Prepara la ruta de entrega`;
     }
 }
@@ -2263,29 +2260,40 @@ function handleClick(e) {
                 return;
             }
             
+            // Verificar dinero antes de nada
+            if (totalMoney < BRIDGE_PRICE) {
+                showGameModal({
+                    icon: '💸',
+                    title: 'Dinero Insuficiente',
+                    message: `<strong>Necesitas $${BRIDGE_PRICE} para construir un puente</strong><br><br>💰 Tu dinero: <span style="color:#ef4444">$${totalMoney}</span>`,
+                    type: 'error'
+                });
+                return;
+            }
+
             showConfirmModal({
                 icon: '🌉',
-                title: 'Colocar Puente',
-                message: '<strong>¿Convertir esta pieza en puente?</strong><br><br>🔗 Conectará con cualquier pieza<br>sin importar las salidas',
+                title: 'Construir Puente',
+                message: `<strong>¿Construir puente aquí?</strong><br><br>🔗 Conecta todas las direcciones<br>💰 Costo: <span style="color:#fbbf24">$${BRIDGE_PRICE}</span>`,
                 type: 'warning',
-                confirmText: '✅ Colocar',
+                confirmText: `🔨 Construir (-$${BRIDGE_PRICE})`,
                 cancelText: '❌ Cancelar'
             }).then(confirmed => {
                 if (confirmed) {
+                    if (totalMoney < BRIDGE_PRICE) return;
+                    
+                    totalMoney -= BRIDGE_PRICE;
+                    $('moneyDisplay').textContent = totalMoney;
+                    
                     const oldType = tile.type;
                     tile.type = TILE_TYPES.BRIDGE;
                     tile.isBridge = true;
-                    bridgesOwned--;
-                    $('bridgeCount').textContent = bridgesOwned;
+                    // bridgesOwned ya no se usa como inventario
+                    
                     saveGameData();
                     playSound('money');
                     
-                    // Desactivar modo puente si no quedan más puentes
-                    if (bridgesOwned <= 0) {
-                        bridgeModeActive = false;
-                        $('btnBridge').classList.remove('ring-4', 'ring-yellow-400');
-                        $('levelHint').textContent = `📦 Pedido #${level} | 👆 Prepara la ruta de entrega`;
-                    }
+                    // Mantenemos el modo activo para poner más si se quiere
                     
                     checkConnections();
                     draw();
