@@ -523,19 +523,19 @@
                             <img src="motoa.gif" alt="Moto Premium" class="w-10 h-10 object-contain mx-auto">
                             <p class="text-xs text-yellow-400 mt-1">Moto PRO</p>
                             <span id="motoLock" class="absolute -top-2 -right-2 text-lg">🔒</span>
-                            <span id="motoPrice" class="absolute -bottom-2 left-0 right-0 text-[9px] text-yellow-300 bg-slate-900/90 rounded-full py-0.5">$4,000</span>
+                            <span id="motoPrice" class="absolute -bottom-2 left-0 right-0 text-[9px] text-yellow-300 bg-slate-900/90 rounded-full py-0.5">$3,000</span>
                         </button>
                         <button onclick="selectPremiumTruck()" id="btn-trucka" class="vehicle-btn bg-slate-700 rounded-xl relative">
                             <img src="camionetaa.png" alt="Camioneta Premium" class="w-10 h-10 object-contain mx-auto">
                             <p class="text-xs text-yellow-400 mt-1">Cami. PRO</p>
                             <span id="truckLock" class="absolute -top-2 -right-2 text-lg">🔒</span>
-                            <span id="truckPrice" class="absolute -bottom-2 left-0 right-0 text-[9px] text-yellow-300 bg-slate-900/90 rounded-full py-0.5">$6,000</span>
+                            <span id="truckPrice" class="absolute -bottom-2 left-0 right-0 text-[9px] text-yellow-300 bg-slate-900/90 rounded-full py-0.5">$4,000</span>
                         </button>
                         <button onclick="selectPremiumCamion()" id="btn-camion" class="vehicle-btn bg-slate-700 rounded-xl relative">
                             <img src="camion.png" alt="Camión Carga" class="w-10 h-10 object-contain mx-auto">
                             <p class="text-xs text-yellow-400 mt-1">Camión</p>
                             <span id="camionLock" class="absolute -top-2 -right-2 text-lg">🔒</span>
-                            <span id="camionPrice" class="absolute -bottom-2 left-0 right-0 text-[9px] text-yellow-300 bg-slate-900/90 rounded-full py-0.5">$12,000</span>
+                            <span id="camionPrice" class="absolute -bottom-2 left-0 right-0 text-[9px] text-yellow-300 bg-slate-900/90 rounded-full py-0.5">$5,000</span>
                         </button>
                     </div>
                 </div>
@@ -1720,11 +1720,11 @@ let currentLevelForEnd = 0; // Nivel actual para saber cuándo cambiar la casa
 let premiumMotoUnlocked = false; // Moto premium desbloqueada
 let previewPath = []; // Ruta calculada
 let plannedRoute = []; // Ruta planificada con direcciones para que el carro la siga
-const PREMIUM_MOTO_PRICE = 4000; // Precio de la moto premium
+const PREMIUM_MOTO_PRICE = 3000; // Precio de la moto premium
 let premiumTruckUnlocked = false; // Camioneta premium desbloqueada
-const PREMIUM_TRUCK_PRICE = 6000; // Precio de la camioneta premium
-let premiumCamionUnlocked = false; // Camión de carga (12000)
-const PREMIUM_CAMION_PRICE = 12000;
+const PREMIUM_TRUCK_PRICE = 4000; // Precio de la camioneta premium
+let premiumCamionUnlocked = false; // Camión de carga (5000)
+const PREMIUM_CAMION_PRICE = 5000;
 let deliveryStartTime = 0; // Tiempo cuando comenzó la entrega
 let deliveryTimer = null; // Timer para la entrega
 let bridgesOwned = 0; // Número de puentes que tiene el jugador
@@ -4770,6 +4770,10 @@ function drawTile(tile) {
     }
 }
 
+const vImgMoto = new Image(); vImgMoto.src = 'motoa.gif';
+const vImgTruck = new Image(); vImgTruck.src = 'camionetaa.png';
+const vImgCamion = new Image(); vImgCamion.src = 'camion.png';
+
 function drawCar() {
     ctx.save();
     ctx.translate(car.x, car.y);
@@ -4831,10 +4835,13 @@ function drawCar() {
         }
     };
 
-    if (selectedVehicle === 'moto' || selectedVehicle === 'motoa') {
+    if (selectedVehicle === 'motoa') {
+        ctx.scale(1, 1);
+        ctx.drawImage(vImgMoto, -25, -25, 50, 50);
+    } else if (selectedVehicle === 'moto') {
         // --- MOTO DE REPARTO (VISTA PERFIL) ---
         // Se ve el lado de la moto
-        const s = selectedVehicle === 'motoa' ? 1.0 : 0.9;
+        const s = 0.9;
         ctx.scale(s, s);
 
         // Ruedas
@@ -4998,11 +5005,13 @@ function drawCar() {
         // Espejo lado conductor (visible)
         ctx.moveTo(10, -5); ctx.lineTo(13, -6); ctx.lineTo(13, -3); ctx.fill();
 
-    } else if (selectedVehicle === 'truck' || selectedVehicle === 'trucka') {
+    } else if (selectedVehicle === 'trucka') {
+        ctx.drawImage(vImgTruck, -30, -30, 60, 60);
+    } else if (selectedVehicle === 'truck') {
         // --- CAMIÓN DE REPARTO (VISTA PERFIL) ---
         // Se debe ver el lado largo de la caja
         ctx.scale(0.95, 0.95);
-        const isPremium = selectedVehicle === 'trucka';
+        const isPremium = false;
         
         // Ruedas Robustas
         drawSideWheel(-14, 9, 6);
@@ -5060,107 +5069,8 @@ function drawCar() {
         }
 
     } else if (selectedVehicle === 'camion') {
-        // --- CAMIÓN DE CARGA (GRANDE) ---
-        // Estilo tráiler pero compacto para caber en la tile
-        ctx.scale(0.85, 0.85); // Un poco más grande que el bus
-        
-        // Ruedas Multiples (6 ruedas visibles)
-        drawSideWheel(-24, 10, 6);
-        drawSideWheel(-14, 10, 6);
-        drawSideWheel(20, 10, 6);
-        
-        // Chasis Largo
-        ctx.fillStyle = '#111827';
-        ctx.fillRect(-28, 6, 54, 6);
-        
-        // Contenedor de Carga 
-        ctx.fillStyle = '#f8fafc'; // Blanco/Gris claro
-        ctx.beginPath();
-        ctx.roundRect(-28, -16, 38, 22, 2);
-        ctx.fill();
-        
-        // Decoración Contenedor (Líneas verticales)
-        ctx.fillStyle = '#e2e8f0';
-        for(let i=0; i<4; i++) {
-            ctx.fillRect(-24 + (i*8), -16, 2, 22);
-        }
-        
-        // Logo Empresa en Contenedor
-        ctx.fillStyle = companyColors[selectedCompany];
-        ctx.beginPath();
-        ctx.arc(-10, -5, 7, 0, Math.PI*2);
-        ctx.fill();
-        
-        // Cabina (Separada visualmente)
-        ctx.fillStyle = mainColor; // Color seleccionado por usuario
-        ctx.beginPath();
-        ctx.roundRect(12, -12, 16, 18, 2);
-        ctx.fill();
-        
-        // Conector cabina-trailer
-        ctx.fillStyle = '#475569';
-        ctx.fillRect(10, 0, 4, 4);
-        
-        // Ventana Cabina
-        ctx.fillStyle = '#1e3a8a';
-        ctx.beginPath();
-        ctx.moveTo(14, -8);
-        ctx.lineTo(24, -8);
-        ctx.lineTo(24, -2);
-        ctx.lineTo(14, -2);
-        ctx.fill();
-        
-        // Luces
-        // Delanteras
-        ctx.fillStyle = waiting ? '#fbbf24' : '#fef08a';
-        ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 10;
-        ctx.fillRect(26, 4, 2, 4);
         ctx.shadowBlur = 0;
-        
-        // Traseras
-        ctx.fillStyle = '#ef4444';
-        ctx.fillRect(-29, 0, 2, 6);
-
-    } else if (selectedVehicle === 'motoa') {
-        // --- MOTO PREMIUM (F1) ---
-        ctx.scale(0.9, 0.9);
-        
-        // Ruedas Anchas (Slicks)
-        drawSideWheel(-16, 8, 6);
-        drawSideWheel(16, 8, 6);
-
-        // Chasis Aerodinámico
-        ctx.fillStyle = mainColor;
-        ctx.beginPath();
-        ctx.moveTo(-20, 0);
-        ctx.lineTo(-10, -6); // Motor
-        ctx.lineTo(10, -6); // Cockpit
-        ctx.lineTo(24, 0); // Morro
-        ctx.lineTo(30, 4); // Punta
-        ctx.lineTo(24, 8); // Abajo
-        ctx.lineTo(-20, 8); // Fondo plano
-        ctx.fill();
-
-        // Alerón Trasero
-        ctx.fillStyle = '#1e293b'; // Carbono
-        ctx.fillRect(-26, -12, 6, 14);
-        
-        // Alerón Delantero
-        ctx.fillStyle = '#334155';
-        ctx.fillRect(24, 6, 8, 2);
-
-        // Casco Piloto
-        ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(0, -6, 5, 0, Math.PI*2); ctx.fill();
-        // Visera
-        ctx.fillStyle = '#000';
-        ctx.fillRect(2, -7, 3, 2);
-
-        // Faros (F1 no suele llevar, pero por estética del juego)
-        ctx.fillStyle = waiting ? '#fbbf24' : '#fef08a';
-        ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 10;
-        ctx.fillRect(28, 5, 2, 2);
-        ctx.shadowBlur = 0;
+        ctx.drawImage(vImgCamion, -40, -40, 80, 80);
 
     } else {
         // FALLBACK
