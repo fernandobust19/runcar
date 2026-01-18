@@ -4017,8 +4017,8 @@ function win() {
     const overlay = $('overlay');
 
     // Forzar estilo FULL SCREEN al overlay
-    overlay.className = 'fixed inset-0 bg-black z-50 flex flex-col items-center justify-center'; 
-    overlay.style.padding = '0';
+    overlay.className = 'fixed inset-0 bg-black z-50 flex flex-col items-center justify-start'; // justify-start ALINEA TODO ARRIBA
+    overlay.style.padding = '40px 0 0 0'; // Padding superior para bajarlo un poco desde el borde
     overlay.style.background = '#000';
     
     // Título Superior "BUEN TRABAJO"
@@ -4026,12 +4026,10 @@ function win() {
     if (!titleHeader) {
         titleHeader = document.createElement('div');
         titleHeader.id = 'winTitleHeader';
-        titleHeader.style.position = 'absolute';
-        titleHeader.style.top = '20px';
         titleHeader.style.width = '100%';
         titleHeader.style.textAlign = 'center';
         titleHeader.style.zIndex = '60';
-        titleHeader.style.pointerEvents = 'none'; // Permitir clicks a través
+        titleHeader.style.marginBottom = '20px'; // Espacio debajo del título
         overlay.appendChild(titleHeader);
     }
     titleHeader.innerHTML = `
@@ -4045,7 +4043,7 @@ function win() {
             font-family: 'Segoe UI', sans-serif;
             text-transform: uppercase;
         ">¡EXCELENTE TRABAJO!</h1>
-        <p style="color:white; font-size:16px; text-shadow: 1px 1px 3px black; margin-top:5px;">Entrega completada con éxito</p>
+        <p style="color:white; font-size:20px; font-weight:600; text-shadow: 2px 2px 4px black; margin-top:10px;">Entrega completada con éxito</p>
     `;
 
     // --- SECCIÓN DE ESTADÍSTICAS (Nuevo Requerimiento) ---
@@ -4058,13 +4056,14 @@ function win() {
     }
     
     // Estilos del contenedor de stats
-    statsContainer.style.position = 'absolute';
-    statsContainer.style.top = '100px'; 
+    statsContainer.style.position = 'relative'; // Cambio a position relative
     statsContainer.style.width = '100%';
     statsContainer.style.display = 'flex';
     statsContainer.style.justifyContent = 'center';
     statsContainer.style.gap = '20px';
     statsContainer.style.zIndex = '60';
+    statsContainer.style.marginBottom = '20px'; // Espaciado entre stats e imagen
+
     
     const moneyEarnedInRun = levelCoins * 20; // 20 por moneda
     // TIEMPO SOBRANTE (Lo que faltó para terminar el tiempo total)
@@ -4130,17 +4129,25 @@ function win() {
     // Imagen full screen (AJUSTADO: Completa y más pequeña)
     overlayImage.style.width = 'auto'; // Auto width para mantener ratio
     overlayImage.style.maxWidth = '90%'; // No exceder ancho pantalla
-    overlayImage.style.maxHeight = '35vh'; // Aún más pequeña para dar espacio a burbujas grandes
+    overlayImage.style.maxHeight = '40vh'; // Un poco más grande ahora que hay espacio
     overlayImage.style.height = 'auto'; 
     overlayImage.style.objectFit = 'contain'; 
     overlayImage.style.objectPosition = 'center'; 
     overlayImage.style.borderRadius = '10px';
-    overlayImage.style.margin = '140px auto 20px auto'; // MÁS MARGEN ARRIBA para que no tape las stats
+    overlayImage.style.margin = '20px auto 0 auto'; // Margen arriba para separar de stats
     overlayImage.style.display = 'block';
     overlayImage.style.border = '2px solid #334155'; // Borde sutil para ver si carga
     overlayImage.style.zIndex = '55'; // Asegurar que esté por encima del fondo
     
-    // ERROR HANDLER: Si la imagen falla, intentar cargar una por defecto
+    // Aseguramos que la imagen está añadida al overlay después de los stats para que quede abajo en Flex
+    // PERO, solo si no está ya
+    if(overlayImage.parentNode !== overlay) {
+       overlay.appendChild(overlayImage);
+    }
+    // Reordenamos visualmente usando el append
+    overlay.appendChild(titleHeader);
+    overlay.appendChild(statsContainer);
+    overlay.appendChild(overlayImage);
     overlayImage.onerror = function() {
         this.onerror = null;
         this.src = 'INDRIVER.png'; // Fallback a una imagen que sabemos que existe
