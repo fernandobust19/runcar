@@ -2237,6 +2237,13 @@ function resize() {
     TILE_SIZE = Math.max(calculatedTileSize, minTileSize);
 
     canvas.width = COLS * TILE_SIZE; canvas.height = ROWS * TILE_SIZE;
+
+    // ACTUALIZAR POSICIÓN DEL CARRO: Si se redimensiona, hay que recalcular su posición en píxeles
+    // para que siga en el centro de su celda (col, row).
+    if (car) {
+        car.x = car.col * TILE_SIZE + TILE_SIZE / 2;
+        car.y = car.row * TILE_SIZE + TILE_SIZE / 2;
+    }
 }
 
 function handleClick(e) {
