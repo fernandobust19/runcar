@@ -326,7 +326,7 @@
         
         /* Modal de notificación personalizado */
         .game-modal {
-            position: fixed;
+            position: absolute;
             inset: 0;
             background: rgba(0, 0, 0, 0.85);
             backdrop-filter: blur(5px);
@@ -443,7 +443,10 @@
         }
     </style>
 </head>
-<body class="h-screen w-screen flex flex-col items-center justify-start pt-2 overflow-hidden bg-slate-900">
+<body class="h-[100dvh] w-screen flex items-center justify-center overflow-hidden bg-[#0a0a0a] p-1 sm:p-4 touch-none">
+
+    <!-- FRAME DEL JUEGO GLOBAL -->
+    <div id="app-frame" class="relative w-full h-full max-w-[450px] bg-slate-900 shadow-2xl rounded-xl overflow-hidden ring-1 ring-white/5 flex flex-col">
 
     <!-- PANTALLA DE INICIO - FULLSCREEN RESPONSIVE -->
     <div id="startScreen" class="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center z-50 overflow-y-auto" style="padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);">
@@ -572,7 +575,10 @@
                 <div>
                     <p class="text-emerald-400 font-bold text-xs"><span id="vehicleIcon">🏍️</span> <span id="driverDisplay">Repartidor</span></p>
                     <p class="text-[10px] text-slate-400">Pedido <span id="levelDisplay">1</span>/100</p>
-                    <p class="text-yellow-400 font-bold text-xs">💰 $<span id="moneyDisplay">0</span></p>
+                    <div class="flex items-center gap-2">
+                        <p class="text-yellow-400 font-bold text-xs">💰 $<span id="moneyDisplay">0</span></p>
+                        <p id="starDisplayContainer" class="text-orange-400 font-bold text-xs hidden pl-2 border-l border-slate-600">⭐ <span id="starDisplayCount">0</span></p>
+                    </div>
                 </div>
             </div>
             
@@ -619,11 +625,11 @@
         </div>
 
         <!-- ZONA INFERIOR FIJA: Contenedor para todos los controles -->
-        <!-- shrink-0 evita que flex reduzca su tamaño -->
-        <div class="w-full shrink-0 flex flex-col gap-1 z-30 bg-slate-900 pb-1 border-t border-slate-700" style="box-shadow: 0 -4px 20px rgba(0,0,0,0.5);">
+        <!-- shrink-0 evita que flex reduzca su tamaño. Aumentado pb-6 para subir controles -->
+        <div class="w-full shrink-0 flex flex-col gap-2 z-30 bg-slate-900 pb-6 border-t border-slate-700" style="box-shadow: 0 -4px 25px rgba(0,0,0,0.7);">
             
             <!-- Hint -->
-            <div class="text-center text-slate-400 text-[10px] mt-0.5 px-2">
+            <div class="text-center text-slate-400 text-[10px] mt-1 px-2">
                 <p id="levelHint">Prepara la ruta de entrega 📦</p>
             </div>
 
@@ -654,7 +660,7 @@
             </div>
 
             <!-- Controls (Barra inferior de herramientas) -->
-            <div class="w-full flex justify-center gap-1.5 px-1 py-1 overflow-x-auto">
+            <div class="w-full flex justify-center gap-1 px-0 py-1 overflow-x-auto">
                 <button onclick="resetLevel()" class="glass-btn w-10 h-10 rounded-lg" title="Reiniciar ($100)"><span class="glass-icon text-lg">🔄</span></button>
                 <button onclick="instantDeliver()" class="glass-btn w-10 h-10 rounded-lg" title="Entregar Ya ($500)"><span class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #f472b6);">⚡</span></button>
                 <button onclick="addExtraTime()" class="glass-btn w-10 h-10 rounded-lg" title="+5 seg ($5)"><span class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #f97316);">⏱️</span></button>
@@ -666,6 +672,16 @@
             </div>
             
         </div>
+    
+    <!-- Level Announcement Overlay -->
+    <div id="levelAnnouncement" class="hidden absolute inset-0 z-[60] bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center pointer-events-none transition-opacity duration-300">
+        <div class="transform scale-0 transition-transform duration-500 cubic-bezier(0.175, 0.885, 0.32, 1.275)" id="levelMsgBox">
+            <h1 class="text-5xl font-black text-white drop-shadow-[0_0_15px_rgba(16,185,129,0.8)] tracking-tighter text-center">
+                <span class="block text-2xl text-emerald-400 font-bold mb-2 tracking-widest uppercase">Preparado para el</span>
+                NIVEL <span id="announceLevelNum" class="text-emerald-500">1</span>
+            </h1>
+        </div>
+    </div>
     
     </div> <!-- FIN GAME INTERFACE -->
 
@@ -680,7 +696,7 @@
     </div>
 
     <!-- VIDEO OVERLAY (Para el Cofre) -->
-    <div id="videoOverlay" class="hidden fixed inset-0 z-[110] bg-black flex items-center justify-center">
+    <div id="videoOverlay" class="hidden absolute inset-0 z-[110] bg-black flex items-center justify-center">
         <video id="chestVideo" class="w-full h-full object-contain" playsinline>
             <source src="cofre.mp4" type="video/mp4">
         </video>
@@ -2564,7 +2580,47 @@ function generateLevel() {
     resetCar();
     checkConnections();
     draw();
-    startCountdown();
+    
+    // Anunciar nivel antes de empezar
+    showLevelAnnouncement();
+}
+
+// Nueva función de anuncio de nivel
+function showLevelAnnouncement() {
+    const overlay = $('levelAnnouncement');
+    const msgBox = $('levelMsgBox');
+    const levelNum = $('announceLevelNum');
+    
+    // Set content
+    if(levelNum) levelNum.textContent = level;
+    
+    // Reset state
+    overlay.classList.remove('hidden');
+    overlay.classList.remove('opacity-0');
+    msgBox.classList.remove('scale-100');
+    msgBox.classList.add('scale-0');
+    
+    // Animate In
+    requestAnimationFrame(() => {
+        msgBox.classList.remove('scale-0');
+        msgBox.classList.add('scale-100');
+        
+        // Play sound if available
+        if(typeof playSound === 'function') playSound('start');
+    });
+    
+    // Wait and Hide
+    setTimeout(() => {
+        overlay.classList.add('opacity-0'); // Fade out overlay
+        msgBox.classList.remove('scale-100');
+        msgBox.classList.add('scale-150'); // Zoom out effect
+        
+        setTimeout(() => {
+            overlay.classList.add('hidden');
+            startCountdown(); // Start the game timer only after announcement
+        }, 300); // Wait for fade out
+        
+    }, 1500); // Duration of message
 }
 
 function placeStart() {
@@ -3356,37 +3412,29 @@ function finishChestOpening() {
     });
 }
 
-// Función para actualizar UI de Estrellas (se llamará al inicio y cada vez que cambie)
+// Función para actualizar UI de Estrellas (Optimizada)
 function updateStarUI() {
-    let starContainer = document.getElementById('starContainer');
-    if (!starContainer) {
-        // Crear contenedor si no existe (junto al dinero)
-        const header = document.querySelector('header > div'); // Primer div del header
-        if (header) {
-            starContainer = document.createElement('div');
-            starContainer.id = 'starContainer';
-            starContainer.className = 'flex items-center bg-slate-800 px-3 py-1 rounded-full border border-slate-700 space-x-2';
-            starContainer.style.display = 'none'; // Oculto por defecto
-            header.appendChild(starContainer); // Agregar después del dinero
-        }
-    }
+    const starContainer = $('starDisplayContainer');
+    const starCount = $('starDisplayCount');
     
-    if (starContainer) {
-        if (level >= 30 || totalStars > 0) {
-            starContainer.style.display = 'flex';
-            starContainer.innerHTML = `
-                <span style="font-size: 1.2rem;">⭐</span>
-                <span id="starCount" class="font-bold text-yellow-400">${totalStars}/20</span>
-            `;
+    if (starContainer && starCount) {
+        // Mostrar si hay estrellas o el nivel es avanzado
+        if (totalStars > 0 || level >= 5) { 
+            starContainer.classList.remove('hidden');
+            starCount.textContent = `${totalStars}/20`;
             
-            // Si tiene 20, animar
+            // Efecto visual al completar 20
             if (totalStars >= 20) {
-                 starContainer.classList.add('pulse');
-                 starContainer.style.borderColor = '#fbbf24';
+                 starContainer.classList.add('animate-pulse');
+                 starContainer.classList.remove('text-orange-400');
+                 starContainer.classList.add('text-yellow-300');
             } else {
-                 starContainer.classList.remove('pulse');
-                 starContainer.style.borderColor = '';
+                 starContainer.classList.remove('animate-pulse');
+                 starContainer.classList.add('text-orange-400');
+                 starContainer.classList.remove('text-yellow-300');
             }
+        } else {
+            starContainer.classList.add('hidden');
         }
     }
 }
@@ -5200,6 +5248,7 @@ function shadeColor(color, percent) {
 
 window.onload = init;
 </script>
+</div>
 </body>
 </html>
 
