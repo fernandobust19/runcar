@@ -2515,11 +2515,14 @@ function retryLevel() {
 }
 
 function generateLevel() {
+    // 1. Mostrar anuncio PRIMERO (Queda debajo del overlay actual si existe, pero tapa el juego)
+    showLevelAnnouncement();
+
     const config = LEVEL_CONFIG[Math.min(level - 1, 99)];
     gameState = 'EDITING';
-    $('overlay').classList.add('hidden');
-    $('overlay').classList.remove('failure-bg');
-    $('btnStart').classList.remove('opacity-50', 'pointer-events-none');
+    
+    // Las líneas para ocultar el overlay se han movido al FINAL de esta función
+    // para evitar que se vea el juego antes de estar listo.
     
     // Si cambió el nivel, limpiar la posición guardada de la casa
     if (level !== currentLevelForEnd) {
@@ -2567,8 +2570,12 @@ function generateLevel() {
     checkConnections();
     draw();
     
-    // Anunciar nivel antes de empezar
-    showLevelAnnouncement();
+    // 2. REVELAR ESCENA FINAL
+    // Ocultamos el overlay de victoria/gameover AHORA, cuando ya tenemos
+    // el nivel generado y el anuncio de "Nivel X" puesto encima.
+    $('overlay').classList.add('hidden');
+    $('overlay').classList.remove('failure-bg');
+    if($('btnStart')) $('btnStart').classList.remove('opacity-50', 'pointer-events-none');
 }
 
 // Nueva función de anuncio de nivel
