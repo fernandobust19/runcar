@@ -4791,10 +4791,17 @@ function drawCar() {
     ctx.save();
     ctx.translate(car.x, car.y);
     
+    // ESCALADO PARA TAMAÑO DINÁMICO DE TILE
+    // TILE_SIZE puede cambiar, pero las coordenadas de dibujo están diseñadas para base ~55px.
+    // Escalamos todo el contexto para que el coche siempre sea proporcional al tile actual.
+    const currentScale = TILE_SIZE / 55; 
+    ctx.scale(currentScale, currentScale);
+
     // LÓGICA DE ROTACIÓN VISTA LATERAL (PERFIL):
     // El usuario quiere ver el LADO del vehículo.
     // - Derecha (0): Normal
     // - Izquierda (PI): Espejo (flip horizontal)
+
     // - Arriba (-PI/2): Rotar -90 grados
     // - Abajo (PI/2): Rotar 90 grados
     
@@ -4849,8 +4856,20 @@ function drawCar() {
     };
 
     if (selectedVehicle === 'motoa') {
-        ctx.scale(1, 1);
-        ctx.drawImage(vImgMoto, -25, -25, 50, 50);
+        // MOTO PREMIUM: GIF animado
+        // Dibujamos centrado (-25, -25) con tamaño 50x50 (casi el tamaño base de 55)
+        // Como ya aplicamos ctx.scale arriba, se ajustará solo.
+        
+        // Ajuste de "Left" para motoa (flip si va a la izquierda)
+        // La imagen original mira a la derecha por defecto? Asumimos que sí.
+        // Si la imagen original mira a la izquierda, habría que invertir.
+        // Asumimos standar: mira a derecha.
+        
+        // CORRECCIÓN VISUAL: Centrado perfecto
+        ctx.scale(1, 1); // Reset de la escala interna si hubiera
+        // Dibujar imagen centrada en (0,0)
+        ctx.drawImage(vImgMoto, -27.5, -27.5, 55, 55); 
+
     } else if (selectedVehicle === 'moto') {
         // --- MOTO DE REPARTO (VISTA PERFIL) ---
         // Se ve el lado de la moto
@@ -5019,7 +5038,9 @@ function drawCar() {
         ctx.moveTo(10, -5); ctx.lineTo(13, -6); ctx.lineTo(13, -3); ctx.fill();
 
     } else if (selectedVehicle === 'trucka') {
-        ctx.drawImage(vImgTruck, -30, -30, 60, 60);
+        // CAMIONETA PREMIUM
+        // Centrada en 0,0. Tamaño base ligeramente mayor al tile para que se vea imponente
+        ctx.drawImage(vImgTruck, -30, -30, 60, 60); 
     } else if (selectedVehicle === 'truck') {
         // --- CAMIÓN DE REPARTO (VISTA PERFIL) ---
         // Se debe ver el lado largo de la caja
@@ -5082,8 +5103,12 @@ function drawCar() {
         }
 
     } else if (selectedVehicle === 'camion') {
+        // CAMION CARGA (GRANDE)
         ctx.shadowBlur = 0;
-        ctx.drawImage(vImgCamion, -40, -40, 80, 80);
+        // Centrado. Puede ser un poco más largo que alto.
+        // Base 55px. Le damos 70px de largo para que parezca camión.
+        ctx.drawImage(vImgCamion, -35, -35, 70, 70); 
+    } else if (selectedVehicle === 'motoa') {
 
     } else {
         // FALLBACK
