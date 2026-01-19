@@ -2483,14 +2483,50 @@ let tutorialActive = false;
 let currentTutorialStep = 0;
 let speech = new SpeechSynthesisUtterance();
 let synth = window.speechSynthesis;
+let availableVoices = [];
+
+function loadVoices() {
+    if (!synth) return;
+    availableVoices = synth.getVoices() || [];
+    chooseProfessionalVoice();
+}
+
+function chooseProfessionalVoice() {
+    if (!availableVoices || availableVoices.length === 0) return;
+    const preferredLangs = ['es-ES', 'es_MX', 'es-419', 'es-AR', 'es-CO', 'es'];
+    const score = v => {
+        const name = (v.name || '').toLowerCase();
+        const lang = (v.lang || '').toLowerCase();
+        let s = 0;
+        if (preferredLangs.some(pl => lang.startsWith(pl.toLowerCase()))) s += 10;
+        if (name.includes('neural') || name.includes('natural') || name.includes('premium')) s += 8;
+        if (name.includes('microsoft') || name.includes('google')) s += 6;
+        if (name.includes('spanish') || name.includes('es')) s += 3;
+        return s;
+    };
+    const sorted = availableVoices.slice().sort((a, b) => score(b) - score(a));
+    const best = sorted[0];
+    if (best) {
+        speech.voice = best;
+        speech.lang = best.lang || 'es-ES';
+    }
+}
+
+if (synth) {
+    synth.onvoiceschanged = () => loadVoices();
+    // Cargar voces iniciales (algunos navegadores requieren llamada explícita)
+    loadVoices();
+}
 
 function speak(text) {
     if (!soundEnabled || !synth) return;
     synth.cancel();
     speech.text = text;
-    speech.lang = 'es-ES';
-    speech.pitch = 1.2; // Tono más agudo para más energía
-    speech.rate = 1.1;  // Un poco más rápido
+    // Si no se asignó voz aún, establecer idioma por defecto
+    if (!speech.voice) speech.lang = 'es-ES';
+    // Ajustes más naturales/profesionales
+    speech.pitch = 1.0;
+    speech.rate = 1.05;
     synth.speak(speech);
 }
 
