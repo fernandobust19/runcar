@@ -700,7 +700,7 @@
             <div class="w-full flex justify-center gap-1 px-0 py-1 overflow-x-auto">
                 <button onclick="instantDeliver()" class="glass-btn w-10 h-10 rounded-lg" title="Entregar Ya ($500)"><span class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #f472b6);">⚡</span></button>
                 <button onclick="addExtraTime()" class="glass-btn w-10 h-10 rounded-lg" title="+5 seg ($5)"><span class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #f97316);">⏱️</span></button>
-                <button onclick="repairTile()" class="glass-btn w-10 h-10 rounded-lg" title="Constructora"><span class="glass-icon text-lg">🏗️</span></button>
+                <button onclick="toggleBridgeMode()" id="btnBridge" class="glass-btn w-10 h-10 rounded-lg relative" title="Puente ($100)"><span class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #a855f7);">🌉</span></button>
                 <button onclick="toggleSound()" class="glass-btn w-10 h-10 rounded-lg"><span id="soundIcon" class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #3b82f6);">🔊</span></button>
                 <button onclick="openShop()" class="glass-btn w-10 h-10 rounded-lg"><span class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #eab308);">🛍️</span></button>
                 <button onclick="showMenu()" class="glass-btn w-10 h-10 rounded-lg"><span class="glass-icon text-lg">☰</span></button>
@@ -2460,23 +2460,16 @@ let bridgeModeActive = false;
 
 function toggleBridgeMode() {
     if (gameState !== 'EDITING') {
-        showGameModal({
-            icon: '⚠️',
-            title: 'Modo No Disponible',
-            message: '<strong>Solo puedes colocar puentes durante la preparación</strong><br><br>📝 Prepárate antes de comenzar la entrega',
-            type: 'warning'
-        });
+        // Sin ventanas: si no está en edición, ignorar con feedback sutil
+        const btn = $('btnBridge');
+        if (btn) { btn.classList.add('shake'); setTimeout(() => btn.classList.remove('shake'), 400); }
         return;
     }
 
-    // Modo "Instantáneo" - Comprobamos si tiene saldo para al menos un puente
-    if (totalMoney < BRIDGE_PRICE && !bridgeModeActive) { // Solo avisar al activar
-        showGameModal({
-            icon: '💸',
-            title: 'Dinero Insuficiente',
-            message: `<strong>Necesitas $${BRIDGE_PRICE} para construir un puente</strong><br><br>💰 Tu dinero: <span style="color:#ef4444">$${totalMoney}</span>`,
-            type: 'error'
-        });
+    // Si se intenta activar y no hay fondos ni inventario, feedback sutil y no activar
+    if (!bridgeModeActive && (bridgesOwned <= 0 && totalMoney < BRIDGE_PRICE)) {
+        const btn = $('btnBridge');
+        if (btn) { btn.style.boxShadow = '0 0 10px #ef4444'; setTimeout(() => btn.style.boxShadow = '', 600); }
         return;
     }
 
@@ -2486,14 +2479,7 @@ function toggleBridgeMode() {
     if (bridgeModeActive) {
         btn.classList.add('ring-4', 'ring-yellow-400');
         btn.style.boxShadow = "0 0 15px #a855f7"; // Brillo extra
-        $('levelHint').textContent = '🌉 MODO PUENTE: Click en una pieza ($100)';
-        
-        // Notificación visual
-        const toast = document.createElement('div');
-        toast.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-purple-600/90 text-white px-6 py-2 rounded-full shadow-lg z-50 animate-bounce backdrop-blur-sm border border-white/20 font-bold';
-        toast.innerHTML = '🌉 Modo Puente Activado ($100 c/u)';
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 2500);
+        $('levelHint').textContent = '🌉 MODO PUENTE: Toca una pieza para colocar';
         
     } else {
         btn.classList.remove('ring-4', 'ring-yellow-400');
@@ -2860,67 +2846,35 @@ function handleClick(e) {
     if (col >= 0 && col < COLS && row >= 0 && row < ROWS) {
         const tile = grid[row * COLS + col];
         
-        // Modo puente: convertir pieza en puente
+        // Modo puente: convertir pieza en puente (transacción directa sin ventanas)
         if (bridgeModeActive && tile && !tile.locked && tile.type !== TILE_TYPES.BLOCKED) {
-            if (tile.type === TILE_TYPES.BRIDGE) {
-                showGameModal({ icon: '🌉', title: 'Puente Existente', message: '<strong>Esta pieza ya es un puente</strong>', type: 'warning' });
-                return;
-            }
-            
-            // Verificar si puede pagar (Inventario o Dinero)
+            if (tile.type === TILE_TYPES.BRIDGE) { return; }
+
             const canAfford = (bridgesOwned > 0) || (totalMoney >= BRIDGE_PRICE);
+            if (!canAfford) { return; }
 
-            if (!canAfford) {
-                showGameModal({
-                    icon: '💸',
-                    title: 'Recursos Insuficientes',
-                    message: `<strong>Necesitas $${BRIDGE_PRICE} o 1 puente</strong><br><br>💰 Tu dinero: <span style="color:#ef4444">$${totalMoney}</span><br>🌉 Inventario: 0`,
-                    type: 'error'
-                });
-                return;
+            if (bridgesOwned > 0) {
+                bridgesOwned--;
+            } else {
+                totalMoney -= BRIDGE_PRICE;
+                $('moneyDisplay').textContent = totalMoney;
             }
+            if ($('bridgeCount')) $('bridgeCount').textContent = bridgesOwned;
 
-            const costMsg = bridgesOwned > 0 ? "Usar 1 de inventario" : `$${BRIDGE_PRICE}`;
-            const btnMsg = bridgesOwned > 0 ? "Usar Puente" : `Comprar (-$${BRIDGE_PRICE})`;
+            tile.type = TILE_TYPES.BRIDGE;
+            tile.isBridge = true;
 
-            showConfirmModal({
-                icon: '🌉',
-                title: 'Construir Puente',
-                message: `<strong>¿Construir puente aquí?</strong><br><br>🔗 Conecta todas las direcciones<br>💳 Costo: ${costMsg}`,
-                type: 'warning',
-                confirmText: btnMsg,
-                cancelText: '❌ Cancelar'
-            }).then(confirmed => {
-                if (confirmed) {
-                    if (bridgesOwned > 0) {
-                        bridgesOwned--;
-                    } else {
-                         if (totalMoney < BRIDGE_PRICE) return;
-                         totalMoney -= BRIDGE_PRICE;
-                         $('moneyDisplay').textContent = totalMoney;
-                    }
-                    if ($('bridgeCount')) $('bridgeCount').textContent = bridgesOwned;
-                    
-                    const oldType = tile.type;
-                    tile.type = TILE_TYPES.BRIDGE;
-                    tile.isBridge = true;
-                    
-                    saveGameData();
-                    playSound('money');
-                    
-                    // DESACTIVAR MODO PUENTE AUTOMÁTICAMENTE
-                    bridgeModeActive = false;
-                    const btn = $('btnBridge');
-                    if(btn) {
-                        btn.classList.remove('ring-4', 'ring-yellow-400');
-                        btn.style.boxShadow = "";
-                    }
-                    if($('levelHint')) $('levelHint').textContent = `📦 Pedido #${level} | 👆 Prepara la ruta de entrega`;
-                    
-                    checkConnections();
-                    draw();
-                }
-            });
+            saveGameData();
+            playSound('money');
+
+            // Desactivar modo puente automáticamente
+            bridgeModeActive = false;
+            const btn = $('btnBridge');
+            if(btn) { btn.classList.remove('ring-4', 'ring-yellow-400'); btn.style.boxShadow = ""; }
+            if($('levelHint')) $('levelHint').textContent = `📦 Pedido #${level} | 👆 Prepara la ruta de entrega`;
+
+            checkConnections();
+            draw();
         } else if (!bridgeModeActive && tile && !tile.locked && tile.type !== TILE_TYPES.BLOCKED) {
             // Modo normal: rotar pieza
             tile.rotation = (tile.rotation + 1) % 4;
@@ -2990,60 +2944,31 @@ function addExtraTime() {
     // Cobrar $5 por agregar 5 segundos
     const TIME_COST = 5;
     const EXTRA_SECONDS = 5;
-    
-    if (gameState !== 'EDITING' && gameState !== 'RUNNING') {
-        showGameModal({
-            icon: '⚠️',
-            title: 'Modo No Disponible',
-            message: '<strong>Solo puedes agregar tiempo durante la preparación o entrega</strong>',
-            type: 'warning'
-        });
-        return;
+    if (gameState !== 'EDITING' && gameState !== 'RUNNING') { return; }
+    if (totalMoney < TIME_COST) { return; }
+
+    totalMoney -= TIME_COST;
+    timeLeft += EXTRA_SECONDS;
+    maxTime += EXTRA_SECONDS; // También aumentar el máximo para el porcentaje
+
+    $('moneyDisplay').textContent = totalMoney;
+    $('timerDisplay').textContent = `⏱️ ${timeLeft}`;
+    $('progressBar').style.width = `${(timeLeft / maxTime) * 100}%`;
+
+    // Cambiar color de la barra si estaba en advertencia
+    if (timeLeft > 10) {
+        $('progressBar').className = 'progress-bar h-full bg-emerald-500 rounded-full';
+        $('timerDisplay').classList.remove('timer-warning');
+    } else if (timeLeft > 5) {
+        $('progressBar').className = 'progress-bar h-full bg-yellow-500 rounded-full';
     }
-    
-    if (totalMoney < TIME_COST) {
-        showGameModal({
-            icon: '💸',
-            title: 'Dinero Insuficiente',
-            message: `<strong>No tienes suficiente dinero</strong><br><br>🎯 Necesitas: <span style="color:#fbbf24">$${TIME_COST}</span><br>💰 Tu dinero: $${totalMoney}`,
-            type: 'error'
-        });
-        return;
-    }
-    
-    showConfirmModal({
-        icon: '⏱️',
-        title: 'Agregar Tiempo',
-        message: `<strong>¿Agregar ${EXTRA_SECONDS} segundos?</strong><br><br>💸 Costo: <span style="color:#fbbf24">$${TIME_COST}</span><br>💰 Tu dinero: $${totalMoney}`,
-        type: 'warning',
-        confirmText: '⏱️ Agregar',
-        cancelText: '❌ Cancelar'
-    }).then(confirmed => {
-        if (confirmed) {
-            totalMoney -= TIME_COST;
-            timeLeft += EXTRA_SECONDS;
-            maxTime += EXTRA_SECONDS; // También aumentar el máximo para el porcentaje
-            
-            $('moneyDisplay').textContent = totalMoney;
-            $('timerDisplay').textContent = `⏱️ ${timeLeft}`;
-            $('progressBar').style.width = `${(timeLeft / maxTime) * 100}%`;
-            
-            // Cambiar color de la barra si estaba en advertencia
-            if (timeLeft > 10) {
-                $('progressBar').className = 'progress-bar h-full bg-emerald-500 rounded-full';
-                $('timerDisplay').classList.remove('timer-warning');
-            } else if (timeLeft > 5) {
-                $('progressBar').className = 'progress-bar h-full bg-yellow-500 rounded-full';
-            }
-            
-            saveGameData(); // Guardar el cambio de dinero
-            playSound('money'); // Sonido de transacción
-            
-            // Mostrar feedback visual
-            $('timerDisplay').classList.add('pulse');
-            setTimeout(() => $('timerDisplay').classList.remove('pulse'), 500);
-        }
-    });
+
+    saveGameData(); // Guardar el cambio de dinero
+    playSound('money'); // Sonido de transacción
+
+    // Feedback visual directo
+    $('timerDisplay').classList.add('pulse');
+    setTimeout(() => $('timerDisplay').classList.remove('pulse'), 500);
 }
 
 function instantDeliver() {
