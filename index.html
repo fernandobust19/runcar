@@ -487,7 +487,7 @@
 
     <!-- INTRO VIDEO + PRELOAD OVERLAY (FULLSCREEN COVER) -->
     <div id="introOverlay" class="fixed inset-0 z-[500] bg-black">
-        <video id="introVideo" class="absolute inset-0 w-full h-full object-contain object-center bg-black" src="intro.mp4" playsinline preload="auto"></video>
+        <video id="introVideo" class="absolute inset-0 w-full h-full object-cover object-center bg-black" src="intro.mp4" playsinline autoplay preload="auto"></video>
         <!-- Botón para reproducir con sonido en caso de que el autoplay sea bloqueado -->
         <div id="introPlayBtn" class="absolute inset-0 flex items-center justify-center">
             <button class="glass-btn px-5 py-3 text-sm text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg">Tocar para reproducir con sonido ▶️</button>
@@ -900,9 +900,21 @@ function startIntro() {
             video.addEventListener('error', finish, { once: true });
             const tryPlay = () => {
                 video.play().then(() => {
+                    // Intentar fullscreen al iniciar
+                    if (video.requestFullscreen) {
+                        video.requestFullscreen().catch(() => {});
+                    } else if (overlay.requestFullscreen) {
+                        overlay.requestFullscreen().catch(() => {});
+                    }
                     if (playWrap) playWrap.classList.add('hidden');
                 }).catch(() => {
-                    if (playWrap) playWrap.classList.remove('hidden');
+                    // Autoplay con audio bloqueado: reproducir en silencio y mostrar botón
+                    video.muted = true;
+                    video.play().then(() => {
+                        if (playWrap) playWrap.classList.remove('hidden');
+                    }).catch(() => {
+                        if (playWrap) playWrap.classList.remove('hidden');
+                    });
                 });
             };
             tryPlay();
