@@ -479,6 +479,14 @@
 </head>
 <body class="h-[100dvh] w-screen flex items-center justify-center overflow-hidden bg-[#0a0a0a] p-1 sm:p-4 touch-none">
 
+    <audio id="introSound" src="intro.mp3" preload="auto"></audio>
+
+    <!-- SPLASH SCREEN DE INICIO -->
+    <div id="splashScreen" class="hidden fixed inset-0 z-[300] bg-slate-900 flex items-center justify-center">
+        <!-- Nota: Asegúrate de que el archivo 'deliveryrush.png' exista en la carpeta raíz del proyecto -->
+        <img src="deliveryrush.png" alt="Delivery Rush" class="animate-pulse w-3/4 max-w-xs">
+    </div>
+
     <!-- FRAME DEL JUEGO GLOBAL -->
     <div id="app-frame" class="relative w-full h-full max-w-[450px] bg-slate-900 shadow-2xl rounded-xl overflow-hidden ring-1 ring-white/5 flex flex-col">
 
