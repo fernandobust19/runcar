@@ -488,10 +488,6 @@
     <!-- INTRO VIDEO + PRELOAD OVERLAY (FULLSCREEN COVER) -->
     <div id="introOverlay" class="fixed inset-0 z-[500] bg-black">
         <video id="introVideo" class="absolute inset-0 w-full h-full object-cover object-center bg-black" src="intro.mp4" playsinline autoplay preload="auto"></video>
-        <!-- Botón para reproducir con sonido en caso de que el autoplay sea bloqueado -->
-        <div id="introPlayBtn" class="absolute inset-0 flex items-center justify-center">
-            <button class="glass-btn px-5 py-3 text-sm text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg">Tocar para reproducir con sonido ▶️</button>
-        </div>
         <div class="absolute inset-x-0 bottom-0 pb-[env(safe-area-inset-bottom)] flex flex-col items-center gap-2 px-4 text-center">
             <div class="w-3/4 max-w-xs">
                 <div class="text-xs text-slate-200 mb-2 drop-shadow">Cargando juego…</div>
@@ -881,7 +877,6 @@ function startIntro() {
     const bar = document.getElementById('introProgressBar');
     const txt = document.getElementById('introProgressText');
     const skip = document.getElementById('introSkipBtn');
-    const playWrap = document.getElementById('introPlayBtn');
 
     const onProgress = pct => {
         if (bar) bar.style.width = pct + '%';
@@ -890,7 +885,7 @@ function startIntro() {
 
     const assetsPromise = preloadAssets(getCoreAssets(), onProgress);
 
-    // Intentar reproducir automáticamente con sonido; si falla, pedir gesto
+    // Intentar reproducir automáticamente con sonido; si falla, continuar en silencio sin mostrar botón
     let videoResolved = false;
     const videoPromise = new Promise(resolve => {
         const finish = () => { if (!videoResolved) { videoResolved = true; resolve(); } };
@@ -906,25 +901,18 @@ function startIntro() {
                     } else if (overlay.requestFullscreen) {
                         overlay.requestFullscreen().catch(() => {});
                     }
-                    if (playWrap) playWrap.classList.add('hidden');
                 }).catch(() => {
-                    // Autoplay con audio bloqueado: reproducir en silencio y mostrar botón
+                    // Autoplay con audio bloqueado: reproducir en silencio automáticamente
                     video.muted = true;
                     video.play().then(() => {
-                        if (playWrap) playWrap.classList.remove('hidden');
+                        // Continuar sin mostrar controles adicionales
                     }).catch(() => {
-                        if (playWrap) playWrap.classList.remove('hidden');
+                        // Si falla, finalizar para seguir al juego
+                        finish();
                     });
                 });
             };
             tryPlay();
-            if (playWrap) {
-                const btn = playWrap.querySelector('button');
-                if (btn) btn.onclick = () => {
-                    video.muted = false;
-                    tryPlay();
-                };
-            }
         } else finish();
         if (skip) skip.onclick = finish;
     });
@@ -2585,12 +2573,12 @@ const tutorialSteps = [
         onShow: () => speak("En la tienda puedes comprar vehículos más rápidos que además te dan más ganancias."),
     },
      {
-        text: "Recolecta 20 estrellas ⭐ para obtener una llave y abrir un cofre con una gran recompensa de 20,000 monedas.",
+        text: "Recolecta 20 estrellas ⭐ para obtener una llave y abrir un cofre con una gran recompensa de 20.000 (veinte mil) monedas.",
         element: '#starDisplayContainer',
         onShow: () => {
             $('starDisplayContainer').classList.remove('hidden');
             $('starDisplayCount').textContent = "0/20";
-            speak("Recolecta 20 estrellas para obtener una llave y abrir un cofre con una gran recompensa de 20,000 monedas.");
+            speak("Recolecta 20 estrellas para obtener una llave y abrir un cofre con una gran recompensa de veinte mil monedas.");
         },
     },
     {
@@ -2712,7 +2700,8 @@ function highlightElement(element) {
 
     // Anclar siempre al fondo centrado, sin salirse del área visible
     textBox.style.top = 'auto';
-    textBox.style.bottom = 'calc(env(safe-area-inset-bottom) + 12px)';
+    // Subir el texto para no tapar los botones inferiores
+    textBox.style.bottom = 'calc(env(safe-area-inset-bottom) + 100px)';
     textBox.style.left = '50%';
     textBox.style.transform = 'translateX(-50%)';
 }
