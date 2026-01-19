@@ -502,15 +502,13 @@
             </div>
             <button id="introSkipBtn" class="glass-btn px-4 py-2 text-sm text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg">Saltar introducción</button>
         </div>
+        <!-- Botón pequeño para activar sonido si el navegador bloquea autoplay con audio -->
+        <button id="introAudioUnlockBtn" title="Activar sonido" class="hidden absolute left-2 bottom-2 z-[510] w-9 h-9 rounded-full bg-slate-800/80 text-white border border-slate-600 shadow flex items-center justify-center">
+            <span class="text-lg">🔊</span>
+        </button>
     </div>
 
-    <audio id="introSound" src="intro.mp3" preload="auto"></audio>
-
-    <!-- SPLASH SCREEN DE INICIO -->
-    <div id="splashScreen" class="hidden fixed inset-0 z-[300] bg-slate-900 flex items-center justify-center">
-        <!-- Nota: Asegúrate de que el archivo 'deliveryrush.png' exista en la carpeta raíz del proyecto -->
-        <img src="deliveryrush.png" alt="Delivery Rush" class="animate-pulse w-3/4 max-w-xs">
-    </div>
+    
 
     <!-- FRAME DEL JUEGO GLOBAL -->
     <div id="app-frame" class="relative w-full h-full max-w-[450px] bg-slate-900 shadow-2xl rounded-xl overflow-hidden ring-1 ring-white/5 flex flex-col">
@@ -704,7 +702,7 @@
             <div class="w-full flex justify-center gap-1 px-0 py-1 overflow-x-auto">
                 <button onclick="instantDeliver()" class="glass-btn w-10 h-10 rounded-lg" title="Entregar Ya ($500)"><span class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #f472b6);">⚡</span></button>
                 <button onclick="addExtraTime()" class="glass-btn w-10 h-10 rounded-lg" title="+5 seg ($5)"><span class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #f97316);">⏱️</span></button>
-                <button onclick="toggleBridgeMode()" id="btnBridge" class="glass-btn w-10 h-10 rounded-lg relative" title="Puente ($100)"><span class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #a855f7);">🌉</span></button>
+                <button onclick="toggleBridgeMode()" id="btnBridge" class="glass-btn w-10 h-10 rounded-lg relative" title="Puente ($50)"><span class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #a855f7);">🌉</span></button>
                 <button onclick="toggleSound()" class="glass-btn w-10 h-10 rounded-lg"><span id="soundIcon" class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #3b82f6);">🔊</span></button>
                 <button onclick="openShop()" class="glass-btn w-10 h-10 rounded-lg"><span class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #eab308);">🛍️</span></button>
                 <button onclick="showMenu()" class="glass-btn w-10 h-10 rounded-lg"><span class="glass-icon text-lg">☰</span></button>
@@ -832,7 +830,6 @@ function getCoreAssets() {
         'camionetaa.png',
         'LOGO-RAPPI.png',
         'INDRIVER.png',
-        'deliveryrush.png',
         'favicon.png'
     ];
     // Unir con imágenes ya declaradas para precarga si existen
@@ -870,6 +867,21 @@ function startIntro() {
     const bar = document.getElementById('introProgressBar');
     const txt = document.getElementById('introProgressText');
     const skip = document.getElementById('introSkipBtn');
+    const audioBtn = document.getElementById('introAudioUnlockBtn');
+    
+    // Desbloquear audio del video en interacción si el autoplay con sonido falla
+    let audioUnlocked = false;
+    const unlockVideoAudio = () => {
+        if (audioUnlocked) return;
+        audioUnlocked = true;
+        try {
+            if (video) {
+                video.muted = false;
+                video.play().catch(() => {});
+            }
+            if (audioBtn) audioBtn.classList.add('hidden');
+        } catch(e) {}
+    };
 
     const onProgress = pct => {
         if (bar) bar.style.width = pct + '%';
@@ -878,16 +890,21 @@ function startIntro() {
 
     const assetsPromise = preloadAssets(getCoreAssets(), onProgress);
 
-    // Intentar reproducir automáticamente con sonido; si falla, continuar en silencio sin mostrar botón
+    // Intentar reproducir automáticamente con sonido; si falla, continuar en silencio
     let videoResolved = false;
     const videoPromise = new Promise(resolve => {
         const finish = () => { if (!videoResolved) { videoResolved = true; resolve(); } };
         if (video) {
-            video.muted = false;
+            video.muted = false; // Intento principal: sonido activo
             video.addEventListener('ended', finish, { once: true });
             video.addEventListener('error', finish, { once: true });
+            // Reintentos controlados para navegadores que bloquean autoplay con audio
+            let playAttempts = 0;
+            let playStarted = false;
             const tryPlay = () => {
                 video.play().then(() => {
+                    playStarted = true;
+                    if (audioBtn) audioBtn.classList.add('hidden');
                     // Intentar fullscreen al iniciar
                     if (video.requestFullscreen) {
                         video.requestFullscreen().catch(() => {});
@@ -895,25 +912,33 @@ function startIntro() {
                         overlay.requestFullscreen().catch(() => {});
                     }
                 }).catch(() => {
-                    // Autoplay con audio bloqueado: reproducir en silencio automáticamente
-                    video.muted = true;
-                    video.play().then(() => {
-                        // Continuar sin mostrar controles adicionales
-                    }).catch(() => {
-                        // Si falla, finalizar para seguir al juego
-                        finish();
-                    });
+                    // Mantener sin mute y reintentar unas veces
+                    playAttempts++;
+                    if (audioBtn) audioBtn.classList.remove('hidden');
+                    if (playAttempts < 6) {
+                        setTimeout(tryPlay, 500);
+                    } else {
+                        // Dar oportunidad a desbloqueo por interacción; si no empieza, continuar
+                        if (!playStarted) finish();
+                    }
                 });
             };
             tryPlay();
+            // Si el video está listo para reproducir, intentar nuevamente
+            video.addEventListener('canplay', () => { if (!playStarted) tryPlay(); }, { once: true });
         } else finish();
-        if (skip) skip.onclick = finish;
+        if (skip) skip.onclick = () => { if (audioBtn) audioBtn.classList.add('hidden'); finish(); };
     });
 
     if (overlay) overlay.classList.remove('hidden');
 
+    // Primer gesto del usuario en el overlay habilita el audio del video si estaba bloqueado
+    if (overlay) overlay.addEventListener('pointerdown', () => { unlockVideoAudio(); }, { once: true });
+    if (audioBtn) audioBtn.onclick = () => unlockVideoAudio();
+
     Promise.all([assetsPromise, videoPromise]).then(() => {
         if (overlay) overlay.classList.add('hidden');
+        if (audioBtn) audioBtn.classList.add('hidden');
         // Continuar con el flujo normal
         init();
     });
@@ -1857,6 +1882,8 @@ let editRenderId = null; // Loop de render en modo edición
 let previewAnimIndexFloat = 0; // Índice flotante para crecimiento progresivo de la línea amarilla
 let lastEditFrameTime = 0; // Timestamp para delta
 const PREVIEW_SPEED_SEGMENTS_PER_SEC = 4; // Velocidad de crecimiento en segmentos por segundo
+let prevPlannedRoute = []; // Última ruta planificada para mantener prefijo estable
+let previewStableSegments = 0; // Número de segmentos confirmados que no deben reiniciarse
 const DIR = { N: 1, E: 2, S: 4, W: 8 };
 const DIR_DELTA = { 1: {dc:0,dr:-1}, 2: {dc:1,dr:0}, 4: {dc:0,dr:1}, 8: {dc:-1,dr:0} };
 const OPPOSITE = { 1: 4, 2: 8, 4: 1, 8: 2 };
@@ -3767,8 +3794,24 @@ function calculatePreviewPath() {
 
     if (bestPathToDisplay) {
         previewPath = bestPathToDisplay.pathPoints;
-        plannedRoute = bestPathToDisplay.route;
-        resetPreviewAnimation();
+        const newRoute = bestPathToDisplay.route || [];
+
+        // Calcular prefijo común con la ruta previa para no reiniciar desde el inicio
+        let common = 0;
+        const maxCommon = Math.min(prevPlannedRoute.length, newRoute.length);
+        for (; common < maxCommon; common++) {
+            const a = prevPlannedRoute[common];
+            const b = newRoute[common];
+            if (!a || !b || a.col !== b.col || a.row !== b.row || a.dir !== b.dir) break;
+        }
+        previewStableSegments = common; // segmentos (saltos entre nodos) estabilizados
+
+        plannedRoute = newRoute;
+        prevPlannedRoute = newRoute.slice();
+
+        // Ajustar el índice animado: no menor al prefijo estable, ni mayor al total de segmentos
+        const maxSegments = Math.max(0, plannedRoute.length - 1);
+        previewAnimIndexFloat = Math.max(previewStableSegments, Math.min(previewAnimIndexFloat, maxSegments));
     }
 }
 
