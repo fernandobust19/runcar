@@ -111,7 +111,8 @@
         .vehicle-btn { 
             transition: all 0.2s; 
             border: 3px solid transparent;
-            min-width: 70px;
+            min-width: 80px;
+            min-height: 80px;
             padding: 10px 8px;
         }
         .vehicle-btn.selected { border-color: #10b981; transform: scale(1.08); box-shadow: 0 0 15px rgba(16, 185, 129, 0.4); }
@@ -474,6 +475,11 @@
         }
         #tutorialTextBox {
             z-index: 202; /* Por encima de todo */
+            max-width: 90%;
+            width: 92%;
+            background: rgba(15, 23, 42, 0.75); /* slate-900/75 */
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
         }
     </style>
 </head>
@@ -551,28 +557,28 @@
                 <!-- Selector de Vehículo -->
                 <div>
                     <label class="block text-slate-400 text-[10px] font-bold text-center mb-1">VEHÍCULO</label>
-                    <div class="flex justify-center gap-1 flex-wrap">
-                        <button onclick="selectVehicle('moto')" id="btn-moto" class="vehicle-btn selected bg-slate-700 rounded-lg p-1 w-12 h-12">
-                            <span class="text-lg">🏍️</span>
+                    <div class="flex justify-center gap-2 flex-wrap">
+                        <button onclick="selectVehicle('moto')" id="btn-moto" class="vehicle-btn selected bg-slate-700 rounded-lg p-1 w-16 h-16">
+                            <span class="text-2xl">🏍️</span>
                         </button>
-                        <button onclick="selectVehicle('car')" id="btn-car" class="vehicle-btn bg-slate-700 rounded-lg p-1 w-12 h-12">
-                            <span class="text-lg">🚗</span>
+                        <button onclick="selectVehicle('car')" id="btn-car" class="vehicle-btn bg-slate-700 rounded-lg p-1 w-16 h-16">
+                            <span class="text-2xl">🚗</span>
                         </button>
-                        <button onclick="selectVehicle('truck')" id="btn-truck" class="vehicle-btn bg-slate-700 rounded-lg p-1 w-12 h-12">
-                            <span class="text-lg">🛻</span>
+                        <button onclick="selectVehicle('truck')" id="btn-truck" class="vehicle-btn bg-slate-700 rounded-lg p-1 w-16 h-16">
+                            <span class="text-2xl">🛻</span>
                         </button>
                         
                         <!-- Premium integrados en la misma fila -->
-                        <button onclick="selectPremiumMoto()" id="btn-motoa" class="vehicle-btn bg-slate-800 rounded-lg p-1 w-12 h-12 relative border border-yellow-500/30">
-                            <img src="motoa.gif" class="w-6 h-6 object-contain mx-auto">
+                        <button onclick="selectPremiumMoto()" id="btn-motoa" class="vehicle-btn bg-slate-800 rounded-lg p-1 w-16 h-16 relative border border-yellow-500/30">
+                            <img src="motoa.gif" class="w-8 h-8 object-contain mx-auto">
                             <span id="motoLock" class="absolute top-0 right-0 text-[10px]">🔒</span>
                         </button>
-                        <button onclick="selectPremiumTruck()" id="btn-trucka" class="vehicle-btn bg-slate-800 rounded-lg p-1 w-12 h-12 relative border border-yellow-500/30">
-                            <img src="camionetaa.png" class="w-6 h-6 object-contain mx-auto">
+                        <button onclick="selectPremiumTruck()" id="btn-trucka" class="vehicle-btn bg-slate-800 rounded-lg p-1 w-16 h-16 relative border border-yellow-500/30">
+                            <img src="camionetaa.png" class="w-8 h-8 object-contain mx-auto">
                             <span id="truckLock" class="absolute top-0 right-0 text-[10px]">🔒</span>
                         </button>
-                        <button onclick="selectPremiumCamion()" id="btn-camion" class="vehicle-btn bg-slate-800 rounded-lg p-1 w-12 h-12 relative border border-yellow-500/30">
-                            <img src="camion.png" class="w-6 h-6 object-contain mx-auto">
+                        <button onclick="selectPremiumCamion()" id="btn-camion" class="vehicle-btn bg-slate-800 rounded-lg p-1 w-16 h-16 relative border border-yellow-500/30">
+                            <img src="camion.png" class="w-8 h-8 object-contain mx-auto">
                             <span id="camionLock" class="absolute top-0 right-0 text-[10px]">🔒</span>
                         </button>
                     </div>
@@ -696,10 +702,8 @@
 
             <!-- Controls (Barra inferior de herramientas) -->
             <div class="w-full flex justify-center gap-1 px-0 py-1 overflow-x-auto">
-                <button onclick="resetLevel()" class="glass-btn w-10 h-10 rounded-lg" title="Reiniciar ($100)"><span class="glass-icon text-lg">🔄</span></button>
                 <button onclick="instantDeliver()" class="glass-btn w-10 h-10 rounded-lg" title="Entregar Ya ($500)"><span class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #f472b6);">⚡</span></button>
                 <button onclick="addExtraTime()" class="glass-btn w-10 h-10 rounded-lg" title="+5 seg ($5)"><span class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #f97316);">⏱️</span></button>
-                <button onclick="toggleBridgeMode()" id="btnBridge" class="glass-btn w-10 h-10 rounded-lg relative" title="Puente ($100)"><span class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #a855f7);">🌉</span></button>
                 <button onclick="repairTile()" class="glass-btn w-10 h-10 rounded-lg" title="Constructora"><span class="glass-icon text-lg">🏗️</span></button>
                 <button onclick="toggleSound()" class="glass-btn w-10 h-10 rounded-lg"><span id="soundIcon" class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #3b82f6);">🔊</span></button>
                 <button onclick="openShop()" class="glass-btn w-10 h-10 rounded-lg"><span class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #eab308);">🛍️</span></button>
@@ -818,14 +822,14 @@
     <div id="tutorialOverlay" class="hidden fixed inset-0 z-[200] bg-transparent">
         <!-- El spotlight se crea dinámicamente en JS, este es un placeholder -->
         <div id="tutorialSpotlight"></div>
-        <img src="repartidor.jpeg" id="tutorialWelcomeImage" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 max-w-sm w-4/5 p-4 rounded-xl shadow-2xl bg-slate-900/50 backdrop-blur-sm border-2 border-slate-700"/>
-        <div id="tutorialTextBox" class="absolute bg-slate-800 p-4 rounded-lg border-2 border-emerald-400 max-w-sm text-center shadow-2xl transition-all duration-300">
-            <p id="tutorialText" class="text-white mb-4 leading-relaxed"></p>
-            <div class="flex justify-center items-center gap-4">
-                 <button id="tutorialPrevBtn" class="bg-slate-600 hover:bg-slate-500 text-white font-bold py-2 px-6 rounded-full transition-transform active:scale-95">Anterior</button>
-                 <button id="tutorialNextBtn" class="bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-2 px-6 rounded-full transition-transform active:scale-95">Siguiente</button>
+        <img src="repartidor.jpeg" id="tutorialWelcomeImage" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 max-w-sm w-4/5 p-3 rounded-xl shadow-2xl bg-slate-900/50 backdrop-blur-sm border-2 border-slate-700"/>
+        <div id="tutorialTextBox" class="absolute left-1/2 -translate-x-1/2 bottom-[calc(env(safe-area-inset-bottom)+12px)] bg-slate-900/70 p-3 rounded-lg border border-emerald-400 text-center shadow-xl transition-all duration-300">
+            <p id="tutorialText" class="text-white text-[12px] mb-2 leading-snug"></p>
+            <div class="flex justify-center items-center gap-2">
+                 <button id="tutorialPrevBtn" class="bg-slate-600 hover:bg-slate-500 text-white font-bold py-1 px-3 rounded-full text-[11px] transition-transform active:scale-95">Anterior</button>
+                 <button id="tutorialNextBtn" class="bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-1 px-3 rounded-full text-[11px] transition-transform active:scale-95">Siguiente</button>
             </div>
-            <button id="tutorialSkipBtn" class="text-slate-400 text-xs mt-3 underline hover:text-white">Saltar Tutorial</button>
+            <button id="tutorialSkipBtn" class="text-slate-300 text-[10px] mt-2 underline hover:text-white">Saltar Tutorial</button>
         </div>
     </div>
 
@@ -2694,14 +2698,9 @@ function highlightElement(element) {
         spotlight.style.height = rect.height + 10 + 'px';
     }
 
-    const spaceBelow = window.innerHeight - (parseInt(spotlight.style.top) + parseInt(spotlight.style.height));
-    if (spaceBelow > textBox.offsetHeight + 30) {
-        textBox.style.top = parseInt(spotlight.style.top) + parseInt(spotlight.style.height) + 15 + 'px';
-        textBox.style.bottom = 'auto';
-    } else {
-        textBox.style.bottom = (window.innerHeight - parseInt(spotlight.style.top)) + 15 + 'px';
-        textBox.style.top = 'auto';
-    }
+    // Anclar siempre al fondo centrado, sin salirse del área visible
+    textBox.style.top = 'auto';
+    textBox.style.bottom = 'calc(env(safe-area-inset-bottom) + 12px)';
     textBox.style.left = '50%';
     textBox.style.transform = 'translateX(-50%)';
 }
@@ -4351,6 +4350,14 @@ function gameLoop() {
         
         const next = grid[nr * COLS + nc];
         if (!next || next.type === TILE_TYPES.BLOCKED) { crash('¡Bloqueado!'); return; }
+
+        // Semáforo en la siguiente pieza: detener ANTES de entrar si no está en verde
+        if (next.special === 'semaphore' && next.semaphoreState !== 'green') {
+            car.waiting = true;
+            draw();
+            animationId = requestAnimationFrame(gameLoop);
+            return;
+        }
         
         // VALIDAR que la siguiente pieza esté CONECTADA (powered) - el carro no puede ir por calles no armadas
         if (!next.powered && !next.locked) { 
