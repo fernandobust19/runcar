@@ -479,19 +479,19 @@
 </head>
 <body class="h-[100dvh] w-screen flex items-center justify-center overflow-hidden bg-[#0a0a0a] p-1 sm:p-4 touch-none">
 
-    <!-- INTRO VIDEO + PRELOAD OVERLAY -->
-    <div id="introOverlay" class="fixed inset-0 z-[500] bg-black/95 flex flex-col items-center justify-center gap-6 text-center">
-        <div class="w-full max-w-sm px-4">
-            <video id="introVideo" class="w-full rounded-lg border border-slate-700 shadow-xl" src="intro.mp4" playsinline muted preload="auto"></video>
-        </div>
-        <div class="w-3/4 max-w-xs">
-            <div class="text-xs text-slate-300 mb-2">Cargando juego…</div>
-            <div class="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
-                <div id="introProgressBar" class="h-full w-0 bg-emerald-500 transition-all"></div>
+    <!-- INTRO VIDEO + PRELOAD OVERLAY (FULLSCREEN COVER) -->
+    <div id="introOverlay" class="fixed inset-0 z-[500] bg-black">
+        <video id="introVideo" class="absolute inset-0 w-full h-full object-cover object-center pointer-events-none" src="intro.mp4" playsinline muted preload="auto"></video>
+        <div class="absolute inset-x-0 bottom-0 pb-[env(safe-area-inset-bottom)] flex flex-col items-center gap-2 px-4 text-center">
+            <div class="w-3/4 max-w-xs">
+                <div class="text-xs text-slate-200 mb-2 drop-shadow">Cargando juego…</div>
+                <div class="h-2 w-full bg-slate-800/70 rounded-full overflow-hidden">
+                    <div id="introProgressBar" class="h-full w-0 bg-emerald-500 transition-[width] duration-300"></div>
+                </div>
+                <div id="introProgressText" class="mt-2 text-[10px] text-slate-300">0%</div>
             </div>
-            <div id="introProgressText" class="mt-2 text-[10px] text-slate-400">0%</div>
+            <button id="introSkipBtn" class="glass-btn px-4 py-2 text-sm text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg">Saltar introducción</button>
         </div>
-        <button id="introSkipBtn" class="glass-btn px-4 py-2 text-sm text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg">Saltar introducción</button>
     </div>
 
     <audio id="introSound" src="intro.mp3" preload="auto"></audio>
