@@ -485,9 +485,13 @@
 </head>
 <body class="h-[100dvh] w-screen flex items-center justify-center overflow-hidden bg-[#0a0a0a] p-1 sm:p-4 touch-none">
 
-    <!-- INTRO VIDEO + PRELOAD OVERLAY (FULLSCREEN COVER) -->
+    <!-- INTRO VIDEO + PRELOAD OVERLAY (centrado con margen blanco alrededor) -->
     <div id="introOverlay" class="fixed inset-0 z-[500] bg-black">
-        <video id="introVideo" class="absolute inset-0 w-full h-full object-cover object-center bg-black" src="intro.mp4" playsinline autoplay preload="auto"></video>
+        <div class="absolute inset-0 flex items-center justify-center px-4">
+            <div class="bg-white rounded-xl p-2 shadow-2xl max-w-[90vw] max-h-[75vh]">
+                <video id="introVideo" class="block w-[86vw] h-[70vh] object-contain object-center bg-black rounded-lg" src="intro.mp4" playsinline autoplay preload="auto"></video>
+            </div>
+        </div>
         <div class="absolute inset-x-0 bottom-0 pb-[env(safe-area-inset-bottom)] flex flex-col items-center gap-2 px-4 text-center">
             <div class="w-3/4 max-w-xs">
                 <div class="text-xs text-slate-200 mb-2 drop-shadow">Cargando juego…</div>
@@ -663,7 +667,7 @@
 
         <!-- ZONA INFERIOR FIJA: Contenedor para todos los controles -->
         <!-- shrink-0 evita que flex reduzca su tamaño. Aumentado pb-6 para subir controles -->
-        <div class="w-full shrink-0 flex flex-col gap-2 z-30 bg-slate-900 pb-6 border-t border-slate-700" style="box-shadow: 0 -4px 25px rgba(0,0,0,0.7);">
+        <div id="bottomControls" class="w-full shrink-0 flex flex-col gap-2 z-30 bg-slate-900 pb-6 border-t border-slate-700" style="box-shadow: 0 -4px 25px rgba(0,0,0,0.7);">
             
             <!-- Hint -->
             <div class="text-center text-slate-400 text-[10px] mt-1 px-2">
@@ -794,18 +798,7 @@
                     <span id="shopCamionIcon" class="text-2xl">🔒</span>
                 </div>
                 
-                <!-- Puente -->
-                <div id="shopBridge" class="flex items-center justify-between bg-slate-700 p-3 rounded-xl border-2 border-transparent hover:border-yellow-400 cursor-pointer transition-all" onclick="buyBridge()">
-                    <div class="flex items-center gap-3">
-                        <span class="text-4xl">🌉</span>
-                        <div>
-                            <p class="text-white font-bold">Puente</p>
-                            <p class="text-xs text-cyan-300">Conecta cualquier camino</p>
-                            <p class="text-yellow-400 text-sm" id="shopBridgeStatus">$100</p>
-                        </div>
-                    </div>
-                    <span id="bridgeCount" class="text-2xl bg-slate-900/50 rounded-full px-3 py-1">0</span>
-                </div>
+                
             </div>
             
             <div class="mt-4 text-center">
@@ -1639,42 +1632,7 @@ function buyVehicle(vehicleType) {
     }
 }
 
-function buyBridge() {
-    if (totalMoney >= BRIDGE_PRICE) {
-        showConfirmModal({
-            icon: '🌉',
-            title: 'Comprar Puente',
-            message: `<strong>¿Comprar Puente por $${BRIDGE_PRICE}?</strong><br><br>🔗 Permite conectar piezas sin importar sus salidas<br>🎮 Uso: Click en botón 🌉 y luego en una pieza<br><br>💰 Tu dinero: <span style="color:#fbbf24">$${totalMoney}</span>`,
-            type: 'warning',
-            confirmText: '🛒 Comprar',
-            cancelText: '❌ Cancelar'
-        }).then(confirmed => {
-            if (confirmed) {
-                totalMoney -= BRIDGE_PRICE;
-                bridgesOwned++;
-                $('moneyDisplay').textContent = totalMoney;
-                $('shopMoney').textContent = totalMoney;
-                if ($('bridgeCount')) $('bridgeCount').textContent = bridgesOwned;
-                playSound('money');
-                updateShopUI();
-                saveGameData();
-                showGameModal({
-                    icon: '✅',
-                    title: '¡Puente Comprado!',
-                    message: `<strong>🌉 Ahora tienes ${bridgesOwned} puente(s)</strong><br><br>💡 Usa el botón 🌉 en el juego para colocarlo`,
-                    type: 'success'
-                });
-            }
-        });
-    } else {
-        showGameModal({
-            icon: '💸',
-            title: 'Dinero Insuficiente',
-            message: `<strong>Te faltan $${BRIDGE_PRICE - totalMoney}</strong><br><br>🎯 Necesitas: <span style="color:#fbbf24">$${BRIDGE_PRICE}</span><br>💰 Tu dinero: $${totalMoney}`,
-            type: 'error'
-        });
-    }
-}
+// Opción de compra de puente eliminada: los puentes se colocan solo desde los botones principales
 
 function updatePremiumMotoUI() {
     // Moto Premium
@@ -1895,6 +1853,10 @@ for (let i = 1; i <= 100; i++) {
 
 let TILE_SIZE = 55, COLS = 6, ROWS = 7;
 let floatingTexts = []; // Variable global para textos flotantes
+let editRenderId = null; // Loop de render en modo edición
+let previewAnimIndexFloat = 0; // Índice flotante para crecimiento progresivo de la línea amarilla
+let lastEditFrameTime = 0; // Timestamp para delta
+const PREVIEW_SPEED_SEGMENTS_PER_SEC = 4; // Velocidad de crecimiento en segmentos por segundo
 const DIR = { N: 1, E: 2, S: 4, W: 8 };
 const DIR_DELTA = { 1: {dc:0,dr:-1}, 2: {dc:1,dr:0}, 4: {dc:0,dr:1}, 8: {dc:-1,dr:0} };
 const OPPOSITE = { 1: 4, 2: 8, 4: 1, 8: 2 };
@@ -1939,7 +1901,7 @@ let deliveryStartTime = 0; // Tiempo cuando comenzó la entrega
 let deliveryTimer = null; // Timer para la entrega
 let bridgesOwned = 0; // Número de puentes que tiene el jugador
 let semaphoreTimers = []; // Para gestionar y limpiar los ciclos de semáforos
-const BRIDGE_PRICE = 100; // Precio de cada puente
+const BRIDGE_PRICE = 50; // Precio de cada puente (ajustado)
 
 class Tile {
     constructor(col, row, type, rotation = 0) {
@@ -2062,6 +2024,7 @@ function generateTutorialLevel() {
     resetCar();
     checkConnections();
     draw();
+    startEditRender();
 }
 
 // ============ FUNCIONES DE GUARDADO LOCAL ============
@@ -2686,8 +2649,11 @@ function highlightElement(element) {
 
     // Anclar siempre al fondo centrado, sin salirse del área visible
     textBox.style.top = 'auto';
-    // Subir el texto para no tapar los botones inferiores
-    textBox.style.bottom = 'calc(env(safe-area-inset-bottom) + 100px)';
+    // Subir el texto para no tapar los botones inferiores (offset dinámico por altura real de controles)
+    const controls = $('bottomControls');
+    const extraMargin = 8; // pequeño margen adicional
+    const controlsHeight = controls ? (controls.offsetHeight || 120) : 120;
+    textBox.style.bottom = `calc(env(safe-area-inset-bottom) + ${controlsHeight + extraMargin}px)`;
     textBox.style.left = '50%';
     textBox.style.transform = 'translateX(-50%)';
 }
@@ -2780,6 +2746,7 @@ function generateLevel(showLoading = true) {
     // Ajuste visual y dibujado
     resize();
     draw();
+    startEditRender();
 
     // Mostrar anuncio de nivel
     showLevelAnnouncement();
@@ -3801,6 +3768,7 @@ function calculatePreviewPath() {
     if (bestPathToDisplay) {
         previewPath = bestPathToDisplay.pathPoints;
         plannedRoute = bestPathToDisplay.route;
+        resetPreviewAnimation();
     }
 }
 
@@ -4043,6 +4011,12 @@ function resetCar() {
 function startCar() {
     initAudio();
     if (gameState !== 'EDITING') return;
+    // Prechequeo: debe existir una ruta planificada válida antes de iniciar
+    if (!plannedRoute || plannedRoute.length === 0 || !previewPath || previewPath.length < 2) {
+        const btn = $('btnStart');
+        if (btn) { btn.classList.add('shake'); setTimeout(() => btn.classList.remove('shake'), 500); }
+        return;
+    }
     // NO detenemos el countdown - el tiempo sigue corriendo
     stopPrepAnimation();
     
@@ -4073,6 +4047,8 @@ function actuallyStartCar() {
     car.angle = car.dir === DIR.N ? -Math.PI/2 : car.dir === DIR.E ? 0 : car.dir === DIR.S ? Math.PI/2 : Math.PI;
     
     gameState = 'RUNNING';
+    // Detener render de edición si estuviera activo
+    if (editRenderId) { cancelAnimationFrame(editRenderId); editRenderId = null; }
     $('btnStart').classList.add('opacity-50', 'pointer-events-none');
     $('statusText').textContent = '¡ENTREGANDO! ⏱️';
     $('statusText').className = 'text-emerald-400 font-bold text-xs pulse';
@@ -4277,13 +4253,8 @@ function gameLoop() {
         const next = grid[nr * COLS + nc];
         if (!next || next.type === TILE_TYPES.BLOCKED) { crash('¡Bloqueado!'); return; }
 
-        // Semáforo en la siguiente pieza: detener ANTES de entrar si no está en verde
-        if (next.special === 'semaphore' && next.semaphoreState !== 'green') {
-            car.waiting = true;
-            draw();
-            animationId = requestAnimationFrame(gameLoop);
-            return;
-        }
+        // Semáforo en la siguiente pieza: permitir entrar a la pieza del semáforo
+        // y detenerse solo al estar sobre ella si está en rojo/amarillo
         
         // VALIDAR que la siguiente pieza esté CONECTADA (powered) - el carro no puede ir por calles no armadas
         if (!next.powered && !next.locked) { 
@@ -4821,7 +4792,11 @@ function drawPreviewPath() {
     if (previewPath.length < 2) return;
     ctx.save();
     
-    // Dibujar solo la línea amarilla principal - SOLO LÍNEAS RECTAS
+    // Determinar progreso de dibujo
+    const totalSegments = previewPath.length - 1;
+    const maxIndex = Math.min(Math.floor(previewAnimIndexFloat), totalSegments);
+    const frac = Math.min(Math.max(previewAnimIndexFloat - Math.floor(previewAnimIndexFloat), 0), 1);
+
     // Sombra
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
     ctx.lineWidth = 6;
@@ -4830,20 +4805,15 @@ function drawPreviewPath() {
     ctx.setLineDash([8, 4]);
     ctx.beginPath();
     ctx.moveTo(previewPath[0].x, previewPath[0].y);
-    for (let i = 1; i < previewPath.length; i++) {
-        // Solo dibujar líneas rectas (sin diagonales)
-        const prevX = previewPath[i-1].x;
-        const prevY = previewPath[i-1].y;
-        const currX = previewPath[i].x;
-        const currY = previewPath[i].y;
-        
-        // Si hay desplazamiento diagonal, dibujar en dos segmentos
-        if (prevX !== currX && prevY !== currY) {
-            ctx.lineTo(currX, prevY);
-            ctx.lineTo(currX, currY);
-        } else {
-            ctx.lineTo(currX, currY);
-        }
+    for (let i = 1; i <= maxIndex; i++) {
+        ctx.lineTo(previewPath[i].x, previewPath[i].y);
+    }
+    if (maxIndex < totalSegments && frac > 0) {
+        const a = previewPath[maxIndex];
+        const b = previewPath[maxIndex + 1];
+        const px = a.x + (b.x - a.x) * frac;
+        const py = a.y + (b.y - a.y) * frac;
+        ctx.lineTo(px, py);
     }
     ctx.stroke();
     
@@ -4852,20 +4822,25 @@ function drawPreviewPath() {
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(previewPath[0].x, previewPath[0].y);
-    for (let i = 1; i < previewPath.length; i++) {
-        const prevX = previewPath[i-1].x;
-        const prevY = previewPath[i-1].y;
-        const currX = previewPath[i].x;
-        const currY = previewPath[i].y;
-        
-        // Si hay desplazamiento diagonal, dibujar en dos segmentos
-        ctx.lineTo(currX, currY);
+    for (let i = 1; i <= maxIndex; i++) {
+        ctx.lineTo(previewPath[i].x, previewPath[i].y);
+    }
+    if (maxIndex < totalSegments && frac > 0) {
+        const a2 = previewPath[maxIndex];
+        const b2 = previewPath[maxIndex + 1];
+        const px2 = a2.x + (b2.x - a2.x) * frac;
+        const py2 = a2.y + (b2.y - a2.y) * frac;
+        ctx.lineTo(px2, py2);
     }
     ctx.stroke();
     ctx.setLineDash([]);
     
     // Indicador final
-    const last = previewPath[previewPath.length - 1];
+    const last = (maxIndex < totalSegments && frac > 0) ? {
+        x: previewPath[maxIndex].x + (previewPath[maxIndex + 1].x - previewPath[maxIndex].x) * frac,
+        y: previewPath[maxIndex].y + (previewPath[maxIndex + 1].y - previewPath[maxIndex].y) * frac,
+        isEnd: false
+    } : previewPath[previewPath.length - 1];
     if (last.isEnd) {
         ctx.fillStyle = 'rgba(34, 197, 94, 0.8)';
         ctx.beginPath();
@@ -5660,6 +5635,26 @@ function drawGiantSemaphore(tile) {
     }
     
     ctx.restore();
+}
+
+// Animación de crecimiento de línea amarilla en modo edición
+function resetPreviewAnimation() {
+    previewAnimIndexFloat = 0;
+}
+
+function startEditRender() {
+    if (editRenderId) { cancelAnimationFrame(editRenderId); editRenderId = null; }
+    lastEditFrameTime = performance.now();
+    const loop = (ts) => {
+        if (gameState !== 'EDITING') { editRenderId = null; return; }
+        const deltaSec = Math.min((ts - lastEditFrameTime) / 1000, 0.1);
+        lastEditFrameTime = ts;
+        const segments = Math.max(1, previewPath.length - 1);
+        previewAnimIndexFloat = Math.min(previewAnimIndexFloat + deltaSec * PREVIEW_SPEED_SEGMENTS_PER_SEC, segments);
+        draw();
+        editRenderId = requestAnimationFrame(loop);
+    };
+    editRenderId = requestAnimationFrame(loop);
 }
 
 window.onload = startIntro;
