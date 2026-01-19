@@ -461,6 +461,20 @@
         .game-modal.warning .game-modal-title {
             color: #fbbf24;
         }
+
+        /* --- ESTILOS DEL TUTORIAL --- */
+        #tutorialSpotlight {
+            position: absolute;
+            border-radius: 12px;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 4px solid #fde047; /* Amarillo brillante y más grueso */
+            /* Solo la sombra para el brillo, sin el overlay que oscurece la pantalla */
+            box-shadow: 0 0 35px 15px rgba(253, 224, 71, 0.6);
+            pointer-events: none;
+        }
+        #tutorialTextBox {
+            z-index: 202; /* Por encima de todo */
+        }
     </style>
 </head>
 <body class="h-[100dvh] w-screen flex items-center justify-center overflow-hidden bg-[#0a0a0a] p-1 sm:p-4 touch-none">
@@ -757,6 +771,21 @@
             <div class="mt-4 text-center">
                 <button onclick="closeShop()" class="btn-game bg-slate-600 hover:bg-slate-500 text-white font-bold py-2 px-6 rounded-lg">❌ Cerrar</button>
             </div>
+        </div>
+    </div>
+
+    <!-- TUTORIAL OVERLAY -->
+    <div id="tutorialOverlay" class="hidden fixed inset-0 z-[200] bg-transparent">
+        <!-- El spotlight se crea dinámicamente en JS, este es un placeholder -->
+        <div id="tutorialSpotlight"></div>
+        <img src="repartidor.jpeg" id="tutorialWelcomeImage" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 max-w-sm w-4/5 p-4 rounded-xl shadow-2xl bg-slate-900/50 backdrop-blur-sm border-2 border-slate-700"/>
+        <div id="tutorialTextBox" class="absolute bg-slate-800 p-4 rounded-lg border-2 border-emerald-400 max-w-sm text-center shadow-2xl transition-all duration-300">
+            <p id="tutorialText" class="text-white mb-4 leading-relaxed"></p>
+            <div class="flex justify-center items-center gap-4">
+                 <button id="tutorialPrevBtn" class="bg-slate-600 hover:bg-slate-500 text-white font-bold py-2 px-6 rounded-full transition-transform active:scale-95">Anterior</button>
+                 <button id="tutorialNextBtn" class="bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-2 px-6 rounded-full transition-transform active:scale-95">Siguiente</button>
+            </div>
+            <button id="tutorialSkipBtn" class="text-slate-400 text-xs mt-3 underline hover:text-white">Saltar Tutorial</button>
         </div>
     </div>
 
@@ -1688,7 +1717,7 @@ for (let i = 1; i <= 100; i++) {
     // Niveles avanzados (>60) son más difíciles: más obstáculos, más calles ciegas
     const isHard = i > 60;
     
-    LEVEL_CONFIG.push({
+    const levelData = {
         // Aumentar tamaño progresivamente PERO LÍMITE FIJO para evitar scroll excesivo
         // Nivel 40: 9x11 es el máximo y funciona bien. Mantenemos eso.
         cols: Math.min(5 + Math.floor(i / 5), 9), 
@@ -1712,7 +1741,21 @@ for (let i = 1; i <= 100; i++) {
                 : ['semaphore','puddle']) 
             : ['semaphore']) 
         : []
-    });
+    };
+
+    // Añadir bloqueadores temáticos progresivamente
+    levelData.themedBlockers = [];
+    if (i >= 30) {
+        levelData.themedBlockers.push({ type: 'bridge_broken', count: 2 });
+    }
+    if (i >= 60) {
+        levelData.themedBlockers.push({ type: 'road_work', count: 2 });
+    }
+    if (i >= 90) {
+        levelData.themedBlockers.push({ type: 'landslide', count: 1 });
+    }
+
+    LEVEL_CONFIG.push(levelData);
 }
 
 let TILE_SIZE = 55, COLS = 6, ROWS = 7;
@@ -1804,21 +1847,87 @@ function startGame() {
     }
     $('companyLogo').src = companyLogos[selectedCompany] || 'LOGO-RAPPI.png';
     
-    // CAMBIO DE PANTALLA
-    $('startScreen').classList.add('hidden'); // Ocultar Menú
-    $('gameInterface').classList.remove('hidden'); // Mostrar Interfaz de Juego
-    
-    // Mantener el nivel guardado (ya cargado por loadGameData)
-    // Solo reiniciar a nivel 1 si es un jugador completamente nuevo
-    if (level === undefined || level === null) {
-        level = 1;
+    // --- Lógica de Tutorial ---
+    const playerKey = 'deliveryRush_' + driverName.toLowerCase().replace(/\s+/g, '_');
+    const playerData = JSON.parse(localStorage.getItem(playerKey) || '{}');
+    const tutorialCompleted = playerData.tutorialCompleted || false;
+
+    // Mostrar interfaz del juego
+    $('startScreen').classList.add('hidden');
+    $('gameInterface').classList.remove('hidden');
+    resize(); // Asegurar dimensiones correctas
+
+    if (!tutorialCompleted) {
+        generateTutorialLevel(); 
+        setTimeout(startTutorial, 100); // Dar tiempo a que se renderice el canvas
+    } else {
+        if (level === undefined || level === null) {
+            level = 1;
+        }
+        $('levelDisplay').textContent = level;
+        generateLevel(false);
     }
-    $('levelDisplay').textContent = level;
-    // Generar nivel sin overlay de carga para evitar pantalla negra inicial
-    generateLevel(false);
     
     // Forzar un resize inicial para asegurar layouts correctos
     setTimeout(resize, 100);
+}
+
+function generateTutorialLevel() {
+    // Esta función genera un nivel 1 predecible para el tutorial
+    // Es una copia de generateLevel sin el anuncio de nivel
+    level = 1; // Forzar nivel 1 para el tutorial
+    const config = LEVEL_CONFIG[0];
+    COLS = config.cols; ROWS = config.rows;
+
+    gameState = 'EDITING';
+    bridgeModeActive = false;
+    const ov = $('overlay');
+    if (ov) {
+        ov.removeAttribute('style');
+        ov.className = 'hidden absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-20 rounded-xl p-3';
+        ov.style.display = '';
+    }
+    const startBtn = $('btnStart');
+    if (startBtn) startBtn.classList.remove('opacity-50', 'pointer-events-none');
+    const orderReadyEl = $('orderReady');
+    if (orderReadyEl) orderReadyEl.classList.add('hidden');
+    
+    grid = new Array(COLS * ROWS).fill(null);
+    specialTiles = [];
+
+    maxTime = 999; // Tiempo casi infinito para el tutorial
+    timeLeft = maxTime;
+    if ($('timerDisplay')) {
+        $('timerDisplay').textContent = `⏱️ ${timeLeft}`;
+        $('timerDisplay').classList.remove('timer-warning');
+    }
+    if ($('progressBar')) {
+        $('progressBar').style.width = '100%';
+        $('progressBar').className = 'progress-bar h-full bg-emerald-500 rounded-full';
+    }
+    if ($('statusText')) {
+        $('statusText').textContent = 'TUTORIAL';
+        $('statusText').className = 'text-yellow-400 font-bold text-xs';
+    }
+    if ($('levelHint')) {
+        $('levelHint').textContent = `Bienvenido al tutorial`;
+    }
+
+    startPrepAnimation();
+    updateStarUI();
+
+    // Usar una semilla o layout fijo para el tutorial
+    placeStart();
+    placeEnd();
+    // No colocar obstáculos en el tutorial
+    ensureSolvablePath();
+    fillEmpty(0); // Sin callejones sin salida
+    // No aleatorizar rotaciones para que sea más fácil
+    grid.forEach(tile => { if (tile && !tile.locked) tile.rotation = 0; });
+    
+    resetCar();
+    checkConnections();
+    draw();
 }
 
 // ============ FUNCIONES DE GUARDADO LOCAL ============
@@ -2234,6 +2343,216 @@ function toggleBridgeMode() {
     }
 }
 
+// --- SISTEMA DE TUTORIAL INTERACTIVO ---
+let tutorialActive = false;
+let currentTutorialStep = 0;
+let speech = new SpeechSynthesisUtterance();
+let synth = window.speechSynthesis;
+
+function speak(text) {
+    if (!soundEnabled || !synth) return;
+    synth.cancel();
+    speech.text = text;
+    speech.lang = 'es-ES';
+    speech.pitch = 1.2; // Tono más agudo para más energía
+    speech.rate = 1.1;  // Un poco más rápido
+    synth.speak(speech);
+}
+
+const tutorialSteps = [
+    {
+        text: "¡Bienvenido a Delivery Rush! Tu misión es construir la ruta para que el repartidor entregue el pedido.",
+        element: '#gameCanvas',
+        onShow: () => speak("¡Bienvenido a Delivery Rush! Tu misión es construir la ruta para que el repartidor entregue el pedido."),
+    },
+    {
+        text: "Toca las piezas de la carretera para girarlas y conectarlas. ¡Crea un camino desde el vehículo hasta la casa del cliente!",
+        element: () => {
+            const tile = grid.find(t => t && !t.locked && t.type !== TILE_TYPES.BLOCKED);
+            return tile ? { col: tile.col, row: tile.row } : null;
+        },
+        onShow: (el) => {
+            speak("Toca las piezas de la carretera para girarlas y conectarlas. ¡Crea un camino desde el vehículo hasta la casa del cliente!");
+            if (el) {
+                const tile = grid[parseInt(el.dataset.row) * COLS + parseInt(el.dataset.col)];
+                if (tile) {
+                    let rotations = 0;
+                    const interval = setInterval(() => {
+                        if (!tutorialActive || rotations >= 2) { clearInterval(interval); return; }
+                        tile.rotation = (tile.rotation + 1) % 4;
+                        checkConnections();
+                        draw();
+                        rotations++;
+                    }, 800);
+                }
+            }
+        }
+    },
+    {
+        text: "La línea amarilla te muestra la ruta que seguirá tu vehículo. ¡Asegúrate de que llegue a la casa!",
+        element: '#gameCanvas',
+        onShow: () => {
+            speak("La línea amarilla te muestra la ruta que seguirá tu vehículo. ¡Asegúrate de que llegue a la casa!");
+            grid.forEach(t => { if(t && !t.locked){ t.rotation = 0; } });
+            checkConnections();
+            draw();
+        }
+    },
+    {
+        text: "Cuando la ruta esté completa, presiona 'ENTREGAR' para iniciar la entrega.",
+        element: '#btnStart',
+        onShow: () => speak("Cuando la ruta esté completa, presiona 'ENTREGAR' para iniciar la entrega."),
+    },
+    {
+        text: "Ganas dinero 💰 con cada entrega y recogiendo monedas. ¡Úsalo en la tienda para mejorar tu flota!",
+        element: '#moneyDisplay',
+        onShow: () => speak("Ganas dinero con cada entrega y recogiendo monedas. ¡Úsalo en la tienda para mejorar tu flota!"),
+    },
+    {
+        text: "En la tienda 🛍️ puedes comprar vehículos más rápidos que además te dan más ganancias.",
+        element: 'button[onclick="openShop()"]',
+        onShow: () => speak("En la tienda puedes comprar vehículos más rápidos que además te dan más ganancias."),
+    },
+     {
+        text: "Recolecta 20 estrellas ⭐ para obtener una llave y abrir un cofre con una gran recompensa de 20,000 monedas.",
+        element: '#starDisplayContainer',
+        onShow: () => {
+            $('starDisplayContainer').classList.remove('hidden');
+            $('starDisplayCount').textContent = "0/20";
+            speak("Recolecta 20 estrellas para obtener una llave y abrir un cofre con una gran recompensa de 20,000 monedas.");
+        },
+    },
+    {
+        text: "¡Cuidado con el temporizador! ⏱️ Si se acaba, el cliente cancelará el pedido. ¡Ahora, a repartir!",
+        element: '#timerDisplay',
+        onShow: () => speak("¡Cuidado con el temporizador! Si se acaba, el cliente cancelará el pedido. ¡Ahora, a repartir!"),
+    }
+];
+
+function startTutorial() {
+    tutorialActive = true;
+    currentTutorialStep = 0;
+    $('tutorialOverlay').classList.remove('hidden');
+    setTimeout(() => showTutorialStep(0), 100);
+
+    $('tutorialNextBtn').onclick = () => {
+        currentTutorialStep++;
+        if (currentTutorialStep >= tutorialSteps.length) {
+            endTutorial();
+        } else {
+            showTutorialStep(currentTutorialStep);
+        }
+    };
+    $('tutorialPrevBtn').onclick = () => {
+        currentTutorialStep = Math.max(0, currentTutorialStep - 1);
+        showTutorialStep(currentTutorialStep);
+    };
+    $('tutorialSkipBtn').onclick = endTutorial;
+}
+
+function endTutorial() {
+    tutorialActive = false;
+    $('tutorialOverlay').classList.add('hidden');
+    const oldTemp = document.getElementById('temp-highlight');
+    if(oldTemp) oldTemp.remove();
+    if(synth) synth.cancel();
+
+    const playerKey = 'deliveryRush_' + driverName.toLowerCase().replace(/\s+/g, '_');
+    try {
+        const playerData = JSON.parse(localStorage.getItem(playerKey) || '{}');
+        playerData.tutorialCompleted = true;
+        localStorage.setItem(playerKey, JSON.stringify(playerData));
+    } catch(e) { console.error("Failed to save tutorial completion status", e); }
+    
+    // Regenerar un nivel normal y mostrar la pantalla de inicio de nivel
+    generateLevel(false);
+}
+
+function showTutorialStep(index) {
+    if (!tutorialActive || index >= tutorialSteps.length) return;
+    
+    const step = tutorialSteps[index];
+    $('tutorialText').innerHTML = step.text;
+    
+    $('tutorialPrevBtn').style.visibility = index === 0 ? 'hidden' : 'visible';
+    $('tutorialNextBtn').textContent = index === tutorialSteps.length - 1 ? '¡Jugar!' : 'Siguiente';
+    
+    const welcomeImage = $('tutorialWelcomeImage');
+    const spotlight = $('tutorialSpotlight');
+
+    if (index === 0) {
+        welcomeImage.classList.remove('hidden');
+        spotlight.style.display = 'none';
+        // Mover el texto debajo de la imagen
+        const imgRect = welcomeImage.getBoundingClientRect();
+        if (imgRect.height > 0) {
+             $('tutorialTextBox').style.top = imgRect.bottom + 20 + 'px';
+             $('tutorialTextBox').style.bottom = 'auto';
+        }
+    } else {
+        welcomeImage.classList.add('hidden');
+        spotlight.style.display = 'block';
+    }
+    
+    let elementToHighlight = null;
+    const oldTemp = document.getElementById('temp-highlight');
+    if(oldTemp) oldTemp.remove();
+
+    if (typeof step.element === 'string') {
+        elementToHighlight = document.querySelector(step.element);
+    } else if (typeof step.element === 'function') {
+        const tileData = step.element();
+        if (tileData) {
+            const tempEl = document.createElement('div');
+            tempEl.id = 'temp-highlight';
+            document.body.appendChild(tempEl);
+            tempEl.dataset.col = tileData.col;
+            tempEl.dataset.row = tileData.row;
+            elementToHighlight = tempEl;
+        } else {
+             elementToHighlight = document.querySelector('#gameCanvas'); // Fallback
+        }
+    }
+
+    if (elementToHighlight && index !== 0) { // No resaltar nada en el paso 0
+        highlightElement(elementToHighlight);
+    }
+    
+    if (step.onShow) {
+        setTimeout(() => step.onShow(elementToHighlight), 500);
+    }
+}
+
+function highlightElement(element) {
+    const rect = element.getBoundingClientRect();
+    const spotlight = $('tutorialSpotlight');
+    const textBox = $('tutorialTextBox');
+
+    if (element.id === 'temp-highlight') {
+        const canvasRect = canvas.getBoundingClientRect();
+        spotlight.style.left = canvasRect.left + (parseInt(element.dataset.col) * TILE_SIZE) - 5 + 'px';
+        spotlight.style.top = canvasRect.top + (parseInt(element.dataset.row) * TILE_SIZE) - 5 + 'px';
+        spotlight.style.width = TILE_SIZE + 10 + 'px';
+        spotlight.style.height = TILE_SIZE + 10 + 'px';
+    } else {
+        spotlight.style.left = rect.left - 5 + 'px';
+        spotlight.style.top = rect.top - 5 + 'px';
+        spotlight.style.width = rect.width + 10 + 'px';
+        spotlight.style.height = rect.height + 10 + 'px';
+    }
+
+    const spaceBelow = window.innerHeight - (parseInt(spotlight.style.top) + parseInt(spotlight.style.height));
+    if (spaceBelow > textBox.offsetHeight + 30) {
+        textBox.style.top = parseInt(spotlight.style.top) + parseInt(spotlight.style.height) + 15 + 'px';
+        textBox.style.bottom = 'auto';
+    } else {
+        textBox.style.bottom = (window.innerHeight - parseInt(spotlight.style.top)) + 15 + 'px';
+        textBox.style.top = 'auto';
+    }
+    textBox.style.left = '50%';
+    textBox.style.transform = 'translateX(-50%)';
+}
+
 function init() {
     resize();
     loadGameData(); // Cargar datos guardados al iniciar
@@ -2253,6 +2572,7 @@ function init() {
 
 // Genera el nivel actual: prepara grid, UI y piezas
 function generateLevel(showLoading = true) {
+    if ($('levelDisplay')) $('levelDisplay').textContent = level;
     // Configuración por nivel
     const config = LEVEL_CONFIG[Math.min(level - 1, 99)];
     COLS = config.cols; ROWS = config.rows;
@@ -2307,6 +2627,7 @@ function generateLevel(showLoading = true) {
     placeStart();
     placeEnd();
     placeObstacles(config.obstacles);
+    placeThemedBlockers(config);
     ensureSolvablePath();
     fillEmpty(config.deadEnds);
     randomizeRotations();
@@ -2759,6 +3080,37 @@ function placeObstacles(count) {
         grid[row * COLS + col].special = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
         placed++;
     }
+}
+
+function placeThemedBlockers(config) {
+    if (!config.themedBlockers || config.themedBlockers.length === 0) return;
+
+    config.themedBlockers.forEach(blockerInfo => {
+        let placed = 0;
+        let attempts = 0;
+        while (placed < blockerInfo.count && attempts < 100) {
+            attempts++;
+            const col = Math.floor(Math.random() * COLS);
+            const row = Math.floor(Math.random() * ROWS);
+
+            if (grid[row * COLS + col]) continue; // Already occupied
+
+            const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
+            const endTile = grid.find(t => t && t.type === TILE_TYPES.END);
+            if (startTile && Math.abs(col - startTile.col) <= 1 && Math.abs(row - startTile.row) <= 1) continue;
+            if (endTile && Math.abs(col - endTile.col) <= 1 && Math.abs(row - endTile.row) <= 1) continue;
+
+            const newBlocker = new Tile(col, row, TILE_TYPES.BLOCKED);
+            newBlocker.special = blockerInfo.type;
+            grid[row * COLS + col] = newBlocker;
+
+            if (!canReachEnd()) {
+                grid[row * COLS + col] = null; // Revert if it makes level unsolvable
+            } else {
+                placed++;
+            }
+        }
+    });
 }
 
 function placeCoins() {
@@ -4457,11 +4809,48 @@ function drawTile(tile) {
     ctx.fillRect(x + 1, y + 1, TILE_SIZE - 2, TILE_SIZE - 2);
     
     if (tile.type === TILE_TYPES.BLOCKED) {
-        ctx.fillStyle = tile.special === 'tree' ? '#166534' : tile.special === 'bridge_broken' ? '#78350f' : tile.special === 'broken' ? '#4b5563' : '#ea580c';
+        let icon = '🚧';
+        let color = '#ea580c'; // construction orange
+        switch(tile.special) {
+            case 'tree':
+                icon = '🌳';
+                color = '#166534'; // green
+                break;
+            case 'broken':
+                icon = '⚠️';
+                color = '#4b5563'; // gray
+                break;
+            case 'bridge_broken':
+                icon = '🌉';
+                color = '#78350f'; // brown
+                break;
+            case 'road_work':
+                icon = '🚧';
+                color = '#f97316'; // orange
+                break;
+            case 'landslide':
+                icon = '⛰️';
+                color = '#854d0e'; // dark yellow
+                break;
+        }
+        ctx.fillStyle = color;
         ctx.fillRect(x + 4, y + 4, TILE_SIZE - 8, TILE_SIZE - 8);
-        ctx.font = `${tile.special === 'tree' ? TILE_SIZE * 0.25 : TILE_SIZE * 0.4}px sans-serif`;
+        ctx.font = `${TILE_SIZE * 0.4}px sans-serif`;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(tile.special === 'tree' ? '🌳' : tile.special === 'bridge_broken' ? '🌉' : tile.special === 'broken' ? '⚠️' : '🚧', cx, cy);
+        ctx.globalAlpha = 0.8;
+        ctx.fillText(icon, cx, cy);
+        ctx.globalAlpha = 1;
+
+        if (tile.special === 'bridge_broken') {
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = TILE_SIZE * 0.08;
+            ctx.beginPath();
+            ctx.moveTo(cx - TILE_SIZE * 0.2, cy - TILE_SIZE * 0.2);
+            ctx.lineTo(cx + TILE_SIZE * 0.2, cy + TILE_SIZE * 0.2);
+            ctx.moveTo(cx + TILE_SIZE * 0.2, cy - TILE_SIZE * 0.2);
+            ctx.lineTo(cx - TILE_SIZE * 0.2, cy + TILE_SIZE * 0.2);
+            ctx.stroke();
+        }
         ctx.restore(); return;
     }
     
