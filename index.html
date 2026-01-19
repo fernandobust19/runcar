@@ -481,7 +481,11 @@
 
     <!-- INTRO VIDEO + PRELOAD OVERLAY (FULLSCREEN COVER) -->
     <div id="introOverlay" class="fixed inset-0 z-[500] bg-black">
-        <video id="introVideo" class="absolute inset-0 w-full h-full object-cover object-center pointer-events-none" src="intro.mp4" playsinline muted preload="auto"></video>
+        <video id="introVideo" class="absolute inset-0 w-full h-full object-contain object-center bg-black" src="intro.mp4" playsinline preload="auto"></video>
+        <!-- Botón para reproducir con sonido en caso de que el autoplay sea bloqueado -->
+        <div id="introPlayBtn" class="absolute inset-0 flex items-center justify-center">
+            <button class="glass-btn px-5 py-3 text-sm text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg">Tocar para reproducir con sonido ▶️</button>
+        </div>
         <div class="absolute inset-x-0 bottom-0 pb-[env(safe-area-inset-bottom)] flex flex-col items-center gap-2 px-4 text-center">
             <div class="w-3/4 max-w-xs">
                 <div class="text-xs text-slate-200 mb-2 drop-shadow">Cargando juego…</div>
@@ -873,6 +877,7 @@ function startIntro() {
     const bar = document.getElementById('introProgressBar');
     const txt = document.getElementById('introProgressText');
     const skip = document.getElementById('introSkipBtn');
+    const playWrap = document.getElementById('introPlayBtn');
 
     const onProgress = pct => {
         if (bar) bar.style.width = pct + '%';
@@ -881,17 +886,29 @@ function startIntro() {
 
     const assetsPromise = preloadAssets(getCoreAssets(), onProgress);
 
-    // Intentar reproducir automáticamente (móvil requiere muted + user gesture)
+    // Intentar reproducir automáticamente con sonido; si falla, pedir gesto
     let videoResolved = false;
     const videoPromise = new Promise(resolve => {
         const finish = () => { if (!videoResolved) { videoResolved = true; resolve(); } };
         if (video) {
+            video.muted = false;
             video.addEventListener('ended', finish, { once: true });
             video.addEventListener('error', finish, { once: true });
-            video.play().catch(() => {
-                // Si falla el autoplay, mostrar un tap para iniciar
-                video.setAttribute('controls', 'true');
-            });
+            const tryPlay = () => {
+                video.play().then(() => {
+                    if (playWrap) playWrap.classList.add('hidden');
+                }).catch(() => {
+                    if (playWrap) playWrap.classList.remove('hidden');
+                });
+            };
+            tryPlay();
+            if (playWrap) {
+                const btn = playWrap.querySelector('button');
+                if (btn) btn.onclick = () => {
+                    video.muted = false;
+                    tryPlay();
+                };
+            }
         } else finish();
         if (skip) skip.onclick = finish;
     });
@@ -981,30 +998,18 @@ function prevTrack() {
 function updateSpeedometer() {
     // Detectar si el coche (variable global 'car') se está moviendo
     let targetSpeed = 0;
-    
+
     if (typeof car !== 'undefined' && car && gameState === 'RUNNING' && !car.waiting) {
-       // VELOCIDAD BASE EN PANTALLA: 100 KM/H
-       let displayBase = 100;
-       
-       // Detectar tiles especiales analizando la velocidad real vs base
-       // Si car.speed > car.baseSpeed -> Boost (150 KM/H)
-       // Si car.speed < car.baseSpeed -> Pozo (80 KM/H)
-       
-       // Verificar que baseSpeed no sea 0 para evitar division por cero
-       if (car.baseSpeed > 0) {
-           const ratio = car.speed / car.baseSpeed;
-           
-           if (ratio > 1.2) {
-               // Turbo detectado
-               displayBase = 150; 
-           } else if (ratio < 0.8) {
-               // Charco detectado
-               displayBase = 80;
-           }
-       }
-       
-       // Pequeña variación para realismo (+/- 3 km/h del objetivo)
-       targetSpeed = displayBase + (Math.random() * 6 - 3);
+        // Mapear velocidad real relativa a una escala de 0-160
+        // 100 corresponde a car.baseSpeed, >100 indica boost, <100 indica ralentización
+        if (car.baseSpeed > 0) {
+            const ratio = car.speed / car.baseSpeed; // 1.0 => 100 km/h visual
+            const mapped = Math.max(0, Math.min(160, Math.round(100 * ratio)));
+            // Variación leve para dar vida
+            targetSpeed = mapped + (Math.random() * 4 - 2);
+        } else {
+            targetSpeed = 0;
+        }
     } else {
         // Si está parado o esperando
         targetSpeed = 0;
@@ -1063,7 +1068,7 @@ function updateSpeedometer() {
 
     // AGUJA
     const maxSpeed = 160;
-    const speed = Math.min(currentSpeed, maxSpeed);
+    const speed = Math.max(0, Math.min(currentSpeed, maxSpeed));
     // Mapear 0-160 a Math.PI - 0 (Semicírculo, de izq a der)
     const angle = Math.PI + (speed / maxSpeed) * Math.PI;
     
