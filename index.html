@@ -479,6 +479,21 @@
 </head>
 <body class="h-[100dvh] w-screen flex items-center justify-center overflow-hidden bg-[#0a0a0a] p-1 sm:p-4 touch-none">
 
+    <!-- INTRO VIDEO + PRELOAD OVERLAY -->
+    <div id="introOverlay" class="fixed inset-0 z-[500] bg-black/95 flex flex-col items-center justify-center gap-6 text-center">
+        <div class="w-full max-w-sm px-4">
+            <video id="introVideo" class="w-full rounded-lg border border-slate-700 shadow-xl" src="intro.mp4" playsinline muted preload="auto"></video>
+        </div>
+        <div class="w-3/4 max-w-xs">
+            <div class="text-xs text-slate-300 mb-2">Cargando juego…</div>
+            <div class="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+                <div id="introProgressBar" class="h-full w-0 bg-emerald-500 transition-all"></div>
+            </div>
+            <div id="introProgressText" class="mt-2 text-[10px] text-slate-400">0%</div>
+        </div>
+        <button id="introSkipBtn" class="glass-btn px-4 py-2 text-sm text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg">Saltar introducción</button>
+    </div>
+
     <audio id="introSound" src="intro.mp3" preload="auto"></audio>
 
     <!-- SPLASH SCREEN DE INICIO -->
@@ -774,6 +789,19 @@
                     </div>
                     <span id="shopCamionIcon" class="text-2xl">🔒</span>
                 </div>
+                
+                <!-- Puente -->
+                <div id="shopBridge" class="flex items-center justify-between bg-slate-700 p-3 rounded-xl border-2 border-transparent hover:border-yellow-400 cursor-pointer transition-all" onclick="buyBridge()">
+                    <div class="flex items-center gap-3">
+                        <span class="text-4xl">🌉</span>
+                        <div>
+                            <p class="text-white font-bold">Puente</p>
+                            <p class="text-xs text-cyan-300">Conecta cualquier camino</p>
+                            <p class="text-yellow-400 text-sm" id="shopBridgeStatus">$100</p>
+                        </div>
+                    </div>
+                    <span id="bridgeCount" class="text-2xl bg-slate-900/50 rounded-full px-3 py-1">0</span>
+                </div>
             </div>
             
             <div class="mt-4 text-center">
@@ -798,6 +826,84 @@
     </div>
 
 <script>
+// ===== INTRO VIDEO + PRELOAD =====
+function getCoreAssets() {
+    const base = [
+        'cesped.jpg',
+        'pavimento.jpg',
+        'motoa.gif',
+        'camionetaa.png',
+        'LOGO-RAPPI.png',
+        'INDRIVER.png',
+        'deliveryrush.png',
+        'favicon.png'
+    ];
+    // Unir con imágenes ya declaradas para precarga si existen
+    try {
+        if (Array.isArray(imagesToLoad)) {
+            imagesToLoad.forEach(p => { if (!base.includes(p)) base.push(p); });
+        }
+    } catch(e) {}
+    return base;
+}
+
+function preloadAssets(paths, onProgress) {
+    return new Promise(resolve => {
+        let loaded = 0;
+        const total = paths.length;
+        if (total === 0) { onProgress?.(100); resolve(); return; }
+        const update = () => {
+            loaded++;
+            const pct = Math.round((loaded / total) * 100);
+            onProgress?.(pct);
+            if (loaded >= total) resolve();
+        };
+        paths.forEach(p => {
+            const img = new Image();
+            img.onload = update;
+            img.onerror = update;
+            img.src = p;
+        });
+    });
+}
+
+function startIntro() {
+    const overlay = document.getElementById('introOverlay');
+    const video = document.getElementById('introVideo');
+    const bar = document.getElementById('introProgressBar');
+    const txt = document.getElementById('introProgressText');
+    const skip = document.getElementById('introSkipBtn');
+
+    const onProgress = pct => {
+        if (bar) bar.style.width = pct + '%';
+        if (txt) txt.textContent = pct + '%';
+    };
+
+    const assetsPromise = preloadAssets(getCoreAssets(), onProgress);
+
+    // Intentar reproducir automáticamente (móvil requiere muted + user gesture)
+    let videoResolved = false;
+    const videoPromise = new Promise(resolve => {
+        const finish = () => { if (!videoResolved) { videoResolved = true; resolve(); } };
+        if (video) {
+            video.addEventListener('ended', finish, { once: true });
+            video.addEventListener('error', finish, { once: true });
+            video.play().catch(() => {
+                // Si falla el autoplay, mostrar un tap para iniciar
+                video.setAttribute('controls', 'true');
+            });
+        } else finish();
+        if (skip) skip.onclick = finish;
+    });
+
+    if (overlay) overlay.classList.remove('hidden');
+
+    Promise.all([assetsPromise, videoPromise]).then(() => {
+        if (overlay) overlay.classList.add('hidden');
+        // Continuar con el flujo normal
+        init();
+    });
+}
 // Helper function para obtener elementos por ID
 const $ = id => document.getElementById(id);
 
@@ -826,8 +932,12 @@ function playTrack(index) {
         musicPlayer.play().then(() => {
             isMusicPlaying = true;
             updatePlayBtn();
-            const safeName = file.name.replace(/[<>]/g, ''); // Sanitize simple
-            $('trackInfo').innerHTML = `<marquee scrollamount="3">🎵 Reproduciendo: ${safeName} ... </marquee>`;
+            const trackInfo = $('trackInfo');
+            trackInfo.textContent = ''; // Limpiar contenido
+            const marquee = document.createElement('marquee');
+            marquee.setAttribute('scrollamount', '3');
+            marquee.textContent = `🎵 Reproduciendo: ${file.name} ... `;
+            trackInfo.appendChild(marquee);
         }).catch(err => {
             console.error("Error al reproducir audio:", err);
             // Algunos navegadores bloquean autoplay sin interacción previa
@@ -1202,8 +1312,10 @@ function selectPremiumMoto() {
                     premiumMotoUnlocked = true;
                     $('moneyDisplay').textContent = totalMoney;
                     $('motoLock').textContent = '⭐';
-                    $('motoPrice').textContent = 'TUYA';
-                    $('motoPrice').classList.add('text-emerald-400');
+                    if ($('motoPrice')) {
+                        $('motoPrice').textContent = 'TUYA';
+                        $('motoPrice').classList.add('text-emerald-400');
+                    }
                     selectVehicle('motoa');
                     playSound('money');
                     showGameModal({
@@ -1243,8 +1355,10 @@ function selectPremiumTruck() {
                     premiumTruckUnlocked = true;
                     $('moneyDisplay').textContent = totalMoney;
                     $('truckLock').textContent = '⭐';
-                    $('truckPrice').textContent = 'TUYA';
-                    $('truckPrice').classList.add('text-emerald-400');
+                    if ($('truckPrice')) {
+                        $('truckPrice').textContent = 'TUYA';
+                        $('truckPrice').classList.add('text-emerald-400');
+                    }
                     selectVehicle('trucka');
                     playSound('money');
                     showGameModal({
@@ -1284,8 +1398,10 @@ function selectPremiumCamion() {
                     premiumCamionUnlocked = true;
                     $('moneyDisplay').textContent = totalMoney;
                     $('camionLock').textContent = '⭐';
-                    $('camionPrice').textContent = 'TUYO';
-                    $('camionPrice').classList.add('text-emerald-400');
+                    if ($('camionPrice')) {
+                        $('camionPrice').textContent = 'TUYO';
+                        $('camionPrice').classList.add('text-emerald-400');
+                    }
                     selectVehicle('camion');
                     playSound('money');
                     showGameModal({
@@ -1489,8 +1605,10 @@ function buyVehicle(vehicleType) {
                     premiumCamionUnlocked = true;
                     $('moneyDisplay').textContent = totalMoney;
                     $('camionLock').textContent = '⭐';
-                    $('camionPrice').textContent = 'TUYO';
-                    $('camionPrice').classList.add('text-emerald-400');
+                    if ($('camionPrice')) {
+                        $('camionPrice').textContent = 'TUYO';
+                        $('camionPrice').classList.add('text-emerald-400');
+                    }
                     selectVehicle('camion');
                     playSound('money');
                     showGameModal({
@@ -1796,6 +1914,7 @@ const pavementImg = new Image();
 pavementImg.src = 'pavimento.jpg';
 let gameState = 'START', animationId, countdownTimer, timeLeft, maxTime, engineSoundInterval;
 let totalMoney = 0; // Dinero acumulado por propinas
+let tutorialCompleted = false;
 let totalStars = 0; // Estrellas acumuladas para el cofre
 let savedEndPosition = null; // Posición guardada de la casa para reintentos
 let currentLevelForEnd = 0; // Nivel actual para saber cuándo cambiar la casa
@@ -1856,9 +1975,7 @@ function startGame() {
     $('companyLogo').src = companyLogos[selectedCompany] || 'LOGO-RAPPI.png';
     
     // --- Lógica de Tutorial ---
-    const playerKey = 'deliveryRush_' + driverName.toLowerCase().replace(/\s+/g, '_');
-    const playerData = JSON.parse(localStorage.getItem(playerKey) || '{}');
-    const tutorialCompleted = playerData.tutorialCompleted || false;
+    // La variable global `tutorialCompleted` se carga en `loadGameData` al iniciar.
 
     // Mostrar interfaz del juego
     $('startScreen').classList.add('hidden');
@@ -1945,6 +2062,7 @@ function saveGameData() {
         driverName: driverName,
         level: level,
         totalMoney: totalMoney,
+        tutorialCompleted: tutorialCompleted,
         totalStars: totalStars, // Guardar estrellas
         premiumMotoUnlocked: premiumMotoUnlocked,
         premiumTruckUnlocked: premiumTruckUnlocked,
@@ -1983,19 +2101,19 @@ function loadGameData(playerName) {
         if (!playerName) {
             playerName = localStorage.getItem('deliveryRushLastPlayer');
         }
-        
+
         if (!playerName) {
             // No hay jugador previo, mostrar lista de jugadores si existe
             showPlayersList();
             return false;
         }
-        
+
         const playerKey = 'deliveryRush_' + playerName.toLowerCase().replace(/\s+/g, '_');
         const saved = localStorage.getItem(playerKey);
-        
+
         if (saved) {
             const gameData = JSON.parse(saved);
-            
+
             // Cargar nombre
             if (gameData.driverName && gameData.driverName !== "Repartidor") {
                 driverName = gameData.driverName;
@@ -2003,7 +2121,7 @@ function loadGameData(playerName) {
                 $('welcomeBack').classList.remove('hidden');
                 $('welcomeBack').innerHTML = '¡Bienvenido de nuevo! <button onclick="showPlayersList()" class="text-xs text-yellow-400 underline ml-2">Cambiar jugador</button>';
             }
-            
+
             // Cargar nivel
             if (gameData.level !== undefined) {
                 level = gameData.level;
@@ -2014,7 +2132,7 @@ function loadGameData(playerName) {
                     $('resetProgressBtn').classList.remove('hidden');
                 }
             }
-            
+
             // Cargar dinero
             if (gameData.totalMoney !== undefined) {
                 totalMoney = gameData.totalMoney;
@@ -2025,27 +2143,26 @@ function loadGameData(playerName) {
                 }
             }
 
+            // Cargar estado del tutorial
+            if (gameData.tutorialCompleted !== undefined) {
+                tutorialCompleted = gameData.tutorialCompleted;
+            }
+
             // Cargar estrellas
             if (gameData.totalStars !== undefined) {
                 totalStars = gameData.totalStars;
             } else {
                 totalStars = 0;
             }
-            
+
             // Cargar desbloqueos
-            if (gameData.premiumMotoUnlocked) {
-                premiumMotoUnlocked = true;
-            }
-            if (gameData.premiumTruckUnlocked) {
-                premiumTruckUnlocked = true;
-            }
-            if (gameData.premiumCamionUnlocked) {
-                premiumCamionUnlocked = true;
-            }
+            premiumMotoUnlocked = !!gameData.premiumMotoUnlocked;
+            premiumTruckUnlocked = !!gameData.premiumTruckUnlocked;
+            premiumCamionUnlocked = !!gameData.premiumCamionUnlocked;
             if (gameData.bridgesOwned !== undefined) {
                 bridgesOwned = gameData.bridgesOwned;
             }
-            
+
             // Cargar preferencias
             if (gameData.selectedCompany) {
                 selectedCompany = gameData.selectedCompany;
@@ -2053,14 +2170,19 @@ function loadGameData(playerName) {
                 const companyBtn = document.getElementById('btn-' + selectedCompany);
                 if (companyBtn) companyBtn.classList.add('selected');
             }
-            
-            if (gameData.selectedVehicle && (gameData.selectedVehicle !== 'motoa' || premiumMotoUnlocked) && (gameData.selectedVehicle !== 'trucka' || premiumTruckUnlocked) && (gameData.selectedVehicle !== 'camion' || premiumCamionUnlocked)) {
+
+            if (
+                gameData.selectedVehicle &&
+                (gameData.selectedVehicle !== 'motoa' || premiumMotoUnlocked) &&
+                (gameData.selectedVehicle !== 'trucka' || premiumTruckUnlocked) &&
+                (gameData.selectedVehicle !== 'camion' || premiumCamionUnlocked)
+            ) {
                 selectedVehicle = gameData.selectedVehicle;
                 document.querySelectorAll('.vehicle-btn').forEach(btn => btn.classList.remove('selected'));
                 const vehicleBtn = document.getElementById('btn-' + selectedVehicle);
                 if (vehicleBtn) vehicleBtn.classList.add('selected');
             }
-            
+
             if (gameData.selectedColor) {
                 selectedColor = gameData.selectedColor;
                 $('colorPreview').style.background = selectedColor;
@@ -2070,7 +2192,7 @@ function loadGameData(playerName) {
                     $('colorSlider').value = (colorIndex / (sliderColors.length - 1)) * 100;
                 }
             }
-            
+
             return true;
         } else {
             showPlayersList();
@@ -2175,21 +2297,41 @@ function loadPlayerData(playerName) {
 }
 
 function resetPlayerProgress() {
-    if (!confirm('¿Estás seguro de reiniciar tu progreso desde el nivel 1? Esta acción no se puede deshacer.')) {
-        return;
-    }
-    
-    level = 1;
-    saveGameData();
-    
-    $('levelInfo').classList.add('hidden');
-    $('resetProgressBtn').classList.add('hidden');
-    $('currentLevel').textContent = 1;
-    
-    showGameModal({
-        title: '✅ Progreso Reiniciado',
-        message: 'Tu progreso ha sido reiniciado. Comenzarás desde el nivel 1.',
-        confirmText: 'OK'
+    showConfirmModal({
+        title: 'Reiniciar Progreso',
+        message: '¿Estás seguro de que quieres reiniciar todo tu progreso? Perderás tu nivel, dinero y vehículos comprados. Esta acción no se puede deshacer.',
+        confirmText: 'Sí, reiniciar',
+        cancelText: 'No, cancelar',
+        type: 'error'
+    }).then(confirmed => {
+        if (confirmed) {
+            level = 1;
+            totalMoney = 0;
+            totalStars = 0;
+            premiumMotoUnlocked = false;
+            premiumTruckUnlocked = false;
+            premiumCamionUnlocked = false;
+            bridgesOwned = 0;
+            tutorialCompleted = false;
+            
+            saveGameData();
+            
+            // Actualizar UI
+            $('levelInfo').classList.add('hidden');
+            $('resetProgressBtn').classList.add('hidden');
+            $('currentLevel').textContent = '1';
+            $('moneyDisplay').textContent = '0';
+            $('savedMoneyDisplay').classList.add('hidden');
+            $('savedMoneyAmount').textContent = '0';
+            updatePremiumMotoUI();
+            updateShopUI();
+            
+            showGameModal({
+                title: '✅ Progreso Reiniciado',
+                message: 'Tu progreso ha sido reiniciado. Comenzarás desde el nivel 1.',
+                type: 'success'
+            });
+        }
     });
 }
 
@@ -2465,12 +2607,10 @@ function endTutorial() {
     if(oldTemp) oldTemp.remove();
     if(synth) synth.cancel();
 
-    const playerKey = 'deliveryRush_' + driverName.toLowerCase().replace(/\s+/g, '_');
-    try {
-        const playerData = JSON.parse(localStorage.getItem(playerKey) || '{}');
-        playerData.tutorialCompleted = true;
-        localStorage.setItem(playerKey, JSON.stringify(playerData));
-    } catch(e) { console.error("Failed to save tutorial completion status", e); }
+    // Marcar tutorial como completado de forma persistente
+    tutorialCompleted = true;
+    saveGameData();
+    
     
     // Regenerar un nivel normal y mostrar la pantalla de inicio de nivel
     generateLevel(false);
@@ -4324,6 +4464,9 @@ function nextLevel() {
         return;
     }
     level++;
+    if (level === 3) {
+        tutorialCompleted = true;
+    }
     saveGameData();
     hideGameModal();
     generateLevel();
@@ -5581,7 +5724,7 @@ function drawGiantSemaphore(tile) {
     ctx.restore();
 }
 
-window.onload = init;
+window.onload = startIntro;
 
 </script>
 </body>
