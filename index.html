@@ -755,15 +755,14 @@
                 </div>
             </div>
             
-            <!-- Preparación del pedido - En el header -->
-            <div id="prepContainer" class="prep-container hidden">
-                <div class="prep-icon text-2xl">📦</div>
-                <div class="prep-info">
-                    <span class="prep-text text-[10px]" id="prepText">Preparando...</span>
-                    <div class="prep-bar-container w-20 h-1.5">
-                        <div class="prep-bar filling" id="prepBar"></div>
-                    </div>
+            <!-- MISIÓN DEL NIVEL (Reemplaza a Preparación) -->
+            <div id="missionContainer" class="hidden flex items-center gap-2 bg-slate-800/90 px-3 py-1 rounded-lg border border-blue-500/50 shadow-[0_0_10px_rgba(59,130,246,0.3)]">
+                <div id="missionIcon" class="text-xl animate-bounce">🎯</div>
+                <div class="flex flex-col leading-none">
+                    <span class="text-[9px] text-blue-300 font-bold uppercase tracking-wider">MISIÓN ACTIVAA</span>
+                    <span id="missionText" class="text-xs text-white font-bold">Recoger 3 Monedas</span>
                 </div>
+                <div id="missionCheck" class="hidden text-emerald-400 text-lg font-bold">✓</div>
             </div>
             
             <div id="statusContainer" class="bg-slate-800/95 px-2 py-1 rounded-lg border border-slate-600 shadow-md flex flex-col items-center">
@@ -2138,6 +2137,16 @@ let bridgesOwned = 0; // Número de puentes que tiene el jugador
 let semaphoreTimers = []; // Para gestionar y limpiar los ciclos de semáforos
 const BRIDGE_PRICE = 50; // Precio de cada puente (ajustado)
 
+// --- SISTEMA DE MISIONES ---
+let currentMission = null; // { type: 'coins'|'pickup', target: 5, current: 0, item: '...' }
+const MISSION_ITEMS = [
+    { id: 'pizza', icon: '🍕', name: 'Pizza Olvidada' },
+    { id: 'keys', icon: '🔑', name: 'Llaves de Casa' },
+    { id: 'doc', icon: '📄', name: 'Factura' },
+    { id: 'coke', icon: '🥤', name: 'Bebida' },
+    { id: 'flower', icon: '🌹', name: 'Ramo de Rosas' }
+];
+
 class Tile {
     constructor(col, row, type, rotation = 0) {
         this.col = col; this.row = row; this.type = type;
@@ -2146,6 +2155,7 @@ class Tile {
         this.isEnd = false; this.isDeadEnd = false;
         this.hasCoin = false; // Propiedad para monedas
         this.hasStar = false; // Propiedad para estrellas (Nivel 30+)
+        this.missionItem = null; // { type: 'pizza', icon: '🍕', name: 'Pizza' }
     }
     getConnections() {
         if (this.type === TILE_TYPES.BLOCKED) return 0;
@@ -3033,12 +3043,71 @@ function generateLevel(showLoading = true) {
     }
 
     // Animación de preparación y estrellas
-    startPrepAnimation();
+    // startPrepAnimation(); // REEMPLAZADO POR SISTEMA DE MISIONES
     updateStarUI();
+
+    // --- GENERAR MISIÓN DEL NIVEL ---
+    if (level < 2) {
+        currentMission = null;
+        $('missionContainer').classList.add('hidden');
+    } else {
+        // Probabilidad de misión: 100% desde nivel 2 para dar variedad
+        const missionType = Math.random() > 0.5 ? 'coins' : 'pickup';
+        
+        if (missionType === 'coins') {
+            const target = Math.min(3 + Math.floor(level / 5), 8); // Entre 3 y 8 monedas
+            currentMission = {
+                type: 'coins',
+                target: target,
+                current: 0,
+                text: `Recoger ${target} Monedas`
+            };
+        } else {
+            // Misión de Recogida
+            const item = MISSION_ITEMS[Math.floor(Math.random() * MISSION_ITEMS.length)];
+            currentMission = {
+                type: 'pickup',
+                item: item,
+                completed: false,
+                text: `Recoger: ${item.name} ${item.icon}`
+            };
+        }
+
+        // --- MOSTRAR MISIÓN EN MODAL DE INICIO (NUEVO) ---
+        if (showLoading) {
+             showGameModal({
+                icon: currentMission.type === 'coins' ? '💰' : currentMission.item.icon,
+                title: `NIVEL ${level}: MISIÓN ESPECIAL`,
+                message: `<strong>${currentMission.text}</strong><br><br>⚠️ ¡Es obligatorio para completar el pedido!`,
+                confirmText: '¡ENTENDIDO!',
+                type: 'warning'
+             });
+        }
+
+        // Actualizar UI Header
+        const mCont = $('missionContainer');
+        const mText = $('missionText');
+        const mIcon = $('missionIcon');
+        const mCheck = $('missionCheck');
+
+        if (mCont && mText && mIcon) {
+            mCont.classList.remove('hidden');
+            mCheck.classList.add('hidden');
+            mText.textContent = currentMission.text;
+            mIcon.textContent = currentMission.type === 'coins' ? '💰' : currentMission.item.icon;
+            // Highlight effect
+            mCont.classList.add('animate-pulse');
+            setTimeout(() => mCont.classList.remove('animate-pulse'), 2000);
+        }
+    }
 
     // Construcción del nivel
     placeStart();
     placeEnd();
+    
+    // --- COLOCAR OBJETO DE MISIÓN EN EL MAPA ---
+    // (Lógica inyectada dentro de placeCoins o al final para asegurar posición válida)
+    
     placeObstacles(config.obstacles);
     placeThemedBlockers(config);
     ensureSolvablePath();
@@ -3046,6 +3115,24 @@ function generateLevel(showLoading = true) {
     randomizeRotations();
     addSpecials(config.features);
     placeCoins();
+    
+    // --- INSERTAR ITEM DE MISIÓN FINAL ---
+    if (currentMission && currentMission.type === 'pickup') {
+        let attempts = 0;
+        let placed = false;
+        while(attempts < 50 && !placed) {
+            const c = Math.floor(Math.random() * COLS);
+            const r = Math.floor(Math.random() * ROWS);
+            const t = grid[r * COLS + c];
+            
+            // Requisitos: Tile normal, que no sea start/end/blocked, y que NO tenga moneda ni estrella ni especial
+            if (t && !t.locked && t.type !== TILE_TYPES.BLOCKED && !t.hasCoin && !t.hasStar && !t.special) {
+                t.missionItem = currentMission.item;
+                placed = true;
+            }
+            attempts++;
+        }
+    }
 
     // Carro y conexiones
     resetCar();
@@ -4473,6 +4560,21 @@ function gameLoop() {
             levelCoins++; // Contar para estadísticas
             playSound('money');
             
+            // --- ACTUALIZAR MISION DE MONEDAS ---
+            if (currentMission && currentMission.type === 'coins') {
+                currentMission.current++;
+                // Actualizar UI Misión
+                const mText = $('missionText');
+                const mCheck = $('missionCheck');
+                if (mText) mText.textContent = `Monedas ${currentMission.current}/${currentMission.target}`;
+                
+                if (currentMission.current >= currentMission.target) {
+                    if (mCheck) mCheck.classList.remove('hidden');
+                    if (mText) mText.classList.add('text-emerald-400');
+                    playSound('delivery'); // Sonido logro
+                }
+            }
+
             // Efecto visual en el mapa (texto flotante inmediato)
             floatingTexts.push({
                 x: car.x,
@@ -4485,6 +4587,37 @@ function gameLoop() {
             
             // Animación: moneda vuela y suma el dinero al llegar
             animateCoinCollection(car.x, car.y, 20);
+        }
+        
+        // --- LOGICA ITEM DE MISION (PICKUP) ---
+        if (tile?.missionItem) {
+             const mItem = tile.missionItem;
+             tile.missionItem = null; // Recogido
+             
+             if (currentMission && currentMission.type === 'pickup') {
+                 currentMission.completed = true;
+                 
+                 // Update UI
+                 const mText = $('missionText');
+                 const mCheck = $('missionCheck');
+                 if (mCheck) mCheck.classList.remove('hidden');
+                 if (mText) {
+                     mText.textContent = `¡${mItem.name} Recogido!`;
+                     mText.classList.add('text-emerald-400');
+                 }
+                 
+                 playSound('delivery'); // Sonido logro
+                 
+                 // Float text
+                 floatingTexts.push({
+                    x: car.x,
+                    y: car.y - 40,
+                    text: `${mItem.icon} Recogido!`,
+                    color: '#34d399',
+                    life: 100,
+                    vy: -1
+                });
+             }
         }
         
         // RECOLECTAR ESTRELLA (Nivel 30+)
@@ -4521,8 +4654,23 @@ function gameLoop() {
             }
         }
 
-        // CUALQUIER meta es válida - ¡GANAS!
-        if (tile?.isEnd) { win(); return; }
+        // CUALQUIER meta es válida - ¡GANAS! (Solo si se completó la misión)
+        if (tile?.isEnd) { 
+            // Validar Misión
+            if (currentMission) {
+                if (currentMission.type === 'coins' && currentMission.current < currentMission.target) {
+                    crash(`¡Faltan monedas!<br>Requeridas: ${currentMission.target}`);
+                    return;
+                }
+                if (currentMission.type === 'pickup' && !currentMission.completed) {
+                    crash(`¡Olvidaste el objeto!<br>Recoge: ${currentMission.item.name} ${currentMission.item.icon}`);
+                    return;
+                }
+            }
+            
+            win(); 
+            return; 
+        }
         
         const conn = tile?.getConnections() || 0;
         const entry = OPPOSITE[car.dir];
@@ -4877,8 +5025,12 @@ function win() {
     // Bonus
     const halfTimeBonus = timeUsedRatio <= 0.5 ? 10 : 0;
     const timeBonus = Math.floor(timeLeft / 5) * 5;
+
+    // --- NUEVO: Bono por Mayor Armado (Complejidad de Ruta) ---
+    // Si la ruta tiene 14 pasos o más, se considera un armado complejo
+    const complexityBonus = (plannedRoute && plannedRoute.length >= 14) ? 50 : 0;
     
-    const totalEarned = deliveryPayment + halfTimeBonus + timeBonus;
+    const totalEarned = deliveryPayment + halfTimeBonus + timeBonus + complexityBonus;
     totalMoney += totalEarned;
     
     // Actualizar display de dinero
@@ -4908,24 +5060,33 @@ function win() {
     nextLvlDiv.className = 'level-transition-title';
     nextLvlDiv.innerHTML = `<span class="text-slate-400 text-lg font-light uppercase tracking-widest">Nivel Completado</span><br><span class="text-6xl font-black text-white" style="text-shadow: 0 0 30px rgba(16,185,129,0.5);">${level}</span>`;
     nextLvlDiv.style.textAlign = 'center';
-    nextLvlDiv.style.marginBottom = '30px';
+    nextLvlDiv.style.marginBottom = '20px'; // Reducido un poco
     nextLvlDiv.style.animation = 'popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
     ov.appendChild(nextLvlDiv);
     
     // 2. Stats (Monedas ganadas) - INSTANTÁNEO
     const statsDiv = document.createElement('div');
-    statsDiv.className = 'flex gap-4 mb-10';
+    statsDiv.className = 'flex flex-col gap-2 mb-8 items-center'; // Cambiado a columna para mostrar detalle
     statsDiv.style.animation = 'fadeIn 0.5s ease-out 0.2s backwards';
+    
+    // Detalle de ganancias
+    let bonusText = '';
+    if (complexityBonus > 0) bonusText += `<br><span class="text-sm text-cyan-300">🏗️ Bono Constructor: +$${complexityBonus}</span>`;
+    if (halfTimeBonus > 0) bonusText += `<br><span class="text-sm text-blue-300">⚡ Bono Velocidad: +$${halfTimeBonus}</span>`;
+    
     statsDiv.innerHTML = `
-        <div class="bg-slate-800/50 p-3 rounded-2xl border border-slate-700 backdrop-blur text-center min-w-[90px]">
-            <div class="text-3xl mb-1">💰</div>
-            <div class="text-yellow-400 font-bold text-xl">+$${totalEarned}</div>
+        <div class="flex gap-4">
+            <div class="bg-slate-800/50 p-3 rounded-2xl border border-slate-700 backdrop-blur text-center min-w-[120px]">
+                <div class="text-3xl mb-1">💰</div>
+                <div class="text-yellow-400 font-bold text-2xl">+$${totalEarned}</div>
+                ${bonusText ? `<div class="mt-2 pt-2 border-t border-slate-600/50">${bonusText}</div>` : ''}
+            </div>
+            ${levelStars > 0 ? `
+            <div class="bg-slate-800/50 p-3 rounded-2xl border border-slate-700 backdrop-blur text-center min-w-[90px] h-fit">
+                <div class="text-3xl mb-1">⭐</div>
+                <div class="text-purple-400 font-bold text-xl">+${levelStars}</div>
+            </div>` : ''}
         </div>
-        ${levelStars > 0 ? `
-        <div class="bg-slate-800/50 p-3 rounded-2xl border border-slate-700 backdrop-blur text-center min-w-[90px]">
-            <div class="text-3xl mb-1">⭐</div>
-            <div class="text-purple-400 font-bold text-xl">+${levelStars}</div>
-        </div>` : ''}
     `;
     ov.appendChild(statsDiv);
 
@@ -5456,6 +5617,38 @@ function drawTile(tile) {
         ctx.beginPath();
         ctx.arc(-2, -2, 1.5, 0, Math.PI * 2);
         ctx.fill();
+        
+        ctx.restore();
+    }
+    
+    // --- DIBUJAR OBJETO DE MISIÓN ---
+    if (tile.missionItem) {
+        const time = Date.now() * 0.003;
+        const scale = 1 + Math.sin(time) * 0.1; // Latido suave
+        
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.scale(scale, scale);
+        
+        // Sombra
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(0, 12, 8, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Icono
+        ctx.font = `${TILE_SIZE * 0.5}px Arial`; // Emoji grande
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(tile.missionItem.icon, 0, 0);
+        
+        // Indicador de "RECOGER"
+        ctx.font = 'bold 8px sans-serif';
+        ctx.fillStyle = 'white';
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 1;
+        ctx.strokeText('RECOGER', 0, -15);
+        ctx.fillText('RECOGER', 0, -15);
         
         ctx.restore();
     }
