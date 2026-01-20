@@ -279,6 +279,55 @@
             50% { box-shadow: 0 0 15px #eab308; }
         }
         
+        /* ANIMACIONES ENTRADA MENÚ (ESTELA DE VELOCIDAD + GIRO) */
+        @keyframes menuSlideIn {
+            0% { 
+                transform: translateX(120%) skewX(-30deg) scale(0.8);
+                opacity: 0;
+            }
+            60% {
+                transform: translateX(-10%) skewX(10deg) scale(1.05);
+                opacity: 1;
+            }
+             80% {
+                transform: translateX(5%) skewX(-5deg);
+            }
+            100% { 
+                transform: translateX(0) skewX(0) scale(1);
+                opacity: 1;
+            }
+        }
+        
+        /* menu-arrive animation moved to JS */
+
+
+        /* Estela Visual en los elementos al llegar (necesita posicion relativa) */
+        .menu-arrive::after {
+            content: '';
+            position: absolute;
+            top: 0; bottom: 0;
+            left: -100px;
+            width: 80px;
+            background: linear-gradient(90deg, transparent, rgba(6,182,212,0.6), transparent);
+            transform: skewX(-30deg);
+            opacity: 0;
+            animation: trailFlash 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+            pointer-events: none;
+        }
+        @keyframes trailFlash {
+            0% { left: 100%; opacity: 0; }
+            50% { opacity: 0.8; }
+            100% { left: -100%; opacity: 0; }
+        }
+
+        .menu-spin-in {
+            animation: spinIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+        }
+        @keyframes spinIn {
+            from { transform: scale(0) rotate(-180deg); opacity: 0; }
+            to { transform: scale(1) rotate(0); opacity: 1; }
+        }
+
         /* Mensaje de salida del pedido - ESTILO MODERNO CON IMAGEN */
         .order-ready {
             position: absolute;
@@ -547,27 +596,53 @@
 </head>
 <body class="h-[100dvh] w-screen flex items-center justify-center overflow-hidden bg-[#0a0a0a] p-1 sm:p-4 touch-none">
 
-    <!-- INTRO VIDEO + PRELOAD OVERLAY (centrado con margen blanco alrededor) -->
-    <div id="introOverlay" class="fixed inset-0 z-[500] bg-black">
-        <div class="absolute inset-0 flex items-center justify-center px-4">
-            <div class="bg-white rounded-xl p-2 shadow-2xl max-w-[90vw] max-h-[75vh]">
-                <video id="introVideo" class="block w-[86vw] h-[70vh] object-contain object-center bg-black rounded-lg" src="intro.mp4" playsinline autoplay preload="auto"></video>
-            </div>
+    <!-- SPLASH SCREEN VERSION (Nuevo Pantalla de inicio con Neón) -->
+    <div id="splashScreen" class="fixed inset-0 z-[600] bg-black flex flex-col items-center justify-center p-6 text-center">
+        <!-- Título con efecto Neón -->
+        <h1 class="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 mb-2 drop-shadow-[0_0_15px_rgba(34,211,238,0.8)] animate-pulse" style="font-family: 'Segoe UI', system-ui, sans-serif; -webkit-text-stroke: 1px rgba(255,255,255,0.3);">
+            DELIVERY RUSH
+        </h1>
+        
+        <div class="mb-12"></div>
+
+        <!-- Botón Neón -->
+        <button onclick="startNeonIntro()" class="relative group px-12 py-6 bg-black rounded-full overflow-hidden transition-all duration-300 hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(6,182,212,0.8)] border-4 border-cyan-400">
+            <!-- Brillo interior -->
+            <span class="absolute inset-0 bg-cyan-500 opacity-20 blur-xl group-hover:opacity-40 transition-opacity"></span>
+            <!-- Texto -->
+            <span class="relative z-10 text-cyan-50 font-black text-2xl uppercase tracking-widest flex items-center gap-3">
+                JUGAR
+            </span>
+            <!-- Borde brillante animado -->
+            <span class="absolute inset-0 rounded-full border border-cyan-300 opacity-50 blur-[4px] animate-pulse"></span>
+        </button>
+
+        <div class="absolute bottom-8 text-slate-500 text-xs text-center px-4 max-w-sm">
+            <span class="text-slate-600">Recomendado usar audífonos 🎧</span>
+        </div>
+    </div>
+
+    <!-- INTRO VIDEO + PRELOAD OVERLAY (centrado SIN recuadro blanco) -->
+    <div id="introOverlay" class="fixed inset-0 z-[500] bg-black hidden">
+        <div class="absolute inset-0 flex items-center justify-center bg-black">
+             <!-- Video a pantalla completa real del contenedor -->
+             <video id="introVideo" class="w-full h-full object-contain bg-black" src="intro.mp4" playsinline preload="auto"></video>
         </div>
         <div class="absolute inset-x-0 bottom-0 pb-[env(safe-area-inset-bottom)] flex flex-col items-center gap-2 px-4 text-center">
-            <div class="w-3/4 max-w-xs">
-                <div class="text-xs text-slate-200 mb-2 drop-shadow">Cargando juego…</div>
-                <div class="h-2 w-full bg-slate-800/70 rounded-full overflow-hidden">
-                    <div id="introProgressBar" class="h-full w-0 bg-emerald-500 transition-[width] duration-300"></div>
+            
+            <!-- Barra de carga REMOVIDA según solicitud -->
+            <div id="introProgressBarContainer" class="hidden w-full max-w-md bg-black/50 backdrop-blur-md p-3 rounded-full border border-white/10 shadow-2xl mb-6">
+                <div class="flex items-center gap-3 w-full">
+                     <span class="text-[10px] text-cyan-400 font-mono tracking-widest uppercase shrink-0 w-16 text-right" id="introProgressText">0%</span>
+                     <div class="h-1.5 flex-1 bg-slate-800 rounded-full overflow-hidden relative">
+                        <div id="introProgressBar" class="h-full w-0 bg-gradient-to-r from-cyan-500 to-blue-600 shadow-[0_0_10px_#06b6d4]"></div>
+                     </div>
                 </div>
-                <div id="introProgressText" class="mt-2 text-[10px] text-slate-300">0%</div>
             </div>
-            <button id="introSkipBtn" class="glass-btn px-4 py-2 text-sm text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg">Saltar introducción</button>
+
+            <button id="introSkipBtn" class="glass-btn px-6 py-2 text-xs text-white/70 hover:text-white bg-slate-900/40 hover:bg-slate-800/60 rounded-full border border-white/5 transition-all mb-4">SALTAR INTRO ▶</button>
         </div>
-        <!-- Botón pequeño para activar sonido si el navegador bloquea autoplay con audio -->
-        <button id="introAudioUnlockBtn" title="Activar sonido" class="hidden absolute left-2 bottom-2 z-[510] w-9 h-9 rounded-full bg-slate-800/80 text-white border border-slate-600 shadow flex items-center justify-center">
-            <span class="text-lg">🔊</span>
-        </button>
+        <!-- Botón de sonido eliminado -->
     </div>
 
     
@@ -579,16 +654,16 @@
     <div id="startScreen" class="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center z-50 overflow-y-auto" style="padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);">
         <div class="w-full max-w-md mx-auto px-4 py-6 flex flex-col min-h-full justify-between menu-card">
             
-            <!-- Header del menú con logotipo -->
-            <div class="text-center mb-2 shrink-0">
+            <!-- Header del menú con logotipo (EFECTO GIRO) -->
+            <div class="text-center mb-2 shrink-0 opacity-0 js-menu-logo">
                 <img src="logo.png" alt="Delivery Rush" class="mx-auto w-56 max-w-[80%] h-auto drop-shadow-[0_0_12px_rgba(56,189,248,.6)]">
             </div>
             
-            <!-- Contenido principal SCROLLABLE -->
+            <!-- Contenido principal SCROLLABLE (EFECTO SLIDE IN) -->
             <div class="flex-1 overflow-y-auto space-y-2 px-1">
                 
                 <!-- Nombre del jugador (frame imagen) -->
-                <div class="text-center p-2">
+                <div class="text-center p-2 opacity-0 js-menu-item" style="animation-delay: 0.1s;">
                     <div class="name-frame">
                         <input type="text" id="driverName" placeholder="Tu Nombre" maxlength="12" autocomplete="off" class="name-input text-center">
                     </div>
@@ -601,7 +676,7 @@
                 </div>
                 
                 <!-- Selector de Empresa -->
-                <div class="pb-1 border-b border-slate-700/50">
+                <div class="pb-1 border-b border-slate-700/50 opacity-0 js-menu-item" style="animation-delay: 0.2s;">
                     <label class="block text-slate-400 text-[10px] font-bold text-center mb-1">EMPRESA</label>
                     <div class="flex justify-center gap-1 flex-wrap">
                         <button onclick="selectCompany('rappi')" id="btn-rappi" class="company-btn selected transform scale-90 m-0"><img src="LOGO-RAPPI.png" alt="Rappi"></button>
@@ -609,12 +684,11 @@
                         <button onclick="selectCompany('pedidosya')" id="btn-pedidosya" class="company-btn transform scale-90 m-0"><img src="pedidosya.png" alt="PY"></button>
                         <button onclick="selectCompany('indriver')" id="btn-indriver" class="company-btn transform scale-90 m-0"><img src="INDRIVER.png" alt="In"></button>
                         <button onclick="selectCompany('amazon')" id="btn-amazon" class="company-btn transform scale-90 m-0"><img src="amazon.png" alt="Am"></button>
-                        <button onclick="selectCompany('servientrega')" id="btn-servientrega" class="company-btn transform scale-90 m-0"><img src="SERVIENTREGA.png" alt="SE"></button>
                     </div>
                 </div>
                 
                 <!-- Selector de Vehículo -->
-                <div>
+                <div class="opacity-0 js-menu-item" style="animation-delay: 0.3s;">
                     <label class="block text-slate-400 text-[10px] font-bold text-center mb-1">VEHÍCULO</label>
                     <div class="flex justify-center gap-2 flex-wrap">
                         <button onclick="selectVehicle('moto')" id="btn-moto" class="vehicle-btn selected bg-slate-700 p-1 w-16 h-16">
@@ -623,8 +697,9 @@
                         <button onclick="selectVehicle('car')" id="btn-car" class="vehicle-btn bg-slate-700 p-1 w-16 h-16">
                             <span class="text-2xl">🚗</span>
                         </button>
-                        <button onclick="selectVehicle('truck')" id="btn-truck" class="vehicle-btn bg-slate-700 p-1 w-16 h-16">
-                            <img src="fulgoneta.png" alt="Furgoneta" />
+                        <button onclick="selectPremiumFulgoneta()" id="btn-fulgoneta" class="vehicle-btn bg-slate-800 p-1 w-16 h-16 relative border border-yellow-500/30">
+                            <img src="fulgoneta.png" alt="Furgoneta" class="w-8 h-8 object-contain mx-auto" />
+                            <span id="fulgonetaLock" class="absolute top-0 right-0 text-[10px]">🔒</span>
                         </button>
                         
                         <!-- Premium integrados en la misma fila -->
@@ -644,7 +719,7 @@
                 </div>
                 
                 <!-- Selector de Color -->
-                <div class="px-4">
+                <div class="px-4 opacity-0 js-menu-item" style="animation-delay: 0.4s;">
                     <label class="block text-slate-400 text-[10px] font-bold text-center mb-1">COLOR</label>
                     <div class="color-slider-container h-8">
                         <input type="range" min="0" max="100" value="0" class="color-slider h-2" id="colorSlider" oninput="updateColorFromSlider(this.value)">
@@ -654,7 +729,7 @@
             </div>
             
             <!-- Botón de inicio y footer -->
-            <div class="text-center mt-2 pb-2 shrink-0">
+            <div class="text-center mt-2 pb-2 shrink-0 opacity-0 js-menu-item" style="animation-delay: 0.5s;">
                 <button onclick="startGame()" class="btn-game play-btn-wrap mx-auto block" aria-label="PLAY">
                     <img src="play.png" alt="PLAY" class="play-img" />
                 </button>
@@ -742,7 +817,7 @@
                 </div>
 
                 <!-- Botón Principal ENTREGAR (Ahora al centro y más ancho) -->
-                <button onclick="startCar()" id="btnStart" class="btn-game bg-emerald-600 hover:bg-emerald-500 text-white font-bold h-[45px] rounded-xl text-sm shadow-lg border-b-4 border-emerald-800 flex-1 transition-transform active:scale-95 flex items-center justify-center gap-2">
+                <button onclick="startCar()" id="btnStart" class="no-click-sound btn-game bg-emerald-600 hover:bg-emerald-500 text-white font-bold h-[45px] rounded-xl text-sm shadow-lg border-b-4 border-emerald-800 flex-1 transition-transform active:scale-95 flex items-center justify-center gap-2">
                     📦 ENTREGAR
                 </button>
 
@@ -889,6 +964,7 @@ function getCoreAssets() {
         'pavimento.jpg',
         'motoa.gif',
         'camionetaa.png',
+        'fulgoneta.png',
         'LOGO-RAPPI.png',
         'INDRIVER.png',
         'favicon.png'
@@ -922,30 +998,24 @@ function preloadAssets(paths, onProgress) {
     });
 }
 
+function startNeonIntro() {
+    // 1. Ocultar Splash Screen
+    const splash = document.getElementById('splashScreen');
+    if (splash) splash.classList.add('hidden');
+
+    // 2. Mostrar Overlay de Intro y Lanzar Video
+    startIntro();
+}
+
 function startIntro() {
     const overlay = document.getElementById('introOverlay');
     const video = document.getElementById('introVideo');
     const bar = document.getElementById('introProgressBar');
     const txt = document.getElementById('introProgressText');
     const skip = document.getElementById('introSkipBtn');
-    const audioBtn = document.getElementById('introAudioUnlockBtn');
-    let requestFullscreenOnAuto = true; // Solo solicitar fullscreen en autoplay inicial
     
-    // Desbloquear audio del video en interacción si el autoplay con sonido falla
-    let audioUnlocked = false;
-    const unlockVideoAudio = () => {
-        if (audioUnlocked) return;
-        audioUnlocked = true;
-        try {
-            if (video) {
-                video.muted = false;
-                requestFullscreenOnAuto = false; // No fullscreen al desbloquear por botón
-                video.volume = 1.0;
-                video.play().catch(() => {});
-            }
-            if (audioBtn) audioBtn.classList.add('hidden');
-        } catch(e) {}
-    };
+    // Mostrar overlay de video ahora
+    if (overlay) overlay.classList.remove('hidden');
 
     const onProgress = pct => {
         if (bar) bar.style.width = pct + '%';
@@ -954,59 +1024,65 @@ function startIntro() {
 
     const assetsPromise = preloadAssets(getCoreAssets(), onProgress);
 
-    // Intentar reproducir automáticamente con sonido; si falla, continuar en silencio
     let videoResolved = false;
     const videoPromise = new Promise(resolve => {
         const finish = () => { if (!videoResolved) { videoResolved = true; resolve(); } };
         if (video) {
-            video.muted = false; // Intento principal: sonido activo
+            video.muted = false; // SONIDO ACTIVADO DIRECTAMENTE
+            video.volume = 1.0;
+            video.currentTime = 0;
+            
             video.addEventListener('ended', finish, { once: true });
             video.addEventListener('error', finish, { once: true });
-            // Reintentos controlados para navegadores que bloquean autoplay con audio
-            let playAttempts = 0;
-            let playStarted = false;
-            const tryPlay = () => {
-                video.play().then(() => {
-                    playStarted = true;
-                    if (audioBtn) audioBtn.classList.add('hidden');
-                    // Intentar fullscreen al iniciar
-                    if (requestFullscreenOnAuto) {
-                        if (video.requestFullscreen) {
-                            video.requestFullscreen().catch(() => {});
-                        } else if (overlay.requestFullscreen) {
-                            overlay.requestFullscreen().catch(() => {});
-                        }
-                    }
-                }).catch(() => {
-                    // Mantener sin mute y reintentar unas veces
-                    playAttempts++;
-                    if (audioBtn) audioBtn.classList.remove('hidden');
-                    if (playAttempts < 6) {
-                        setTimeout(tryPlay, 500);
-                    } else {
-                        // Dar oportunidad a desbloqueo por interacción; si no empieza, continuar
-                        if (!playStarted) finish();
-                    }
-                });
-            };
-            tryPlay();
-            // Si el video está listo para reproducir, intentar nuevamente
-            video.addEventListener('canplay', () => { if (!playStarted) tryPlay(); }, { once: true });
+            
+            // Reproducir directamente (ya estamos en un evento de click de usuario)
+            video.play().catch(e => {
+                console.log("Error play intro:", e);
+                // Si falla por alguna razón extraña, terminar intro
+                finish();
+            });
+            
         } else finish();
-        if (skip) skip.onclick = () => { if (audioBtn) audioBtn.classList.add('hidden'); finish(); };
+        if (skip) skip.onclick = () => { finish(); };
     });
-
-    if (overlay) overlay.classList.remove('hidden');
-
-    // Primer gesto del usuario en el overlay habilita el audio del video si estaba bloqueado
-    if (overlay) overlay.addEventListener('pointerdown', () => { unlockVideoAudio(); }, { once: true });
-    if (audioBtn) audioBtn.onclick = () => unlockVideoAudio();
 
     Promise.all([assetsPromise, videoPromise]).then(() => {
         if (overlay) overlay.classList.add('hidden');
-        if (audioBtn) audioBtn.classList.add('hidden');
         // Continuar con el flujo normal
         init();
+
+        // --- ANIMAR ELEMENTOS DEL MENÚ AHORA ---
+        // Se ejecuta justo después de que la intro termine
+        setTimeout(() => {
+            const menuItems = document.querySelectorAll('.js-menu-item');
+            const menuLogo = document.querySelector('.js-menu-logo');
+            
+            // 1. Animar Logo con efecto de giro y opacidad
+            if (menuLogo) {
+                menuLogo.classList.remove('opacity-0');
+                menuLogo.style.animation = 'menuSlideIn 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) backwards';
+            }
+
+            // 2. Animar cada elemento en cascada
+            menuItems.forEach((item, index) => {
+                // Removemos opacity-0 para que la animación controle la visibilidad
+                item.classList.remove('opacity-0');
+                
+                // Aplicamos la animación menuSlideIn
+                // Mantenemos el animation-delay que ya tienen inline o agregamos uno calculado
+                // Nota: CSS animation-delay funciona mejor si la clase de animación se añade fresca
+                item.style.animation = 'menuSlideIn 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) backwards';
+                // El styles inline para delay se respeta automáticamente porque es parte del estilo del elemento
+                
+                // Forzar repintado para reiniciar animación si fuera necesario
+                void item.offsetWidth;
+            });
+
+            // Sonido de llegada
+            playSound('moto_pass');
+
+        }, 100); // Pequeño delay de cortesía
+
     });
 }
 // Helper function para obtener elementos por ID
@@ -1227,8 +1303,7 @@ const companyColors = {
     uber: '#000000',
     pedidosya: '#d42e58',
     indriver: '#2db742',
-    amazon: '#ff9900',
-    servientrega: '#003087'
+    amazon: '#ff9900'
 };
 
 // Logos de las empresas
@@ -1237,8 +1312,7 @@ const companyLogos = {
     uber: 'UBER.png',
     pedidosya: 'pedidosya.png',
     indriver: 'INDRIVER.png',
-    amazon: 'amazon.png',
-    servientrega: 'SERVIENTREGA.png'
+    amazon: 'amazon.png'
 };
 
 // Emojis de vehículos
@@ -1247,7 +1321,8 @@ const vehicleEmojis = {
     car: '🚗',
     truck: '🛻',
     motoa: '🏎️',  // Moto premium
-    trucka: '🚚'  // Camioneta premium
+    trucka: '🚚',  // Camioneta premium
+    fulgoneta: '🚐'
 };
 
 // ============ SISTEMA DE MODALES PERSONALIZADOS ============
@@ -1377,6 +1452,7 @@ function updateColorFromSlider(value) {
 function selectVehicle(type) {
     if (type === 'motoa' && !premiumMotoUnlocked) return;
     if (type === 'trucka' && !premiumTruckUnlocked) return;
+    if (type === 'fulgoneta' && !premiumFulgonetaUnlocked) return;
     if (type === 'camion' && !premiumCamionUnlocked) return;
     selectedVehicle = type;
     document.querySelectorAll('.vehicle-btn').forEach(btn => btn.classList.remove('selected'));
@@ -1467,6 +1543,45 @@ function selectPremiumTruck() {
                 icon: '💸',
                 title: 'Dinero Insuficiente',
                 message: `<strong>Necesitas $${PREMIUM_TRUCK_PRICE} para la Camioneta Premium</strong><br><br>💰 Tu dinero: <span style="color:#fbbf24">$${totalMoney}</span><br>🚫 Te faltan: <span style="color:#ef4444">$${PREMIUM_TRUCK_PRICE - totalMoney}</span>`,
+                type: 'error'
+            });
+        }
+    }
+}
+
+function selectPremiumFulgoneta() {
+    if (premiumFulgonetaUnlocked) {
+        selectVehicle('fulgoneta');
+    } else {
+        if (totalMoney >= PREMIUM_FULGONETA_PRICE) {
+            showConfirmModal({
+                icon: '🚐', // Furgoneta icon
+                title: 'Furgoneta Premium',
+                message: `<strong>¿Comprar Furgoneta por $${PREMIUM_FULGONETA_PRICE}?</strong><br><br>💰 Tu dinero: <span style="color:#fbbf24">$${totalMoney}</span><br>📦 ¡Gran estilo!`,
+                type: 'warning',
+                confirmText: '🛒 Comprar',
+                cancelText: '❌ Cancelar'
+            }).then(confirmed => {
+                if (confirmed) {
+                    totalMoney -= PREMIUM_FULGONETA_PRICE;
+                    premiumFulgonetaUnlocked = true;
+                    $('moneyDisplay').textContent = totalMoney;
+                    $('fulgonetaLock').textContent = '⭐';
+                    selectVehicle('fulgoneta');
+                    playSound('money');
+                    showGameModal({
+                        iconImage: 'fulgoneta.png',
+                        title: '¡Compra Exitosa!',
+                        message: '<strong>🚐 Furgoneta desbloqueada!</strong><br>¡Lista para repartir!',
+                        type: 'success'
+                    });
+                }
+            });
+        } else {
+            showGameModal({
+                icon: '💸',
+                title: 'Dinero Insuficiente',
+                message: `<strong>Necesitas $${PREMIUM_FULGONETA_PRICE} para la Furgoneta</strong><br><br>💰 Tu dinero: <span style="color:#fbbf24">$${totalMoney}</span><br>🚫 Te faltan: <span style="color:#ef4444">$${PREMIUM_FULGONETA_PRICE - totalMoney}</span>`,
                 type: 'error'
             });
         }
@@ -1774,6 +1889,14 @@ function updatePremiumMotoUI() {
         if ($('shopTruckStatus')) $('shopTruckStatus').textContent = truckPriceStr;
     }
 
+    // Furgoneta Premium
+    const fulgonetaPriceStr = '$' + PREMIUM_FULGONETA_PRICE.toLocaleString();
+    if (premiumFulgonetaUnlocked) {
+        if ($('fulgonetaLock')) $('fulgonetaLock').textContent = '⭐';
+    } else {
+        if ($('fulgonetaLock')) $('fulgonetaLock').textContent = '🔒';
+    }
+
     // Camión de Carga
     const camionPriceStr = '$' + PREMIUM_CAMION_PRICE.toLocaleString();
     if (premiumCamionUnlocked) {
@@ -1806,8 +1929,25 @@ function playSound(type) {
         const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
         osc.connect(gain); gain.connect(audioCtx.destination);
         const t = audioCtx.currentTime;
-        if (type === 'rotate') { osc.frequency.setValueAtTime(600, t); osc.frequency.exponentialRampToValueAtTime(300, t + 0.08); gain.gain.setValueAtTime(0.08, t); gain.gain.exponentialRampToValueAtTime(0.01, t + 0.08); osc.start(t); osc.stop(t + 0.08); }
+        
+        if (type === 'click') {
+            // Sonido "Seco" y Profesional (UI Click) - Más corto y definido
+            osc.type = 'triangle'; 
+            osc.frequency.setValueAtTime(600, t);
+            gain.gain.setValueAtTime(0.15, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05); // 50ms de duración
+            osc.start(t); osc.stop(t + 0.05);
+        } else if (type === 'hover') {
+            // Sonido hover muy sutil
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(400, t);
+            osc.frequency.linearRampToValueAtTime(600, t + 0.05);
+            gain.gain.setValueAtTime(0.02, t);
+            gain.gain.linearRampToValueAtTime(0.001, t + 0.05);
+            osc.start(t); osc.stop(t + 0.05);
+        } else if (type === 'rotate') { osc.frequency.setValueAtTime(600, t); osc.frequency.exponentialRampToValueAtTime(300, t + 0.08); gain.gain.setValueAtTime(0.08, t); gain.gain.exponentialRampToValueAtTime(0.01, t + 0.08); osc.start(t); osc.stop(t + 0.08); }
         else if (type === 'engine') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(80, t); gain.gain.setValueAtTime(0.04, t); osc.start(t); osc.stop(t + 0.12); }
+
         else if (type === 'crash') { osc.type = 'square'; osc.frequency.setValueAtTime(150, t); osc.frequency.exponentialRampToValueAtTime(40, t + 0.3); gain.gain.setValueAtTime(0.2, t); osc.start(t); osc.stop(t + 0.3); }
         else if (type === 'win') { [523,659,784,1047].forEach((f,i) => { const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); o.frequency.setValueAtTime(f, t+i*0.15); g.gain.setValueAtTime(0.1, t+i*0.15); o.start(t+i*0.15); o.stop(t+i*0.15+0.2); }); }
         else if (type === 'warning') { osc.frequency.setValueAtTime(400, t); gain.gain.setValueAtTime(0.1, t); osc.start(t); osc.stop(t + 0.1); }
@@ -1910,8 +2050,8 @@ for (let i = 1; i <= 100; i++) {
         // Tiempo ajustado
         time: 40 + i * 2 + (isHard ? 0 : 10), 
         
-        // Velocidad aumenta (AJUSTADO: Más lento para mejor control)
-        speed: Math.min(2.0 + i * 0.015, 3.5),
+        // Velocidad aumenta (AJUSTADO: Más rápido para mayor reto)
+        speed: Math.min(2.8 + i * 0.02, 5.5),
         
         // Obstáculos y callejones sin salida aumentan drásticamente en niveles altos
         obstacles: Math.min(Math.floor(i / 4) + (isHard ? 3 : 0), 12),
@@ -1988,6 +2128,8 @@ let plannedRoute = []; // Ruta planificada con direcciones para que el carro la 
 const PREMIUM_MOTO_PRICE = 3000; // Precio de la moto premium
 let premiumTruckUnlocked = false; // Camioneta premium desbloqueada
 const PREMIUM_TRUCK_PRICE = 4000; // Precio de la camioneta premium
+let premiumFulgonetaUnlocked = false; // Furgoneta premium desbloqueada
+const PREMIUM_FULGONETA_PRICE = 4500;
 let premiumCamionUnlocked = false; // Camión de carga (5000)
 const PREMIUM_CAMION_PRICE = 5000;
 let deliveryStartTime = 0; // Tiempo cuando comenzó la entrega
@@ -2033,6 +2175,8 @@ function startGame() {
         $('vehicleIcon').innerHTML = '<img src="motoa.gif" alt="Moto Premium" style="width:20px;height:20px;display:inline;vertical-align:middle;">';
     } else if (selectedVehicle === 'trucka') {
         $('vehicleIcon').innerHTML = '<img src="camionetaa.png" alt="Camioneta Premium" style="width:20px;height:20px;display:inline;vertical-align:middle;">';
+    } else if (selectedVehicle === 'fulgoneta') {
+        $('vehicleIcon').innerHTML = '<img src="fulgoneta.png" alt="Furgoneta" style="width:20px;height:20px;display:inline;vertical-align:middle;">';
     } else {
         $('vehicleIcon').textContent = vehicleEmojis[selectedVehicle] || '🏍️';
     }
@@ -2131,6 +2275,7 @@ function saveGameData() {
         totalStars: totalStars, // Guardar estrellas
         premiumMotoUnlocked: premiumMotoUnlocked,
         premiumTruckUnlocked: premiumTruckUnlocked,
+        premiumFulgonetaUnlocked: premiumFulgonetaUnlocked,
         premiumCamionUnlocked: premiumCamionUnlocked,
         bridgesOwned: bridgesOwned,
         selectedCompany: selectedCompany,
@@ -2223,6 +2368,7 @@ function loadGameData(playerName) {
             // Cargar desbloqueos
             premiumMotoUnlocked = !!gameData.premiumMotoUnlocked;
             premiumTruckUnlocked = !!gameData.premiumTruckUnlocked;
+            premiumFulgonetaUnlocked = !!gameData.premiumFulgonetaUnlocked;
             premiumCamionUnlocked = !!gameData.premiumCamionUnlocked;
             if (gameData.bridgesOwned !== undefined) {
                 bridgesOwned = gameData.bridgesOwned;
@@ -2240,6 +2386,7 @@ function loadGameData(playerName) {
                 gameData.selectedVehicle &&
                 (gameData.selectedVehicle !== 'motoa' || premiumMotoUnlocked) &&
                 (gameData.selectedVehicle !== 'trucka' || premiumTruckUnlocked) &&
+                (gameData.selectedVehicle !== 'fulgoneta' || premiumFulgonetaUnlocked) &&
                 (gameData.selectedVehicle !== 'camion' || premiumCamionUnlocked)
             ) {
                 selectedVehicle = gameData.selectedVehicle;
@@ -2436,7 +2583,7 @@ function checkPlayerChange() {
         }, 2000);
         
         // Resetear selección de vehículo si era premium
-        if (selectedVehicle === 'motoa' || selectedVehicle === 'trucka') {
+        if (selectedVehicle === 'motoa' || selectedVehicle === 'trucka' || selectedVehicle === 'fulgoneta' || selectedVehicle === 'camion') {
             selectedVehicle = 'moto';
             document.querySelectorAll('.vehicle-btn').forEach(btn => btn.classList.remove('selected'));
             const motoBtn = document.getElementById('btn-moto');
@@ -2803,6 +2950,17 @@ function init() {
     updatePremiumMotoUI(); // Actualizar estado de moto premium al iniciar
     updateBridgeDisplay();
     
+    // --- NUEVO: Sonidos universales para todos los botones ---
+    document.querySelectorAll('button').forEach(btn => {
+        // Excluir botones silenciosos
+        if (btn.classList.contains('no-click-sound')) return;
+
+        // Sonido al pasar el mouse
+        btn.addEventListener('mouseenter', () => playSound('hover'));
+        // Sonido al clickear
+        btn.addEventListener('click', () => playSound('click'));
+    });
+
     // Listener para detectar cambios en el nombre del jugador
     const driverNameInput = $('driverName');
     if (driverNameInput) {
@@ -2810,6 +2968,17 @@ function init() {
         driverNameInput.addEventListener('change', checkPlayerChange);
     }
     
+    // Al finalizar la animación del Menú, reproducir sonido de "Llegada"
+    // (Movido a startIntro.then() para sincronizar con el video)
+    /* 
+    setTimeout(() => {
+        // Solo si estamos en la pantalla de inicio
+        if (!$('startScreen').classList.contains('hidden')) {
+             playSound('moto_pass'); // Efecto de llegada veloz
+        }
+    }, 600);
+    */
+
     window.addEventListener('resize', () => { if (gameState !== 'START') { resize(); draw(); } });
     canvas.addEventListener('pointerdown', handleClick);
 }
@@ -4158,7 +4327,8 @@ function resetCar() {
         y: start.row * TILE_SIZE + TILE_SIZE / 2,
         dir: dir,
         angle: dir === DIR.N ? -Math.PI/2 : dir === DIR.E ? 0 : dir === DIR.S ? Math.PI/2 : Math.PI,
-        speed: config.speed, baseSpeed: config.speed, waiting: false
+        speed: config.speed, baseSpeed: config.speed, waiting: false,
+        trail: [] // Inicializar estela
     };
     gameState = 'EDITING';
 }
@@ -4437,6 +4607,13 @@ function gameLoop() {
     const d = DIR_DELTA[car.dir];
     car.x += d.dc * car.speed; car.y += d.dr * car.speed;
     
+    // Actualizar Estela (Trail)
+    if (car.trail) {
+        car.trail.push({x: car.x, y: car.y});
+        // Limitar largo de la estela segun velocidad (más rápido = más larga la estela antes de borrar)
+        if (car.trail.length > 15) car.trail.shift(); 
+    }
+
     draw();
     animationId = requestAnimationFrame(gameLoop);
 }
@@ -4760,7 +4937,7 @@ function win() {
     
     // LOGICA DE CLICK DIRECTO
     btnContinue.onclick = function() {
-        if(typeof playSound === 'function') playSound('click');
+        // Sonido de clic eliminado por solicitud
         
         // 1. DISPARAR MOTO TRANSITION
         const moto = $('transitionMoto');
@@ -4907,6 +5084,53 @@ function draw() {
     }
     
     if (car) {
+        // --- DIBUJAR ESTELA DE NEÓN (TRAIL) ---
+        if (car.trail && car.trail.length > 1) {
+            ctx.save();
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            // Color Neón Cyan Eléctrico
+            const neonColor = '#00f3ff';
+            
+            // Efecto brillo exterior
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = neonColor;
+            
+            // Dibujar segmentos con opacidad variable (fading tail)
+            for (let i = 0; i < car.trail.length - 1; i++) {
+                const p1 = car.trail[i];
+                const p2 = car.trail[i+1];
+                
+                // Opacidad aumenta hacia el último punto (cerca del auto)
+                // 0 al inicio de la cola, 1 cerca del auto
+                const opacity = (i / car.trail.length); 
+                
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                
+                // Ancho variable: más delgado al final de la cola
+                ctx.lineWidth = 4 + (opacity * 4);
+                
+                ctx.strokeStyle = `rgba(0, 243, 255, ${opacity})`;
+                ctx.stroke();
+            }
+            
+            // Núcleo blanco brillante
+            ctx.shadowBlur = 0;
+            ctx.beginPath();
+            ctx.moveTo(car.trail[0].x, car.trail[0].y);
+            for (let i = 1; i < car.trail.length; i++) {
+               ctx.lineTo(car.trail[i].x, car.trail[i].y);
+            }
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
         drawCar();
         
         // --- LÓGICA DE SEMÁFORO SOBREPUESTO ---
@@ -5355,6 +5579,7 @@ function drawTile(tile) {
 
 const vImgMoto = new Image(); vImgMoto.src = 'motoa.gif';
 const vImgTruck = new Image(); vImgTruck.src = 'camionetaa.png';
+const vImgFulgoneta = new Image(); vImgFulgoneta.src = 'fulgoneta.png';
 const vImgCamion = new Image(); vImgCamion.src = 'camion.png';
 
 function drawCar() {
@@ -5623,6 +5848,11 @@ function drawCar() {
         // Centrada y proporcional. Usamos un area un poco mas grande porque suelen ser largas
         drawImageCentered(vImgTruck, 65);
         
+    } else if (selectedVehicle === 'fulgoneta') {
+        // FURGONETA (IMAGEN)
+        // Tamaño de carros por defecto
+        drawImageCentered(vImgFulgoneta, 55);
+
     } else if (selectedVehicle === 'truck') {
         // --- CAMIÓN DE REPARTO (VISTA PERFIL) ---
         // Se debe ver el lado largo de la caja
@@ -5812,7 +6042,11 @@ function startEditRender() {
     editRenderId = requestAnimationFrame(loop);
 }
 
-window.onload = startIntro;
+// Al cargar NO iniciar intro directamente, esperar interacción en Splash
+window.onload = function() {
+    // Solo asegurarnos que el splash está visible (ya lo está por HTML)
+    // El flujo inicia cuando el usuario da clic en el botón del splash
+};
 
 </script>
 </body>
