@@ -107,32 +107,54 @@
         input[type="text"]::placeholder { color: #64748b; }
         ::-webkit-scrollbar { display: none; }
         
-        /* Vehículos - botones más grandes */
-        .vehicle-btn { 
-            transition: all 0.2s; 
-            border: 3px solid transparent;
-            min-width: 80px;
-            min-height: 80px;
+        /* Vehículos - estilo NEON rectangular */
+        .vehicle-btn {
+            position: relative;
+            transition: all 0.2s;
+            --ring: rgba(99, 102, 241, 0.6);
+            border: 2px solid rgba(99, 102, 241, 0.35);
+            background: rgba(15, 23, 42, 0.75);
+            border-radius: 12px;
             padding: 10px 8px;
+            overflow: hidden;
+            box-shadow: 0 0 12px rgba(99, 102, 241, 0.3), inset 0 0 12px rgba(0,0,0,0.6);
         }
-        .vehicle-btn.selected { border-color: #10b981; transform: scale(1.08); box-shadow: 0 0 15px rgba(16, 185, 129, 0.4); }
+        .vehicle-btn::before { content:''; position:absolute; inset:0; border-radius: inherit; border:1px solid rgba(255,255,255,0.08); pointer-events:none; }
+        .vehicle-btn::after { content:''; position:absolute; inset:-1px; border-radius: inherit; background: conic-gradient(from var(--a), transparent 0 15%, var(--ring) 20%, transparent 25% 65%, var(--ring) 70%, transparent 75% 100%); filter: blur(5px); pointer-events:none; opacity:.9; animation: neonSpin 4s linear infinite; }
+        .vehicle-btn:hover { transform: scale(1.04); }
+        .vehicle-btn.selected { 
+            --ring: rgba(16,185,129,.8);
+            border-color: #10b981; 
+            transform: scale(1.08); 
+            box-shadow: 0 0 18px rgba(16, 185, 129, 0.55), inset 0 0 14px rgba(0,0,0,0.6);
+        }
+        .vehicle-btn img { width: 70%; height: 70%; object-fit: contain; display:block; margin:0 auto; }
         .color-btn { width: 32px; height: 32px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; }
         .color-btn.selected { border-color: white; transform: scale(1.15); }
         
-        /* Selector de empresa - Más grande para móviles */
-        .company-btn { 
-            width: 48px; 
-            height: 48px; 
-            border-radius: 10px; 
-            border: 3px solid transparent; 
-            cursor: pointer; 
-            background: #1e293b;
-            padding: 4px;
+        /* Selector de empresa - NEON rectangular compacto */
+        .company-btn {
+            width: 56px;
+            height: 56px;
+            --ring: rgba(56, 189, 248, 0.6);
+            border: 2px solid rgba(56, 189, 248, 0.35);
+            cursor: pointer;
+            background: rgba(15, 23, 42, 0.75);
+            padding: 6px;
             transition: all 0.2s;
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.3), inset 0 0 12px rgba(0,0,0,0.6);
         }
-        .company-btn:hover { transform: scale(1.08); }
-        .company-btn.selected { border-color: #10b981; transform: scale(1.1); box-shadow: 0 0 15px rgba(16, 185, 129, 0.5); }
-        .company-btn img { width: 100%; height: 100%; object-fit: contain; border-radius: 6px; }
+        .company-btn::before { content:''; position:absolute; inset:0; border-radius: inherit; border:1px solid rgba(255,255,255,0.08); pointer-events:none; }
+        .company-btn::after { content:''; position:absolute; inset:-1px; border-radius: inherit; background: conic-gradient(from var(--a), transparent 0 15%, var(--ring) 20%, transparent 25% 65%, var(--ring) 70%, transparent 75% 100%); filter: blur(5px); pointer-events:none; opacity:.9; animation: neonSpin 4s linear infinite; }
+        .company-btn:hover { transform: scale(1.06); }
+        .company-btn.selected { --ring: rgba(16,185,129,.8); border-color: #10b981; transform: scale(1.08); box-shadow: 0 0 18px rgba(16, 185, 129, 0.55), inset 0 0 14px rgba(0,0,0,0.6); }
+        .company-btn img { width: 100%; height: 100%; object-fit: contain; border-radius: 0; }
+
+        @property --a { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+        @keyframes neonSpin { to { --a: 360deg; } }
         
         /* Slider de color - Más grande */
         .color-slider-container {
@@ -481,6 +503,46 @@
             backdrop-filter: blur(6px);
             -webkit-backdrop-filter: blur(6px);
         }
+
+        /* Fondo del menú principal con imagen */
+        #startScreen {
+            background-image: url('fondo.jpg');
+            background-position: center;
+            background-size: cover;
+            background-repeat: no-repeat;
+        }
+        #startScreen::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(3,7,18,0.75), rgba(3,7,18,0.55));
+            pointer-events: none;
+            z-index: 0;
+        }
+        #startScreen > * { position: relative; z-index: 1; }
+
+        /* Botón PLAY estilo neon */
+        /* Botón PLAY sin fondo (usa <img>) */
+        .play-btn-wrap { background: transparent; border: none; padding: 0; -webkit-appearance: none; appearance: none; }
+        .play-img { width: 240px; height: auto; display: block; filter: drop-shadow(0 0 10px rgba(56,189,248,.45)); }
+        .play-btn-wrap:active { transform: scale(0.96); }
+
+        /* Marco del menú con neo barrido */
+        .menu-card {
+            position: relative;
+            border: 2px solid rgba(56,189,248,0.35);
+            border-radius: 18px;
+            background: rgba(15,23,42,0.6);
+            box-shadow: 0 0 18px rgba(56,189,248,0.35), inset 0 0 12px rgba(0,0,0,0.6);
+            overflow: hidden;
+        }
+        .menu-card::before { content:''; position:absolute; inset:0; border-radius: inherit; border:1px solid rgba(255,255,255,0.1); pointer-events:none; }
+
+
+        /* Frame para nombre */
+        .name-frame { position: relative; width: 100%; max-width: 360px; height: 80px; margin: 0 auto; background: url('nombre.png') center/contain no-repeat; }
+        .name-input { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 70%; max-width: 260px; background: transparent; border: none; color: #e2e8f0; text-shadow: 0 1px 3px rgba(0,0,0,.6); font-size: 18px; padding: 6px; }
+        .name-input:focus { outline: none; }
     </style>
 </head>
 <body class="h-[100dvh] w-screen flex items-center justify-center overflow-hidden bg-[#0a0a0a] p-1 sm:p-4 touch-none">
@@ -515,22 +577,21 @@
 
     <!-- PANTALLA DE INICIO - FULLSCREEN RESPONSIVE -->
     <div id="startScreen" class="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center z-50 overflow-y-auto" style="padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);">
-        <div class="w-full max-w-md mx-auto px-4 py-6 flex flex-col min-h-full justify-between">
+        <div class="w-full max-w-md mx-auto px-4 py-6 flex flex-col min-h-full justify-between menu-card">
             
-            <!-- Header del menú COMPACTO -->
-            <div class="text-center mb-1 shrink-0">
-                <div class="flex items-center justify-center gap-2 mb-1">
-                    <span class="text-3xl">🛵</span>
-                    <h1 class="text-2xl font-bold text-emerald-400">Delivery Rush</h1>
-                </div>
+            <!-- Header del menú con logotipo -->
+            <div class="text-center mb-2 shrink-0">
+                <img src="logo.png" alt="Delivery Rush" class="mx-auto w-56 max-w-[80%] h-auto drop-shadow-[0_0_12px_rgba(56,189,248,.6)]">
             </div>
             
             <!-- Contenido principal SCROLLABLE -->
             <div class="flex-1 overflow-y-auto space-y-2 px-1">
                 
-                <!-- Nombre del jugador -->
-                <div class="text-center bg-slate-800/50 p-2 rounded-lg">
-                    <input type="text" id="driverName" placeholder="Tu Nombre" maxlength="12" autocomplete="off" class="text-center bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm w-40 text-white placeholder-slate-500">
+                <!-- Nombre del jugador (frame imagen) -->
+                <div class="text-center p-2">
+                    <div class="name-frame">
+                        <input type="text" id="driverName" placeholder="Tu Nombre" maxlength="12" autocomplete="off" class="name-input text-center">
+                    </div>
                     <div class="flex items-center justify-center gap-2 text-[10px] mt-1">
                         <span id="levelInfo" class="text-blue-400 hidden">Nivel: <span id="currentLevel">1</span></span>
                         <div id="savedMoneyDisplay" class="hidden"><span class="text-yellow-400 font-bold">💰 $<span id="savedMoneyAmount">0</span></span></div>
@@ -556,26 +617,26 @@
                 <div>
                     <label class="block text-slate-400 text-[10px] font-bold text-center mb-1">VEHÍCULO</label>
                     <div class="flex justify-center gap-2 flex-wrap">
-                        <button onclick="selectVehicle('moto')" id="btn-moto" class="vehicle-btn selected bg-slate-700 rounded-lg p-1 w-16 h-16">
-                            <span class="text-2xl">🏍️</span>
+                        <button onclick="selectVehicle('moto')" id="btn-moto" class="vehicle-btn selected bg-slate-700 p-1 w-16 h-16">
+                            <img src="motobasica.png" alt="Moto" />
                         </button>
-                        <button onclick="selectVehicle('car')" id="btn-car" class="vehicle-btn bg-slate-700 rounded-lg p-1 w-16 h-16">
+                        <button onclick="selectVehicle('car')" id="btn-car" class="vehicle-btn bg-slate-700 p-1 w-16 h-16">
                             <span class="text-2xl">🚗</span>
                         </button>
-                        <button onclick="selectVehicle('truck')" id="btn-truck" class="vehicle-btn bg-slate-700 rounded-lg p-1 w-16 h-16">
-                            <span class="text-2xl">🛻</span>
+                        <button onclick="selectVehicle('truck')" id="btn-truck" class="vehicle-btn bg-slate-700 p-1 w-16 h-16">
+                            <img src="fulgoneta.png" alt="Furgoneta" />
                         </button>
                         
                         <!-- Premium integrados en la misma fila -->
-                        <button onclick="selectPremiumMoto()" id="btn-motoa" class="vehicle-btn bg-slate-800 rounded-lg p-1 w-16 h-16 relative border border-yellow-500/30">
-                            <img src="motoa.gif" class="w-8 h-8 object-contain mx-auto">
+                        <button onclick="selectPremiumMoto()" id="btn-motoa" class="vehicle-btn bg-slate-800 p-1 w-16 h-16 relative border border-yellow-500/30">
+                            <img src="motoa.gif" class="w-8 h-8 object-contain mx-auto" alt="Moto Premium">
                             <span id="motoLock" class="absolute top-0 right-0 text-[10px]">🔒</span>
                         </button>
-                        <button onclick="selectPremiumTruck()" id="btn-trucka" class="vehicle-btn bg-slate-800 rounded-lg p-1 w-16 h-16 relative border border-yellow-500/30">
+                        <button onclick="selectPremiumTruck()" id="btn-trucka" class="vehicle-btn bg-slate-800 p-1 w-16 h-16 relative border border-yellow-500/30">
                             <img src="camionetaa.png" class="w-8 h-8 object-contain mx-auto">
                             <span id="truckLock" class="absolute top-0 right-0 text-[10px]">🔒</span>
                         </button>
-                        <button onclick="selectPremiumCamion()" id="btn-camion" class="vehicle-btn bg-slate-800 rounded-lg p-1 w-16 h-16 relative border border-yellow-500/30">
+                        <button onclick="selectPremiumCamion()" id="btn-camion" class="vehicle-btn bg-slate-800 p-1 w-16 h-16 relative border border-yellow-500/30">
                             <img src="camion.png" class="w-8 h-8 object-contain mx-auto">
                             <span id="camionLock" class="absolute top-0 right-0 text-[10px]">🔒</span>
                         </button>
@@ -592,10 +653,10 @@
                 </div>
             </div>
             
-            <!-- Botón de inicio y footer COMPACTO -->
+            <!-- Botón de inicio y footer -->
             <div class="text-center mt-2 pb-2 shrink-0">
-                <button onclick="startGame()" class="btn-game bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded-full text-base shadow-lg border-b-4 border-emerald-800 w-full max-w-[200px] mx-auto transform active:scale-95 transition-transform">
-                    PLAY ▶
+                <button onclick="startGame()" class="btn-game play-btn-wrap mx-auto block" aria-label="PLAY">
+                    <img src="play.png" alt="PLAY" class="play-img" />
                 </button>
                 <p class="text-slate-600 text-[9px] mt-1">v1.2</p>
             </div>
