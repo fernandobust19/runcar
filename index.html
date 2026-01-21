@@ -2172,7 +2172,7 @@ function playSound(type) {
 }
 function toggleSound() { soundEnabled = !soundEnabled; document.getElementById('soundIcon').textContent = soundEnabled ? '🔊' : '🔇'; }
 
-// Configuración de niveles - MAPAS MÁS GRANDES - SEMÁFOROS Y PUENTES
+// Configuración de niveles - MAPAS MÁS GRANDES - CHARCOS Y PUENTES
 const LEVEL_CONFIG = [];
 for (let i = 1; i <= 100; i++) {
     // Niveles avanzados (>60) son más difíciles: más obstáculos, más calles ciegas
@@ -2180,9 +2180,9 @@ for (let i = 1; i <= 100; i++) {
     
     const levelData = {
         // Aumentar tamaño progresivamente PERO LÍMITE FIJO para evitar scroll excesivo
-        // Nivel 40: 9x11 es el máximo y funciona bien. Mantenemos eso.
-        cols: Math.min(5 + Math.floor(i / 5), 9), 
-        rows: Math.min(6 + Math.floor(i / 4), 11),
+        // TODOS LOS NIVELES TIENEN EL TAMAÑO DEL NIVEL 15 (8x9) POR SOLICITUD
+        cols: 8, 
+        rows: 9, 
         
         // Tiempo ajustado
         time: 40 + i * 2 + (isHard ? 0 : 10), 
@@ -2280,7 +2280,7 @@ let unlocked_servi = false; const PRICE_SERVI = 6000;       // SERVIENTREGA.png
 let deliveryStartTime = 0; // Tiempo cuando comenzó la entrega
 let deliveryTimer = null; // Timer para la entrega
 let bridgesOwned = 0; // Número de puentes que tiene el jugador
-let semaphoreTimers = []; // Para gestionar y limpiar los ciclos de semáforos
+let semaphoreTimers = []; // Para gestionar los ciclos de semáforos
 const BRIDGE_PRICE = 50; // Precio de cada puente (ajustado)
 
 // --- SISTEMA DE MISIONES ---
@@ -2298,6 +2298,7 @@ class Tile {
         this.col = col; this.row = row; this.type = type;
         this.rotation = rotation; this.locked = type.locked || false;
         this.powered = false; this.special = null; this.semaphoreState = 'red';
+        this.isSequenceActive = false; // Para controlar la secuencia manual
         this.isEnd = false; this.isDeadEnd = false;
         this.hasCoin = false; // Propiedad para monedas
         this.hasStar = false; // Propiedad para estrellas (Nivel 30+)
@@ -2833,7 +2834,7 @@ function showMenu() {
             clearInterval(countdownTimer);
             stopGameEffects();
             clearInterval(deliveryTimer); // Corrección: Limpiar timer de entrega
-            clearSemaphoreTimers();
+            // clearSemaphoreTimers(); // Eliminado: ya no hay semáforos
             
             // Guardar progreso antes de salir
             saveGameData();
@@ -3040,7 +3041,7 @@ const tutorialSteps = [
         }
     },
     {
-        text: "Cada nivel tiene una <b>MISIÓN</b> 🎯 (como pasar semáforos o esquivar charcos). ¡Cúmplela para ganar extras!",
+        text: "Cada nivel tiene una <b>MISIÓN</b> 🎯 (como esquivar charcos o recoger objetos). ¡Cúmplela para ganar extras!",
         element: '#missionContainer',
         preShow: () => {
              const mc = $('missionContainer');
@@ -3324,6 +3325,10 @@ function init() {
     canvas.addEventListener('pointerdown', handleClick);
 }
 
+// Variable global para persistencia de misiones
+let savedMissionForRetry = null;
+let savedLevelForRetry = null;
+
 // Genera el nivel actual: prepara grid, UI y piezas
 function generateLevel(showLoading = true) {
     if ($('levelDisplay')) $('levelDisplay').textContent = level;
@@ -3378,19 +3383,39 @@ function generateLevel(showLoading = true) {
     updateStarUI();
 
     // --- GENERAR MISIÓN DEL NIVEL (Nuevos Tipos Agregados) ---
-    if (level < 2) {
+    // Si estamos reintentando el nivel y hay misión guardada, usarla
+    if (savedMissionForRetry && savedLevelForRetry === level) {
+         // Clonar para evitar modificar la referencia guardada si reiniciamos de nuevo
+         currentMission = JSON.parse(JSON.stringify(savedMissionForRetry));
+         // Reiniciar contadores
+         if (currentMission.current !== undefined) currentMission.current = 0;
+         if (currentMission.completed !== undefined) currentMission.completed = false;
+         if (currentMission.passed !== undefined) currentMission.passed = false;
+         
+         // Asegurar texto correcto en UI
+         if (currentMission.type === 'coins') currentMission.text = `Recoger ${currentMission.target} Monedas`;
+         else if (currentMission.type === 'speed_run') currentMission.text = `⚡ Entrega en < ${currentMission.targetTime}s`;
+         // ... añadir otros si necesitan reset de texto dinámico
+         
+         console.log('Restaurada misión: ', currentMission);
+    } 
+    else if (level < 2) {
         currentMission = null;
         $('missionContainer').classList.add('hidden');
     } else {
+        // Limpiar misión guardada si avanzamos de nivel
+        savedMissionForRetry = null;
+        savedLevelForRetry = null;
+        
         // Probabilidad de misión: 100% desde nivel 2
-        // Mix de misiones: 'coins', 'pickup', 'no_coins', 'speed_run', 'all_coins'
+        // Mix de misiones: 'coins', 'pickup', 'speed_run', etc. (semáforos eliminados)
         const missionRoll = Math.random();
         let missionType = 'coins'; // Default
 
         if (level >= 10 && missionRoll > 0.85) missionType = 'speed_run'; // Entregar rápido
         // else if (level >= 8 && missionRoll > 0.70) missionType = 'all_coins'; // DESACTIVADA POR PETICIÓN (MUY DIFÍCIL)
-        else if (level >= 5 && missionRoll > 0.60) missionType = 'no_coins'; // Ninguna moneda
-        else if (level >= 3 && config.features.includes('semaphore') && missionRoll > 0.55) missionType = 'pass_semaphore'; // Cruza semáforo
+        // else if (level >= 5 && missionRoll > 0.60) missionType = 'no_coins'; // ELIMINADA: Ninguna moneda
+        // else if (level >= 3 && config.features.includes('semaphore') && missionRoll > 0.55) missionType = 'pass_semaphore'; // ELIMINADO: ya no hay semáforos
         else if (level >= 3 && missionRoll > 0.45) missionType = 'place_bridge'; // NUEVO: Construir Puente (Enseña mecánica)
         else if (level >= 2 && missionRoll > 0.35) missionType = 'use_powerup'; // NUEVO: Usar Powerup (Enseña botones)
         else if (missionRoll > 0.2) missionType = 'pickup'; // Recoger objeto
@@ -3424,18 +3449,20 @@ function generateLevel(showLoading = true) {
                 completed: false,
                 text: `Recoger: ${item.name} ${item.icon}`
             };
-        } else if (missionType === 'pass_semaphore') {
+        } /* else if (missionType === 'pass_semaphore') {
             currentMission = {
                 type: 'pass_semaphore',
                 passed: false,
                 text: '🚥 Cruza un Semáforo'
             };
-        } else if (missionType === 'no_coins') {
+        } // ELIMINADO: ya no hay semáforos */
+        /* else if (missionType === 'no_coins') {
             currentMission = {
                 type: 'no_coins',
                 text: '🚫 NO Recojas Monedas'
             };
-        } else if (missionType === 'speed_run') {
+        } // ELIMINADA: Misión muy frustrante */ 
+        if (missionType === 'speed_run') {
             // Tiempo objetivo basado en dificultad
             // Estimacion base: distancia Manhattan * factor + margen
             const distEst = (COLS + ROWS) * 1.5; 
@@ -3470,9 +3497,9 @@ function generateLevel(showLoading = true) {
             let iconStr = '🎯';
             if (currentMission.type === 'coins' || currentMission.type === 'all_coins') iconStr = '💰';
             else if (currentMission.type === 'pickup') iconStr = currentMission.item.icon;
-            else if (currentMission.type === 'no_coins') iconStr = '🚫';
+            // else if (currentMission.type === 'no_coins') iconStr = '🚫'; // ELIMINADA
             else if (currentMission.type === 'speed_run') iconStr = '⚡';
-            else if (currentMission.type === 'pass_semaphore') iconStr = '🚥';
+            // else if (currentMission.type === 'pass_semaphore') iconStr = '🚥'; // ELIMINADO
             
             mText.textContent = currentMission.text;
             mIcon.textContent = iconStr;
@@ -3516,28 +3543,38 @@ function generateLevel(showLoading = true) {
         }
     }
     
-    // Si es 'no_coins', aseguramos que SI haya monedas para que sea un reto esquivarlas
-    if (currentMission && currentMission.type === 'no_coins') {
-        // placeCoins() ya puso monedas, así que perfecto.
-        // Si no hubiera, no sería reto, pero no rompe nada.
-    }
+    // Lógica de misiones eliminada para 'no_coins' ya que se quitó esa misión
     
-    // --- INSERTAR ITEM DE MISIÓN FINAL ---
+    // --- INSERTAR ITEM DE MISIÓN FINAL (LÓGICA MEJORADA) ---
     if (currentMission && currentMission.type === 'pickup') {
-        let attempts = 0;
-        let placed = false;
-        while(attempts < 50 && !placed) {
-            const c = Math.floor(Math.random() * COLS);
-            const r = Math.floor(Math.random() * ROWS);
-            const t = grid[r * COLS + c];
-            
-            // Requisitos: Tile normal, que no sea start/end/blocked, y que NO tenga moneda ni estrella ni especial
-            if (t && !t.locked && t.type !== TILE_TYPES.BLOCKED && !t.hasCoin && !t.hasStar && !t.special) {
-                t.missionItem = currentMission.item;
-                placed = true;
-            }
-            attempts++;
-        }
+         const sTile = grid.find(t => t.type === TILE_TYPES.START);
+         if (sTile) {
+             // Usar helper para encontrar tiles válidos y alcanzables
+             const possible = getReachableTiles(sTile.col, sTile.row);
+             const candidates = possible.filter(idx => {
+                 const t = grid[idx];
+                 // No poner en especiales o bloqueados
+                 return t && !t.locked && !t.hasCoin && !t.hasStar && !t.special;
+             });
+             
+             if (candidates.length > 0) {
+                 // Elegir uno random de los válidos
+                 const chosenIdx = candidates[Math.floor(Math.random() * candidates.length)];
+                 grid[chosenIdx].missionItem = currentMission.item;
+             } else {
+                 // Fallback si no hay candidatos (raro), usar método viejo
+                 let attempts = 0;
+                 while(attempts < 50) {
+                     const idx = Math.floor(Math.random() * grid.length);
+                     const t = grid[idx];
+                     if (t && !t.locked && t.type !== TILE_TYPES.BLOCKED && !t.hasCoin && !t.special) {
+                         t.missionItem = currentMission.item;
+                         break;
+                     }
+                     attempts++;
+                 }
+             }
+         }
     }
 
     // Carro y conexiones
@@ -3722,7 +3759,7 @@ function resetLevel() {
             clearInterval(countdownTimer);
             stopGameEffects();
             stopPrepAnimation();
-            clearSemaphoreTimers(); // Limpiar semáforos
+            // clearSemaphoreTimers(); // Eliminado: ya no hay semáforos
             $('orderReady').classList.add('hidden');
         
             playSound('rotate'); // Sonido de confirmación
@@ -4002,56 +4039,96 @@ function placeThemedBlockers(config) {
     });
 }
 
+// Helper para obtener tiles alcanzables desde una posición
+function getReachableTiles(startCol, startRow) {
+    const reachable = [];
+    const visited = new Set();
+    const queue = [{c: startCol, r: startRow}];
+    visited.add(`${startCol},${startRow}`);
+    
+    if (startCol < 0 || startCol >= COLS || startRow < 0 || startRow >= ROWS) return [];
+
+    while(queue.length > 0) {
+        const curr = queue.shift();
+        const idx = curr.r * COLS + curr.c;
+        const tile = grid[idx];
+
+        // Añadir a reachable si es utilizable (no blocked)
+        if (tile && !tile.locked && tile.type !== TILE_TYPES.BLOCKED) {
+             reachable.push(idx);
+        }
+
+        const dirs = [
+            {dc: 0, dr: -1}, {dc: 1, dr: 0}, 
+            {dc: 0, dr: 1}, {dc: -1, dr: 0}
+        ];
+        
+        for (let d of dirs) {
+            const nc = curr.c + d.dc;
+            const nr = curr.r + d.dr;
+            
+            if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS) {
+                const k = `${nc},${nr}`;
+                if (!visited.has(k)) {
+                    const nextTile = grid[nr * COLS + nc];
+                    // Atraviesa todo lo que no sea pared sólida
+                    if (nextTile && nextTile.type !== TILE_TYPES.BLOCKED) {
+                        visited.add(k);
+                        queue.push({c: nc, r: nr});
+                    }
+                }
+            }
+        }
+    }
+    return reachable;
+}
+
 function placeCoins() {
     const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
     if (!startTile) return;
 
-    // --- MONEDAS ---
-    // Aumentado a 10 por nivel para permitir mayor recolección
-    let coinsToPlace = 10;
-    let attempts = 0;
+    // Obtener tiles válidos (lógica de camino alcanzable)
+    const possibleTiles = getReachableTiles(startTile.col, startTile.row);
     
-    while (coinsToPlace > 0 && attempts < 100) {
-        attempts++;
-        const col = Math.floor(Math.random() * COLS);
-        const row = Math.floor(Math.random() * ROWS);
-        const tile = grid[row * COLS + col];
-        
-        // Solo en tiles existentes transitables
-        if (!tile || tile.type === TILE_TYPES.BLOCKED || tile.type === TILE_TYPES.START || tile.type === TILE_TYPES.END) continue;
-        
-        const dist = Math.abs(col - startTile.col) + Math.abs(row - startTile.row);
-        
-        if (dist > 3 && !tile.hasCoin && !tile.hasStar) {
-            tile.hasCoin = true;
-            coinsToPlace--;
-        }
+    // --- MONEDAS ---
+    let coinsToPlace = 10;
+    
+    // Filtrar candidatos para monedas
+    const candidates = possibleTiles.filter(idx => {
+        const t = grid[idx];
+        const dist = Math.abs(t.col - startTile.col) + Math.abs(t.row - startTile.row);
+        // Evitar cercanía exagerada al inicio
+        return t && !t.hasCoin && !t.hasStar && !t.special && dist > 2; 
+    });
+    
+    // Barajar
+    candidates.sort(() => Math.random() - 0.5);
+    
+    // Colocar hasta que se acaben o no haya sitio
+    for (let i = 0; i < candidates.length && coinsToPlace > 0; i++) {
+        grid[candidates[i]].hasCoin = true;
+        coinsToPlace--;
     }
 
     // --- ESTRELLAS (Nivel 30+) ---
     if (level >= 30) {
-        // Probabilidad alta de 1 estrella por nivel, o a veces 2
         let starsToPlace = Math.random() < 0.7 ? 1 : 2; 
-        attempts = 0;
-
-        while (starsToPlace > 0 && attempts < 100) {
-            attempts++;
-            const col = Math.floor(Math.random() * COLS);
-            const row = Math.floor(Math.random() * ROWS);
-            const tile = grid[row * COLS + col];
-            
-            if (!tile || tile.type === TILE_TYPES.BLOCKED || tile.type === TILE_TYPES.START || tile.type === TILE_TYPES.END) continue;
-            
-            // Distancia considerable para dificultad
-            const dist = Math.abs(col - startTile.col) + Math.abs(row - startTile.row);
-            
-            if (dist > 2 && !tile.hasCoin && !tile.hasStar) {
-                tile.hasStar = true;
-                starsToPlace--;
-            }
+        
+        // Recalcular candidatos disponibles (sin monedas)
+        const starCandidates = possibleTiles.filter(idx => {
+            const t = grid[idx];
+            return t && !t.hasCoin && !t.hasStar && !t.special;
+        });
+        
+        starCandidates.sort(() => Math.random() - 0.5);
+        
+        for (let i = 0; i < starCandidates.length && starsToPlace > 0; i++) {
+            grid[starCandidates[i]].hasStar = true;
+            starsToPlace--;
         }
     }
 }
+
 
 function canReachEnd() {
     const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
@@ -4932,40 +5009,49 @@ function actuallyStartCar() {
     }, 100);
     
     // Limpiar timers anteriores por seguridad
-    clearSemaphoreTimers();
+    clearSemaphoreTimers(); // Restaurado: gestión de semáforos
 
+    // Configurar ciclos automáticos para semáforos (cuando no hay vehículos esperando)
     specialTiles.forEach(tile => {
         if (tile.special === 'semaphore') {
             const runCycle = () => {
                 if (gameState !== 'RUNNING') return;
                 
-                // Ciclo: Rojo -> Amarillo -> Verde -> Rojo
-                // Empezamos asumiendo que está en rojo (establecido en generateLevel/addSpecials) o el estado actual
-                
-                // Tiempo de ROJO variable para desincronizar semáforos
-                const redTime = 1500 + Math.random() * 2000;
-                
-                const t1 = setTimeout(() => {
-                    tile.semaphoreState = 'yellow'; draw();
+                // Solo ejecutar ciclo automático si NO hay secuencia manual activa
+                if (!tile.isSequenceActive) {
+                    // Ciclo: Rojo -> Amarillo -> Verde -> Rojo
+                    const redTime = 3000 + Math.random() * 2000; // Tiempo variable
                     
-                    const t2 = setTimeout(() => {
-                        tile.semaphoreState = 'green'; draw();
+                    const t1 = setTimeout(() => {
+                        if (!tile.isSequenceActive) {
+                            tile.semaphoreState = 'yellow'; draw();
+                        }
                         
-                        // Tiempo de VERDE
-                        const t3 = setTimeout(() => {
-                            tile.semaphoreState = 'red'; draw();
-                            runCycle(); // Reiniciar ciclo
-                        }, 2500); 
-                        semaphoreTimers.push(t3);
+                        const t2 = setTimeout(() => {
+                            if (!tile.isSequenceActive) {
+                                tile.semaphoreState = 'green'; draw();
+                            }
+                            
+                            const t3 = setTimeout(() => {
+                                if (!tile.isSequenceActive) {
+                                    tile.semaphoreState = 'red'; draw();
+                                    runCycle(); // Reiniciar ciclo
+                                }
+                            }, 2500); 
+                            semaphoreTimers.push(t3);
+                            
+                        }, 800); 
+                        semaphoreTimers.push(t2);
                         
-                    }, 800); // Tiempo de AMARILLO (previo a verde)
-                    semaphoreTimers.push(t2);
-                    
-                }, redTime); // Tiempo inicial de ROJO
-                semaphoreTimers.push(t1);
+                    }, redTime); 
+                    semaphoreTimers.push(t1);
+                } else {
+                    // Si hay secuencia activa, reintentar más tarde
+                    setTimeout(runCycle, 1000);
+                }
             };
             
-            // Iniciar ciclo
+            // Iniciar ciclo automático
             runCycle();
         }
     });
@@ -5037,7 +5123,11 @@ function gameLoop() {
     
     if (car.waiting) {
         const tile = grid[car.row * COLS + car.col];
-        if (tile?.special === 'semaphore' && tile.semaphoreState === 'green') car.waiting = false;
+        // Lógica de semáforos: controlada por secuencia
+        if (tile?.special === 'semaphore') {
+             if (tile.semaphoreState === 'green' && !tile.isSequenceActive) car.waiting = false;
+             // Si está en secuencia, el timeout final se encargará de liberar
+        } 
         else { draw(); animationId = requestAnimationFrame(gameLoop); return; }
     }
     
@@ -5053,32 +5143,53 @@ function gameLoop() {
         car.x = cx; car.y = cy;
         const tile = grid[car.row * COLS + car.col];
         
+        // LÓGICA DE SEMÁFOROS RESTAURADA CON MEJORAS
         if (tile?.special === 'semaphore' && tile.semaphoreState !== 'green') {
+            // SECUENCIA COMPLETA: ROJO -> AMARILLO -> VERDE -> DESPUÉS PUEDE AVANZAR
+            if (!tile.isSequenceActive) {
+                tile.isSequenceActive = true;
+                clearSemaphoreTimers(); // Pausar otros ciclos para centrar atención
+                
+                // PASO 1: FORZAR ROJO AL LLEGAR
+                tile.semaphoreState = 'red';
+                draw(); // Mostrar rojo con semáforo grande
+                
+                // PASO 2: Después de ver el rojo, cambiar a amarillo
+                const t1 = setTimeout(() => {
+                    if (tile.isSequenceActive) {
+                        tile.semaphoreState = 'yellow';
+                        draw(); // Mostrar amarillo con semáforo grande
+                    }
+                    
+                    // PASO 3: Después de ver el amarillo, cambiar a verde  
+                    const t2 = setTimeout(() => {
+                        if (tile.isSequenceActive) {
+                            tile.semaphoreState = 'green';
+                            draw(); // Mostrar verde con semáforo grande
+                        }
+                        
+                        // PASO 4: SOLO DESPUÉS de haber mostrado los 3 colores, permitir avanzar
+                        const tFinal = setTimeout(() => {
+                             car.waiting = false; // AHORA SÍ puede avanzar
+                             draw();
+                             
+                             // Mantener el semáforo en verde por más tiempo antes de limpiar
+                             setTimeout(() => {
+                                 tile.isSequenceActive = false; 
+                             }, 2000);
+                             
+                        }, 2500); // Tiempo para ver el verde antes de liberar
+                        semaphoreTimers.push(tFinal);
+
+                    }, 1200); // Tiempo en amarillo
+                    semaphoreTimers.push(t2);
+                    
+                }, 1200); // Tiempo en rojo
+                semaphoreTimers.push(t1);
+            }
+
             car.waiting = true; draw();
             animationId = requestAnimationFrame(gameLoop); return;
-        }
-
-        // --- MISION SEMAFORO ---
-        if (tile?.special === 'semaphore' && currentMission && currentMission.type === 'pass_semaphore' && !currentMission.passed) {
-             currentMission.passed = true;
-             
-             const mText = $('missionText');
-             const mCheck = $('missionCheck');
-             if (mCheck) mCheck.classList.remove('hidden');
-             if (mText) {
-                 mText.textContent = '¡Semáforo Cruzado!';
-                 mText.classList.add('text-emerald-400');
-             }
-             playSound('delivery');
-             
-             floatingTexts.push({
-                x: car.x,
-                y: car.y - 40,
-                text: '🚦 Cruzado!',
-                color: '#34d399',
-                life: 80,
-                vy: -1
-            });
         }
         
         if (tile?.special === 'puddle') car.speed = car.baseSpeed * 0.5;
@@ -5115,11 +5226,11 @@ function gameLoop() {
                         playSound('delivery'); // Sonido logro
                     }
                 } 
-                // C) Misión NO COINS - Fallo inmediato
-                else if (currentMission.type === 'no_coins') {
+                // C) Misión NO COINS - ELIMINADA por ser muy frustrante
+                /*else if (currentMission.type === 'no_coins') {
                     crash('🚫 No debías recoger monedas', '¡MISIÓN FALLIDA!');
                     return;
-                }
+                }*/
             }
 
             // Efecto visual en el mapa (texto flotante inmediato)
@@ -5229,11 +5340,13 @@ function gameLoop() {
                         return;
                     }
                 }
-                // 5. Pass Semaphore
+                // 5. Pass Semaphore - ELIMINADO
+                /*
                 if (currentMission.type === 'pass_semaphore' && !currentMission.passed) {
                     crash('Debías cruzar un semáforo 🚦', '¡MISIÓN FALLIDA!');
                     return;
                 }
+                */
                 // 6. No Coins: Ya se validó en gameLoop (si recogiste una, ya perdiste). Si llegas aquí sin crash, ganaste.
             }
             
@@ -5343,6 +5456,13 @@ function stopGameEffects() {
 
 function crash(msg, title = "¡PEDIDO CANCELADO!") {
     gameState = 'CRASHED';
+    
+    // GUARDAR MISIÓN ACTUAL PARA REINTENTO
+    if (currentMission) {
+        savedMissionForRetry = JSON.parse(JSON.stringify(currentMission));
+        savedLevelForRetry = level;
+    }
+    
     cancelAnimationFrame(animationId); // Detener el loop del juego
     clearInterval(countdownTimer); stopGameEffects(); clearInterval(deliveryTimer);
     playSound('crash');
@@ -5857,12 +5977,11 @@ function draw() {
 
         drawCar();
         
-        // --- LÓGICA DE SEMÁFORO SOBREPUESTO ---
-        // Si el coche está en un semáforo ROJO, lo dibujamos encima y grande
-        const carTile = grid[car.row * COLS + car.col];
-        if (carTile && carTile.special === 'semaphore' && carTile.semaphoreState === 'red') {
-            drawGiantSemaphore(carTile);
-        }
+        // --- LÓGICA DE SEMÁFORO SOBREPUESTO ELIMINADA ---
+        // const carTile = grid[car.row * COLS + car.col];
+        // if (carTile && carTile.special === 'semaphore' && (carTile.semaphoreState === 'red' || carTile.isSequenceActive)) {
+        //     drawGiantSemaphore(carTile); // FUNCIÓN ELIMINADA
+        // }
     }
     
     // DIBUJAR TEXTOS FLOTANTES
@@ -6337,13 +6456,93 @@ function drawTile(tile) {
         ctx.fillText('?', cx, cy);
     }
     
-    // ...existing code para especiales (semaphore, puddle, boost)...
+    // CÓDIGO DE SEMÁFOROS RESTAURADO CON MEJORAS
     if (tile.special === 'semaphore') {
-        ctx.fillStyle = '#1f2937'; ctx.fillRect(cx - 4, cy - 10, 8, 20);
-        const cols = { red: tile.semaphoreState === 'red' ? '#ef4444' : '#3f1515', yellow: tile.semaphoreState === 'yellow' ? '#fbbf24' : '#3f3515', green: tile.semaphoreState === 'green' ? '#22c55e' : '#153f25' };
-        ctx.beginPath(); ctx.arc(cx, cy - 6, 2.5, 0, Math.PI * 2); ctx.fillStyle = cols.red; ctx.fill();
-        ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, Math.PI * 2); ctx.fillStyle = cols.yellow; ctx.fill();
-        ctx.beginPath(); ctx.arc(cx, cy + 6, 2.5, 0, Math.PI * 2); ctx.fillStyle = cols.green; ctx.fill();
+        // Determinar si el vehículo está esperando aquí para hacer el semáforo grande
+        let scale = 1.0;
+        let isWaitingHere = false;
+        let isSequenceRunning = false;
+        
+        if (car && car.waiting && Math.floor(car.x / TILE_SIZE) === tile.col && Math.floor(car.y / TILE_SIZE) === tile.row) {
+            isWaitingHere = true;
+        }
+        
+        // También mantener grande durante la secuencia activa
+        if (tile.isSequenceActive) {
+            isSequenceRunning = true;
+        }
+        
+        if (isWaitingHere || isSequenceRunning) {
+            scale = 1.8; // Crecer significativamente para visualización
+        }
+        
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.scale(scale, scale);
+        
+        // DIBUJAR POSTE DEL SEMÁFORO
+        ctx.fillStyle = '#4a5568'; // Color gris del poste
+        ctx.fillRect(-1, 8, 2, 15); // Poste vertical
+        
+        // Sombra del semáforo
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath(); ctx.ellipse(0, 12, 6, 2, 0, 0, Math.PI*2); ctx.fill();
+
+        // Cuerpo del semáforo (caja negra)
+        ctx.fillStyle = '#1f2937'; 
+        // Borde blanco si está activo (esperando o en secuencia)
+        if (isWaitingHere || isSequenceRunning) {
+             ctx.lineWidth = 1; ctx.strokeStyle = 'white';
+             ctx.strokeRect(-5, -12, 10, 24);
+        }
+        ctx.fillRect(-5, -12, 10, 24);
+
+        // Colores de las luces según el estado
+        const cols = { 
+            red: tile.semaphoreState === 'red' ? '#ef4444' : '#3f1515', 
+            yellow: tile.semaphoreState === 'yellow' ? '#fbbf24' : '#3f3515', 
+            green: tile.semaphoreState === 'green' ? '#22c55e' : '#153f25'
+        };
+        
+        // Luz ROJA
+        ctx.beginPath(); ctx.arc(0, -7, 3, 0, Math.PI * 2); 
+        ctx.fillStyle = cols.red; 
+        if(tile.semaphoreState === 'red') {
+            ctx.shadowColor = '#ef4444'; ctx.shadowBlur = 10; // Glow rojo
+        }
+        ctx.fill(); ctx.shadowBlur = 0;
+
+        // Luz AMARILLA
+        ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI * 2); 
+        ctx.fillStyle = cols.yellow; 
+        if(tile.semaphoreState === 'yellow') {
+            ctx.shadowColor = '#fbbf24'; ctx.shadowBlur = 10; // Glow amarillo
+        }
+        ctx.fill(); ctx.shadowBlur = 0;
+
+        // Luz VERDE
+        ctx.beginPath(); ctx.arc(0, 7, 3, 0, Math.PI * 2); 
+        ctx.fillStyle = cols.green;
+        if(tile.semaphoreState === 'green') {
+            // Glow más intenso cuando está grande
+            ctx.shadowColor = '#22c55e'; 
+            ctx.shadowBlur = scale > 1.5 ? 20 : 10; // Glow más fuerte cuando está grande
+        }
+        ctx.fill(); ctx.shadowBlur = 0;
+
+        // Añadir un brillo extra cuando está en verde y grande
+        if(tile.semaphoreState === 'green' && scale > 1.5) {
+            ctx.beginPath(); ctx.arc(0, 7, 4, 0, Math.PI * 2); 
+            ctx.fillStyle = 'rgba(34, 197, 94, 0.4)'; // Halo verde translúcido
+            ctx.fill();
+            
+            // Centro más brillante
+            ctx.beginPath(); ctx.arc(0, 7, 2, 0, Math.PI * 2); 
+            ctx.fillStyle = '#4ade80'; // Verde más brillante en el centro
+            ctx.fill();
+        }
+
+        ctx.restore();
     } else if (tile.special === 'puddle') {
         ctx.fillStyle = 'rgba(59, 130, 246, 0.5)';
         ctx.beginPath(); ctx.ellipse(cx, cy, TILE_SIZE * 0.12, TILE_SIZE * 0.08, 0, 0, Math.PI * 2);
@@ -6566,21 +6765,28 @@ function drawCar() {
         ctx.fillRect(-18, -6, 36, 12);
     }
     
-    // Indicador de dirección en modo edición (Flotante encima)
+    // Indicador de dirección en modo edición
     if (gameState === 'EDITING') {
-        const bounce = Math.sin(Date.now() / 200) * 3;
-        ctx.translate(0, -20 + bounce); // Arriba del coche
+        const bounce = Math.sin(Date.now() / 200) * 2;
         
-        ctx.fillStyle = 'rgba(74, 222, 128, 0.9)'; 
-        ctx.shadowColor = 'rgba(74, 222, 128, 0.6)'; ctx.shadowBlur = 8;
+        ctx.save();
+        // Resetear transformaciones para dibujar la flecha relativa al mundo no funciona directo aquí porque ya rotamos/escalamos.
+        // Pero queremos indicar "Hacia adelante" DEL COCHE.
+        // Como ya hemos rotado el contexto para que X+ sea el frente, dibujamos la flecha en X+
         
-        // Flecha simple hacia abajo apuntando al coche
+        ctx.translate(35 + bounce, 0); // Al frente del coche
+        
+        ctx.fillStyle = '#4ade80'; // Verde brillante
+        ctx.shadowColor = '#4ade80'; ctx.shadowBlur = 10;
+        
+        // Flecha apuntando a la derecha (que es el frente logicamente)
         ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(-4, -6);
-        ctx.lineTo(4, -6);
+        ctx.moveTo(0, 0);   // Punta
+        ctx.lineTo(-8, -5); // Atrás arriba
+        ctx.lineTo(-8, 5);  // Atrás abajo
         ctx.fill();
-        ctx.shadowBlur = 0;
+        
+        ctx.restore();
     }
     
     ctx.restore();
@@ -6596,67 +6802,8 @@ function shadeColor(color, percent) {
     return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
 }
 
-function drawGiantSemaphore(tile) {
-    const cx = tile.col * TILE_SIZE + TILE_SIZE / 2;
-    const cy = tile.row * TILE_SIZE + TILE_SIZE / 2;
-    
-    ctx.save();
-    ctx.translate(cx, cy - 10); // Un poco hacia arriba para centrar mejor visualmente
-    
-    // Efecto de latido (Pulse) para urgencia
-    // Hacemos que sea "un poco más grande" como pidió el usuario (aprox 1.5x a 2x el tamaño normal visual)
-    const scale = 1.8 + Math.sin(Date.now() / 150) * 0.1; 
-    ctx.scale(scale, scale);
-    
-    // Sombra fuerte para dar efecto de "levitación" sobre el coche
-    ctx.shadowColor = 'rgba(0,0,0,0.8)';
-    ctx.shadowBlur = 15;
-    ctx.shadowOffsetY = 10;
-    
-    // Caja del semáforo (Estilo moderno)
-    ctx.fillStyle = '#111827'; // Negro casi puro
-    ctx.strokeStyle = '#fff'; // Borde blanco fino para contraste máximo
-    ctx.lineWidth = 0.5;
-    
-    ctx.beginPath();
-    // Usamos roundRect (polyfill incluido arriba)
-    ctx.roundRect(-6, -16, 12, 32, 3);
-    ctx.fill();
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetY = 0;
-    
-    // LUCES
-    // ROJO (Activo y Brillante - ESTADO DE ALERTA)
-    const isRed = tile.semaphoreState === 'red';
-    ctx.fillStyle = isRed ? '#ff0000' : '#300';
-    if(isRed) {
-        ctx.shadowColor = '#ff0000';
-        ctx.shadowBlur = 15;
-    }
-    ctx.beginPath(); ctx.arc(0, -9, 3.5, 0, Math.PI*2); ctx.fill();
-    ctx.shadowBlur = 0;
-    
-    // AMARILLO (Apagado generalmente en el estado gigante rojo, pero por si acaso)
-    const isYellow = tile.semaphoreState === 'yellow';
-    ctx.fillStyle = isYellow ? '#fbbf24' : '#221100';
-    ctx.beginPath(); ctx.arc(0, 0, 3.5, 0, Math.PI*2); ctx.fill();
-    
-    // VERDE (Apagado)
-    const isGreen = tile.semaphoreState === 'green';
-    ctx.fillStyle = isGreen ? '#22c55e' : '#001100';
-    ctx.beginPath(); ctx.arc(0, 9, 3.5, 0, Math.PI*2); ctx.fill();
-    
-    // Indicador Texto "STOP" pequeño
-    if(isRed) {
-        ctx.fillStyle = 'white';
-        ctx.font = 'bold 4px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText("STOP", 0, 19);
-    }
-    
-    ctx.restore();
-}
+// FUNCIÓN drawGiantSemaphore ELIMINADA COMPLETAMENTE
+// Los semáforos han sido removidos del juego por petición del usuario
 
 // Animación de crecimiento de línea amarilla en modo edición
 function resetPreviewAnimation() {
