@@ -2338,13 +2338,15 @@ function generateTutorialLevel() {
     // Colocar Fin
     grid[endIdx] = new Tile(4, 2, TILE_TYPES.END, 0);
     grid[endIdx].locked = true;
+    grid[endIdx].isEnd = true; // IMPORTANTÍSIMO: Marcar como meta para que el buscador de ruta la encuentre
     
     // Llenar el camino intermedio con piezas específicas para el tutorial
     // (2,2): Pieza RECTA (I) - La pondremos rotada mal (vertical) para que el usuario tenga que girarla
-    grid[2 * COLS + 2] = new Tile(2, 2, TILE_TYPES.STRAIGHT, 1); // 1 = Vertical (Mal)
+    // BASE es N|S (Vertical). Rot 0 = Vertical. Rot 1 = Horizontal.
+    grid[2 * COLS + 2] = new Tile(2, 2, TILE_TYPES.STRAIGHT, 0); // 0 = Vertical (Cortando el paso - Mal)
     
     // (3,2): Pieza RECTA (I) - Ya rotada bien (horizontal)
-    grid[2 * COLS + 3] = new Tile(3, 2, TILE_TYPES.STRAIGHT, 0); // 0 = Horizontal (Bien)
+    grid[2 * COLS + 3] = new Tile(3, 2, TILE_TYPES.STRAIGHT, 1); // 1 = Horizontal (Bien)
 
     // Rellenar resto con bloqueos o vacío decorativo para no distraer
     grid.forEach(t => { 
@@ -2825,23 +2827,34 @@ function loadVoices() {
 
 function chooseProfessionalVoice() {
     if (!availableVoices || availableVoices.length === 0) return;
-    const preferredLangs = ['es-ES', 'es-ES', 'es_MX', 'es-419', 'es-AR', 'es-CO', 'es-CL', 'es-PE', 'es'];
-    const presenterHints = ['neural', 'broadcast', 'onair', 'expressive', 'premium', 'studio'];
+    const preferredLangs = ['es-MX', 'es-ES', 'es-419', 'es-AR', 'es-CO', 'es-CL', 'es-PE', 'es'];
+    // Buscamos voces MASCULINAS y NATURALES (Alta calidad)
+    const presenterHints = ['natural', 'online', 'neural', 'premium']; // Voces de alta calidad de Edge/Chrome
     const vendorHints = ['microsoft', 'google'];
-    const nameBoosts = ['sabina', 'sofia', 'camila', 'luis', 'alvaro', 'sergio', 'lorena'];
-    const regionBoosts = ['mx', 'es', 'co', 'ar', 'cl', 'pe'];
+    // Énfasis en nombres masculinos comunes en TTS
+    const nameBoosts = ['alvaro', 'alonso', 'pablo', 'raul', 'miguel', 'jorge', 'mateo', 'julio', 'david'];
+    const regionBoosts = ['mx', 'es', 'co', 'ar', 'py'];
 
     const score = v => {
         const name = (v.name || '').toLowerCase();
         const lang = (v.lang || '').toLowerCase();
         let s = 0;
-        if (preferredLangs.some(pl => lang.startsWith(pl.toLowerCase()))) s += 12;
-        if (presenterHints.some(h => name.includes(h))) s += 10;
-        if (vendorHints.some(h => name.includes(h))) s += 6;
-        if (nameBoosts.some(h => name.includes(h))) s += 3;
-        if (regionBoosts.some(h => name.includes(h))) s += 2;
-        // Pista por idioma si no coincide exactamente
-        if (lang.includes('es')) s += 4;
+        
+        // Prioridad idioma (Español)
+        if (preferredLangs.some(pl => lang.startsWith(pl.toLowerCase()))) s += 15;
+        
+        // Calidad (Natural/Neural es 100 veces mejor que robótica)
+        if (presenterHints.some(h => name.includes(h))) s += 20;
+        
+        // Proveedor confiable
+        if (vendorHints.some(h => name.includes(h))) s += 5;
+        
+        // Preferencia MASCULINA (Nombres)
+        if (nameBoosts.some(h => name.includes(h))) s += 25;
+        
+        // Penalizar voces femeninas conocidas si queremos hombre
+        if (['helena', 'sabina', 'zira', 'laura', 'elena'].some(h => name.includes(h))) s -= 10;
+
         return s;
     };
 
@@ -2850,12 +2863,12 @@ function chooseProfessionalVoice() {
     if (best) {
         speech.voice = best;
         speech.lang = best.lang || 'es-ES';
+        // console.log("Voz seleccionada:", best.name);
     }
 }
 
 if (synth) {
     synth.onvoiceschanged = () => loadVoices();
-    // Cargar voces iniciales (algunos navegadores requieren llamada explícita)
     loadVoices();
 }
 
@@ -2865,10 +2878,12 @@ function speak(text) {
     speech.text = text;
     // Si no se asignó voz aún, establecer idioma por defecto
     if (!speech.voice) speech.lang = 'es-ES';
-    // Ajustes de presentador: más energía y claridad
-    speech.pitch = 1.12;
-    speech.rate = 1.12;
+    
+    // Ajustes para voz JOVEN, ENÉRGICA y PROFESIONAL
+    speech.pitch = 1.05; // Tono normal/ligeramente alto para sonar más joven
+    speech.rate = 1.25; // Bastante rápido y dinámico
     speech.volume = 1.0;
+    
     synth.speak(speech);
 }
 
@@ -2886,13 +2901,13 @@ const tutorialSteps = [
         }
     },
     {
-        text: "Toca esta pieza recta para <b>GIRARLA</b> y conectar el camino.",
+        text: "Toca las piezas de calle para <b>GIRARLAS</b> y conectar el camino correctamente.",
         element: () => {
              // Apuntar DIRECTAMENTE a la pieza clave que colocamos en (2,2)
              return { col: 2, row: 2 }; 
         },
         onShow: (el) => {
-            speak("Toca esta pieza recta para girarla y conectar el camino.");
+            speak("Toca las piezas de calle para girarlas y conectar el camino correctamente.");
             if (el) {
                 // Animación de demostración en la pieza REAL (2,2)
                 const targetIdx = 2 * COLS + 2;
@@ -2907,8 +2922,8 @@ const tutorialSteps = [
                         draw();
                         playSound('rotate');
                         rotations++;
-                        // Girar hasta que quede bien (Horizontal = 0)
-                        if (tile.rotation === 0 && rotations > 2) { 
+                        // Girar hasta que quede bien (Horizontal = 1, ya que Base es N|S)
+                        if (tile.rotation === 1 && rotations > 2) { 
                              clearInterval(tutorialInterval); 
                         }
                     }, 600);
@@ -2917,16 +2932,17 @@ const tutorialSteps = [
         }
     },
     {
-        text: "¡Perfecto! La <b>LÍNEA AMARILLA</b> confirma que el camino es válido.",
+        text: "¡Perfecto! La <b>LÍNEA AMARILLA</b> confirma que la ruta llega a la casa de entrega.",
         element: '#gameCanvas',
         onShow: () => {
             if (tutorialInterval) clearInterval(tutorialInterval);
-            speak("Perfecto. La línea amarilla confirma que el camino es válido.");
+            speak("Perfecto. La línea amarilla confirma que la ruta llega a la casa de entrega.");
             
-            // Forzar solución correcta: Pieza (2,2) Horizontal
+            // Forzar solución correcta: Pieza (2,2) Horizontal (1)
             const t = grid[2 * COLS + 2];
-            if (t) t.rotation = 0; 
+            if (t) t.rotation = 1; // 1 = Horizontal
             
+            // Forzar actualización total para asegurar que aparezca la línea ESTA VEZ SÍ (ahora que isEnd=true)
             checkConnections(); 
             draw();
             
@@ -2940,24 +2956,51 @@ const tutorialSteps = [
     {
         text: "Cada nivel tiene una <b>MISIÓN</b> 🎯 (como pasar semáforos o esquivar charcos). ¡Cúmplela para ganar extras!",
         element: '#missionContainer',
+        preShow: () => {
+             const mc = $('missionContainer');
+             if(mc) mc.classList.remove('hidden');
+        },
         onShow: () => {
             speak("Cada nivel tiene una misión especial. Cúmplela para ganar extras.");
             const mc = $('missionContainer');
-            mc.classList.remove('hidden');
-            mc.style.zIndex = '205'; 
-            $('missionText').textContent = "COMPLETAR RUTA";
-            $('missionIcon').className = "text-base animate-bounce";
+            if (mc) {
+                mc.style.zIndex = '205'; 
+                $('missionText').textContent = "COMPLETAR RUTA";
+                $('missionIcon').className = "text-base animate-bounce";
+            }
         }
     },
     {
         text: "Recolecta 20 <b>ESTRELLAS</b> ⭐ para desbloquear el Cofre Legendario con <b>$10,000</b> monedas.",
-        element: '#starDisplayContainer',
+        element: () => {
+             // Apuntar a la estrella en el mapa (3,2)
+             return { col: 3, row: 2 }; 
+        },
         onShow: () => {
             speak("Recolecta 20 estrellas para desbloquear el Cofre Legendario con diez mil monedas.");
+            
+            // Mostrar contador UI
             const sc = $('starDisplayContainer');
-            sc.classList.remove('hidden');
-            sc.style.display = 'flex'; 
-            sc.classList.add('pulse');
+            if (sc) {
+                sc.classList.remove('hidden');
+                sc.style.display = 'flex'; 
+            }
+            
+            // Poner estrella FÍSICA en el mapa (3,2)
+            const tileIdx = 2 * COLS + 3;
+            const tile = grid[tileIdx];
+            if (tile) {
+                tile.hasStar = true; // IMPORTANTÍSIMO: Poner la estrella
+                tile.hasCoin = false; 
+                draw(); // Redibujar para que aparezca
+            }
+        }
+    },
+    {
+        text: "Abajo tienes herramientas útiles: <b>⚡ VELOCIDAD</b>, <b>⏱️ TIEMPO</b> y <b>🌉 PUENTES</b>. ¡Y usa la <b>RADIO</b> 🎵 para poner tu propia música (Selecciona varias canciones)!",
+        element: '#bottomControls',
+        onShow: () => {
+             speak("Abajo tienes herramientas útiles: velocidad, tiempo y puentes. Y usa la radio para poner tu propia música.");
         }
     },
     {
@@ -3019,6 +3062,10 @@ function showTutorialStep(index) {
     if (tutorialInterval) { clearInterval(tutorialInterval); tutorialInterval = null; }
     
     const step = tutorialSteps[index];
+    
+    // Ejecutar pre-acción si existe (ej. hacer visible un elemento antes de resaltar)
+    if (step.preShow) step.preShow();
+
     $('tutorialText').innerHTML = step.text;
     
     $('tutorialPrevBtn').style.visibility = index === 0 ? 'hidden' : 'visible';
@@ -3108,10 +3155,14 @@ function highlightElement(element) {
         
     } else {
         const rect = element.getBoundingClientRect();
-        spotlight.style.left = (rect.left - 5) + 'px';
-        spotlight.style.top = (rect.top - 5) + 'px';
-        spotlight.style.width = (rect.width + 10) + 'px';
-        spotlight.style.height = (rect.height + 10) + 'px';
+        // Margen suave (6px) para que el recuadro respire y muestre todo el contenido, incluyendo sombras/bordes
+        const padding = 6;
+        spotlight.style.left = (rect.left - padding) + 'px';
+        spotlight.style.top = (rect.top - padding) + 'px';
+        spotlight.style.width = (rect.width + padding * 2) + 'px';
+        spotlight.style.height = (rect.height + padding * 2) + 'px';
+        // Ajuste fino para bordes redondeados si el elemento los tiene
+        spotlight.style.borderRadius = getComputedStyle(element).borderRadius || '8px';
     }
 
     // Anclar siempre al fondo centrado, sin salirse del área visible
@@ -4617,9 +4668,8 @@ function stopPrepAnimation() {
 
 // Función para manejar tiempo expirado - Unificada con crash
 function timeExpired() {
-    // Usamos la misma lógica de "Choque/Fallo" para mantener consistencia
-    // y asegurar que se muestra la imagen correcta y el botón de reinicio funciona.
-    crash('¡El cliente canceló por demora!');
+    // Caso 1: Tiempo Agotado -> Pedido Cancelado
+    crash('¡El cliente canceló por demora!', '¡TIEMPO AGOTADO!');
 }
 
 // Función para mostrar mensaje de salida del pedido
@@ -4915,7 +4965,7 @@ function gameLoop() {
                 } 
                 // C) Misión NO COINS - Fallo inmediato
                 else if (currentMission.type === 'no_coins') {
-                    crash('¡Misión Fallida!<br>🚫 No debías recoger monedas');
+                    crash('🚫 No debías recoger monedas', '¡MISIÓN FALLIDA!');
                     return;
                 }
             }
@@ -5005,17 +5055,17 @@ function gameLoop() {
             if (currentMission) {
                 // 1. Monedas Clásicas
                 if (currentMission.type === 'coins' && currentMission.current < currentMission.target) {
-                    crash(`¡Faltan monedas!<br>Requeridas: ${currentMission.target}`);
+                    crash(`Requeridas: ${currentMission.target}`, '¡FALTAN MONEDAS!');
                     return;
                 }
                 // 2. Pickup Objeto
                 if (currentMission.type === 'pickup' && !currentMission.completed) {
-                    crash(`¡Olvidaste el objeto!<br>Recoge: ${currentMission.item.name} ${currentMission.item.icon}`);
+                    crash(`Recoge: ${currentMission.item.name} ${currentMission.item.icon}`, '¡OLVIDASTE EL OBJETO!');
                     return;
                 }
                 // 3. All Coins (Todas)
                 if (currentMission.type === 'all_coins' && currentMission.current < currentMission.target) {
-                    crash(`¡Faltan monedas!<br>Debes recoger TODAS (${currentMission.current}/${currentMission.target})`);
+                    crash(`Debes recoger TODAS (${currentMission.current}/${currentMission.target})`, '¡FALTAN MONEDAS!');
                     return;
                 }
                 // 4. Speed Run (Tiempo)
@@ -5023,13 +5073,13 @@ function gameLoop() {
                     // Cálculo de tiempo transcurrido
                     const elapsed = Math.floor((Date.now() - deliveryStartTime) / 1000);
                     if (elapsed > currentMission.targetTime) {
-                        crash(`¡Demasiado Lento!<br>Límite: ${currentMission.targetTime}s <br>Tu tiempo: ${elapsed}s`);
+                        crash(`Límite: ${currentMission.targetTime}s <br>Tu tiempo: ${elapsed}s`, '¡DEMASIADO LENTO!');
                         return;
                     }
                 }
                 // 5. Pass Semaphore
                 if (currentMission.type === 'pass_semaphore' && !currentMission.passed) {
-                    crash('¡Misión Fallida!<br>Debías cruzar un semáforo 🚦');
+                    crash('Debías cruzar un semáforo 🚦', '¡MISIÓN FALLIDA!');
                     return;
                 }
                 // 6. No Coins: Ya se validó en gameLoop (si recogiste una, ya perdiste). Si llegas aquí sin crash, ganaste.
@@ -5138,7 +5188,7 @@ function stopGameEffects() {
     if (engineAudio) { engineAudio.pause(); engineAudio.currentTime = 0; }
 }
 
-function crash(msg) {
+function crash(msg, title = "¡PEDIDO CANCELADO!") {
     gameState = 'CRASHED';
     cancelAnimationFrame(animationId); // Detener el loop del juego
     clearInterval(countdownTimer); stopGameEffects(); clearInterval(deliveryTimer);
@@ -5162,7 +5212,7 @@ function crash(msg) {
     overlay.innerHTML = `
         <div style="width:100%; text-align:center; margin-bottom:20px; z-index:60;">
             <h1 style="color:#ef4444; font-size:32px; font-weight:900; text-shadow:2px 2px 4px rgba(0,0,0,0.9); text-transform:uppercase; margin:0; font-family:'Segoe UI', sans-serif;">
-                ¡PEDIDO CANCELADO!
+                ${title}
             </h1>
             <p style="color:#fca5a5; font-size:18px; font-weight:600; text-shadow:1px 1px 3px black; margin-top:10px;">${msg}</p>
         </div>
@@ -5234,74 +5284,44 @@ function nextLevel() {
 }
 
 function showNeighborhoodModal() {
-    const NEXT_NEIGHBORHOOD_COST = 50000;
-    
-    // Calcular cuánto falta
-    const missingMoney = Math.max(0, NEXT_NEIGHBORHOOD_COST - totalMoney);
-    
+    // MENSAJE DE VICTORIA FINAL (NIVEL 100)
     let message = `<div style="text-align:center;">
         <strong>¡FELICITACIONES!</strong><br>
-        <span style="color:#fbbf24; font-size:1.2em;">Has completado el Nivel 100</span><br><br>
-        Para avanzar al <strong>SIGUIENTE BARRIO</strong> necesitas <span style="color:#10b981">$${NEXT_NEIGHBORHOOD_COST}</span>.<br><br>
-        💰 Tienes: <span style="color:${totalMoney >= NEXT_NEIGHBORHOOD_COST ? '#10b981' : '#fbbf24'}">$${totalMoney}</span>
-    `;
-
-    if (totalMoney < NEXT_NEIGHBORHOOD_COST) {
-        message += `<br><br>⚠️ Te faltan: <span style="color:#ef4444">$${missingMoney}</span><br>
-        <small>Sigue jugando para conseguir el dinero suficiente.</small></div>`;
-    } else {
-        message += `<br><br>¡Tienes suficiente dinero para mudarte!</div>`;
-    }
+        <span style="color:#fbbf24; font-size:1.4em; text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);">¡Has completado el juego!</span><br><br>
+        Has dominado todas las rutas de esta ciudad. Es hora de expandir tu negocio a nuevos horizontes.<br><br>
+        <div style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; padding: 10px; border-radius: 8px; margin-top: 10px;">
+            <p style="color: #6ee7b7; margin:0; font-weight:bold;">🚀 NUEVA CIUDADELA DISPONIBLE</p>
+        </div>
+    </div>`;
     
     let buttons = [];
     
-    if (totalMoney >= NEXT_NEIGHBORHOOD_COST) {
-        buttons.push({
-            text: '🏙️ Ir al Siguiente Barrio (-$50,000)',
-            primary: true,
-            onClick: () => {
-                showConfirmModal({
-                    icon: '🚚',
-                    title: '¿Mudar al Siguiente Barrio?',
-                    message: 'Esto te costará $50,000 y comenzarás una nueva aventura en el Nivel 1 (Más difícil).',
-                    confirmText: '¡Sí, vámonos!',
-                    cancelText: 'Esperar'
-                }).then(confirmed => {
-                    if (confirmed) {
-                        totalMoney -= NEXT_NEIGHBORHOOD_COST;
-                        level = 1; 
-                        saveGameData();
-                        hideGameModal(); 
-                        
-                        showGameModal({
-                            icon: '🎉',
-                            title: '¡Bienvenido al Nuevo Barrio!',
-                            message: '¡Buena suerte en esta nueva zona!',
-                            type: 'success',
-                            buttons: [{ text: '¡A JUGAR!', primary: true, onClick: () => { hideGameModal(); generateLevel(); } }]
-                        });
-                    } else {
-                        showNeighborhoodModal();
-                    }
-                });
-            }
-        });
-    }
-    
+    // BOTÓN PRINCIPAL: IR A LA NUEVA CIUDADELA (LINK EXTERNO)
     buttons.push({
-        text: '🔄 Seguir Jugando (Replay)',
+        text: '🌍 VIAJAR A NUEVA CIUDAD',
+        primary: true,
+        onClick: () => {
+            // AQUÍ SE PONE EL LINK DEL NUEVO JUEGO
+            // Por ahora redirige a una página de ejemplo o placeholder
+             window.location.href = "https://example.com/nueva-ciudadela"; // <-- CAMBIAR ESTE LINK
+        }
+    });
+    
+    // Opción para quedarse (Replay del nivel 100 infinitamente si quiere)
+    buttons.push({
+        text: '🔄 Quedarse Aquí',
         primary: false,
         onClick: () => {
-            hideGameModal();
-            generateLevel(); // Rejugar nivel
+             hideGameModal();
+             generateLevel();
         }
     });
 
     showGameModal({
         icon: '🏆',
-        title: 'LOGRASTE ALCANZAR EL NIVEL 100',
+        title: '¡ERES UNA LEYENDA!',
         message: message,
-        type: 'warning', 
+        type: 'success', 
         buttons: buttons
     });
 }
