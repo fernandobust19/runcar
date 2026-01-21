@@ -111,36 +111,42 @@
         .vehicle-btn {
             position: relative;
             transition: all 0.2s;
-            background: rgba(15, 23, 42, 0.85);
+            background: #06b6d4 !important; /* Color NEÓN Base (Borde) - Cyan */
             padding: 8px;
             overflow: hidden;
             width: 75px; 
             height: 75px;
-            clip-path: polygon(25% 0%, 75% 0%, 100% 25%, 100% 75%, 75% 100%, 25% 100%, 0% 75%, 0% 25%);
+            clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%); /* Más octagonal */
             display: flex;
             align-items: center;
             justify-content: center;
-            /* Neón simulado con drop-shadow al contenedor */
-            filter: drop-shadow(0 0 5px rgba(99, 102, 241, 0.5));
+            z-index: 1;
+            /* Resplandor Neón */
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.7); 
+            filter: drop-shadow(0 0 5px rgba(6, 182, 212, 0.8));
         }
-        /* Borde interior simulado */
+        /* Interior oscuro del botón */
         .vehicle-btn::before {
              content: '';
              position: absolute;
-             inset: 2px;
-             background: rgba(0,0,0,0.4);
+             inset: 2px; /* Grosor del borde neón */
+             background: #0f172a; /* Slate 900 */
              z-index: -1;
-             clip-path: polygon(25% 0%, 75% 0%, 100% 25%, 100% 75%, 75% 100%, 25% 100%, 0% 75%, 0% 25%);
+             clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
         }
         
-        .vehicle-btn:hover { transform: scale(1.04); filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.8)); }
+        .vehicle-btn:hover { 
+            transform: scale(1.1); 
+            background: #22d3ee !important; /* Brillo al hover */
+            filter: drop-shadow(0 0 12px rgba(34, 211, 238, 1));
+        }
         
         .vehicle-btn.selected { 
-            filter: drop-shadow(0 0 10px #10b981);
-            background: rgba(16, 185, 129, 0.15);
+            background: #10b981 !important; /* Verde Neón al seleccionar */
+            filter: drop-shadow(0 0 15px rgba(16, 185, 129, 0.8));
         }
         .vehicle-btn.selected::before {
-             background: rgba(16, 185, 129, 0.1);
+             background: #064e3b; /* Fondo verde oscuro */
         }
 
         .vehicle-btn img { 
@@ -627,10 +633,47 @@
         .menu-card::before { content:''; position:absolute; inset:0; border-radius: inherit; border:1px solid rgba(255,255,255,0.1); pointer-events:none; }
 
 
-        /* Frame para nombre (Transparente sin imagen de fondo) */
-        .name-frame { position: relative; width: 100%; max-width: 360px; height: 60px; margin: 0 auto; background: transparent; border-bottom: 2px solid rgba(255, 255, 255, 0.1); }
-        .name-input { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 80%; max-width: 280px; background: transparent; border: none; color: #e2e8f0; text-shadow: 0 1px 3px rgba(0,0,0,.6); font-size: 20px; font-weight: bold; padding: 6px; }
-        .name-input:focus { outline: none; border-bottom: 2px solid #22d3ee; }
+        /* Frame para nombre (Con imagen nombre.png de fondo) */
+        .name-frame { 
+            position: relative; 
+            width: 100%; 
+            max-width: 300px; /* Ajustado para la imagen */
+            height: 100px; /* Más alto para que quepa la imagen */
+            margin: 0 auto; 
+            background: url('nombre.png') no-repeat center center;
+            background-size: contain;
+            border: none; 
+        }
+        .name-input { 
+            position: absolute; 
+            left: 50%; 
+            top: 50%; /* Centrado verticalmente */
+            transform: translate(-50%, -50%); 
+            width: 70%; 
+            max-width: 200px; 
+            background: transparent !important; 
+            border: none !important; 
+            outline: none !important;
+            box-shadow: none !important;
+            appearance: none; /* Estándar */
+            -webkit-appearance: none; /* Safari/Chrome antiguos */
+            -moz-appearance: none; /* Firefox */
+            color: #ffffff; /* Letras blancas */
+            text-shadow: 0 2px 4px rgba(0,0,0,0.9); /* Sombra fuerte para legibilidad */
+            font-size: 24px; 
+            font-weight: 900; 
+            padding: 6px; 
+            text-align: center;
+            font-family: inherit;
+        }
+        .name-input:focus { 
+            outline: none; 
+            border: none; 
+            text-shadow: 0 0 10px rgba(34, 211, 238, 0.8); /* Glow cyan al enfocar */
+        }    
+        .name-input::placeholder {
+            color: rgba(255,255,255,0.6);
+        }
     </style>
 </head>
 <body class="h-[100dvh] w-screen flex items-center justify-center overflow-hidden bg-[#0a0a0a] p-1 sm:p-4 touch-none">
@@ -679,7 +722,7 @@
                 </div>
             </div>
 
-            <button id="introSkipBtn" class="glass-btn px-6 py-2 text-xs text-white/70 hover:text-white bg-slate-900/40 hover:bg-slate-800/60 rounded-full border border-white/5 transition-all mb-4">SALTAR INTRO ▶</button>
+            <button id="introSkipBtn" class="w-48 px-6 py-3 text-xs text-white/90 hover:text-white bg-slate-900/80 hover:bg-slate-800 rounded-full border border-white/20 transition-all mb-4 font-bold tracking-widest shadow-lg">SALTAR INTRO ▶</button>
         </div>
         <!-- Botón de sonido eliminado -->
     </div>
@@ -736,7 +779,7 @@
                                 <img src="motoa.gif" alt="Moto" />
                             </button>
                             <button onclick="trySelectVehicle('car')" id="btn-car" class="vehicle-btn bg-slate-700">
-                                <span class="emoji">🚗</span>
+                                <img src="motobasica.png" alt="Moto Básica" />
                             </button>
                             <button onclick="trySelectVehicle('fulgoneta')" id="btn-fulgoneta" class="vehicle-btn bg-slate-800">
                                 <img src="fulgoneta.png" alt="Furgoneta" />
@@ -753,21 +796,6 @@
                                 <img src="moto1.png" alt="Moto Sport" />
                                 <span id="lock-moto1" class="absolute top-0 right-0 text-[10px]">🔒</span>
                                 <span class="absolute bottom-0 inset-x-0 text-[8px] bg-black/60 text-center font-bold text-yellow-300">$3k</span>
-                            </button>
-                            <button onclick="trySelectVehicle('uber')" id="btn-uber" class="vehicle-btn bg-slate-800 border-yellow-500/30">
-                                <img src="UBER.png" alt="Uber" />
-                                <span id="lock-uber" class="absolute top-0 right-0 text-[10px]">🔒</span>
-                                <span class="absolute bottom-0 inset-x-0 text-[8px] bg-black/60 text-center font-bold text-yellow-300">$4k</span>
-                            </button>
-                            <button onclick="trySelectVehicle('indriver')" id="btn-indriver" class="vehicle-btn bg-slate-800 border-yellow-500/30">
-                                <img src="INDRIVER.png" alt="InDriver" />
-                                <span id="lock-indriver" class="absolute top-0 right-0 text-[10px]">🔒</span>
-                                <span class="absolute bottom-0 inset-x-0 text-[8px] bg-black/60 text-center font-bold text-yellow-300">$5k</span>
-                            </button>
-                            <button onclick="trySelectVehicle('servi')" id="btn-servi" class="vehicle-btn bg-slate-800 border-yellow-500/30">
-                                <img src="SERVIENTREGA.png" alt="Servi" />
-                                <span id="lock-servi" class="absolute top-0 right-0 text-[10px]">🔒</span>
-                                <span class="absolute bottom-0 inset-x-0 text-[8px] bg-black/60 text-center font-bold text-yellow-300">$6k</span>
                             </button>
                              <button onclick="trySelectVehicle('camion')" id="btn-camion" class="vehicle-btn bg-slate-800 border-yellow-500/30">
                                 <img src="camion.png" alt="Camión" />
@@ -1930,7 +1958,50 @@ function playSound(type) {
             gain.gain.linearRampToValueAtTime(0.001, t + 0.05);
             osc.start(t); osc.stop(t + 0.05);
         } else if (type === 'rotate') { osc.frequency.setValueAtTime(600, t); osc.frequency.exponentialRampToValueAtTime(300, t + 0.08); gain.gain.setValueAtTime(0.08, t); gain.gain.exponentialRampToValueAtTime(0.01, t + 0.08); osc.start(t); osc.stop(t + 0.08); }
-        else if (type === 'engine') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(80, t); gain.gain.setValueAtTime(0.04, t); osc.start(t); osc.stop(t + 0.12); }
+        else if (type === 'engine') {
+            // SONIDO TIPO "JET / TURBINA FUTURISTA" (Ráfaga de aire + silbido)
+            
+            // 1. RUIDO BLANCO (Aire/Thrust) - Simulado con Buffer
+            // Crear buffer de ruido (0.15s)
+            const bufferSize = audioCtx.sampleRate * 0.15;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+            const noiseFilter = audioCtx.createBiquadFilter();
+            noiseFilter.type = 'lowpass';
+            noiseFilter.frequency.setValueAtTime(400, t);
+            noiseFilter.frequency.linearRampToValueAtTime(800, t + 0.15); // "Whoosh"
+            
+            const noiseGain = audioCtx.createGain();
+            noiseGain.gain.setValueAtTime(0.08, t);
+            noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
+
+            noise.connect(noiseFilter);
+            noiseFilter.connect(noiseGain);
+            noiseGain.connect(audioCtx.destination);
+            noise.start(t);
+
+            // 2. SILBIDO TURBINA (High Pitch Sine)
+            const turbine = audioCtx.createOscillator();
+            const turbineGain = audioCtx.createGain();
+            turbine.connect(turbineGain);
+            turbineGain.connect(audioCtx.destination);
+            
+            turbine.type = 'sine';
+            turbine.frequency.setValueAtTime(1500, t); // Tono agudo
+            // Modulación ligera de frecuencia para dar "vida"
+            turbine.frequency.linearRampToValueAtTime(1600, t + 0.15);
+            
+            turbineGain.gain.setValueAtTime(0.02, t);
+            turbineGain.gain.linearRampToValueAtTime(0, t + 0.15);
+            
+            turbine.start(t); turbine.stop(t + 0.15);
+        }
 
         else if (type === 'crash') { osc.type = 'square'; osc.frequency.setValueAtTime(150, t); osc.frequency.exponentialRampToValueAtTime(40, t + 0.3); gain.gain.setValueAtTime(0.2, t); osc.start(t); osc.stop(t + 0.3); }
         else if (type === 'win') { [523,659,784,1047].forEach((f,i) => { const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); o.frequency.setValueAtTime(f, t+i*0.15); g.gain.setValueAtTime(0.1, t+i*0.15); o.start(t+i*0.15); o.stop(t+i*0.15+0.2); }); }
@@ -2101,6 +2172,7 @@ grassImg.src = 'cesped.jpg';
 const pavementImg = new Image();
 pavementImg.src = 'pavimento.jpg';
 let gameState = 'START', animationId, countdownTimer, timeLeft, maxTime, engineSoundInterval;
+let engineAudio = null; // Variable para audio continuo de motor
 let totalMoney = 0; // Dinero acumulado por propinas
 let tutorialCompleted = false;
 let totalStars = 0; // Estrellas acumuladas para el cofre
@@ -2641,7 +2713,7 @@ function showMenu() {
         if (confirmed) {
             cancelAnimationFrame(animationId);
             clearInterval(countdownTimer);
-            clearInterval(engineSoundInterval);
+            stopGameEffects();
             clearInterval(deliveryTimer); // Corrección: Limpiar timer de entrega
             clearSemaphoreTimers();
             
@@ -3359,7 +3431,7 @@ function resetLevel() {
             // Reiniciar manteniendo la posición de la casa
             cancelAnimationFrame(animationId);
             clearInterval(countdownTimer);
-            clearInterval(engineSoundInterval);
+            stopGameEffects();
             stopPrepAnimation();
             clearSemaphoreTimers(); // Limpiar semáforos
             $('orderReady').classList.add('hidden');
@@ -4592,8 +4664,46 @@ function actuallyStartCar() {
         }
     });
     
+    
+    // Configuración de audio de motor continuo
+    if (engineAudio) { engineAudio.pause(); engineAudio = null; }
+    
+    let engineSrc = null;
+    if (selectedVehicle === 'moto' || selectedVehicle === 'motoa') engineSrc = 'motoa.mp3';
+    else if (selectedVehicle === 'trucka' || selectedVehicle === 'fulgoneta') engineSrc = 'camionetaa.mp3';
+    
+    if (engineSrc) {
+        engineAudio = new Audio(engineSrc);
+        engineAudio.loop = true; 
+        engineAudio.volume = 0.6; // Volumen más alto para que suene bien directo
+
+        // AJUSTE: Saltar inicio silencioso
+        const setStart = () => {
+             if (!engineAudio.duration) return;
+             
+             if (engineSrc === 'motoa.mp3') {
+                 engineAudio.currentTime = engineAudio.duration * 0.02; // 2%
+             } else if (engineSrc === 'camionetaa.mp3') {
+                 engineAudio.currentTime = engineAudio.duration * 0.01; // 1%
+             }
+        };
+        
+        if (engineAudio.readyState >= 1) setStart();
+        else engineAudio.addEventListener('loadedmetadata', setStart);
+    }
+
     engineSoundInterval = setInterval(() => {
-        if (gameState === 'RUNNING' && !car.waiting) playSound('engine');
+        if (gameState === 'RUNNING' && !car.waiting) {
+            if (engineAudio) {
+                if (engineAudio.paused && soundEnabled) {
+                    engineAudio.play().catch(e => console.log('Audio play error:', e));
+                }
+            } else {
+                 playSound('engine');
+            }
+        } else {
+            if (engineAudio && !engineAudio.paused) engineAudio.pause();
+        }
     }, 200);
     
     gameLoop();
@@ -4902,10 +5012,15 @@ function gameLoop() {
     animationId = requestAnimationFrame(gameLoop);
 }
 
+function stopGameEffects() {
+    clearInterval(engineSoundInterval);
+    if (engineAudio) { engineAudio.pause(); engineAudio.currentTime = 0; }
+}
+
 function crash(msg) {
     gameState = 'CRASHED';
     cancelAnimationFrame(animationId); // Detener el loop del juego
-    clearInterval(countdownTimer); clearInterval(engineSoundInterval); clearInterval(deliveryTimer);
+    clearInterval(countdownTimer); stopGameEffects(); clearInterval(deliveryTimer);
     playSound('crash');
     
     const overlay = $('overlay');
@@ -5140,7 +5255,7 @@ function animateCoinCollection(x, y, amount) {
 function win() {
     gameState = 'WON';
     clearInterval(countdownTimer); 
-    clearInterval(engineSoundInterval); 
+    stopGameEffects(); 
     clearInterval(deliveryTimer);
     
     // EVITAR DOBLES PANTALLAS: Asegurar que el modal del cofre no salte
@@ -5932,6 +6047,7 @@ const vImgMoto = new Image(); vImgMoto.src = 'motoa.gif';
 const vImgTruck = new Image(); vImgTruck.src = 'camionetaa.png';
 const vImgFulgoneta = new Image(); vImgFulgoneta.src = 'fulgoneta.png';
 const vImgCamion = new Image(); vImgCamion.src = 'camion.png';
+const vImgMotoBasica = new Image(); vImgMotoBasica.src = 'motobasica.png'; // NUEVA MOTO BÁSICA
 // Nuevos
 const vImgMoto1 = new Image(); vImgMoto1.src = 'moto1.png';
 const vImgUber = new Image(); vImgUber.src = 'UBER.png';
@@ -6037,116 +6153,9 @@ function drawCar() {
         drawImageCentered(vImgMoto, 55); 
 
     } else if (selectedVehicle === 'car') {
-        // --- AUTO DE REPARTO DETALLADO (VISTA PERFIL) ---
-        // Diseño tipo Mini-Van / Hatchback Comercial
-        
-        ctx.scale(0.95, 0.95);
-
-        // 1. Sombra del suelo (más suave y realista)
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
-        ctx.beginPath(); ctx.ellipse(0, 11, 24, 4, 0, 0, Math.PI*2); ctx.fill();
-
-        // 2. Chasis Principal
-        ctx.fillStyle = mainColor;
-        
-        ctx.beginPath();
-        ctx.moveTo(-20, 8);   // Abajo atrás
-        ctx.lineTo(-21, -4);  // Atrás casi vertical (espacio carga)
-        ctx.lineTo(-18, -11); // Curva techo atrás
-        ctx.lineTo(6, -12);   // Techo largo plano
-        ctx.lineTo(18, -7);   // Inicio parabrisas
-        ctx.lineTo(24, 1);    // Fin parabrisas / Capó corto
-        ctx.lineTo(25, 4);    // Nariz
-        ctx.lineTo(24, 8);    // Abajo frente
-        // Huecos ruedas (simple línea recta por ahora, las ruedas van encima)
-        ctx.lineTo(-20, 8);
-        ctx.closePath();
-        ctx.fill();
-
-        // 3. Molduras y Parachoques
-        ctx.fillStyle = '#374151'; // Gris oscuro bumpers
-        // Trasero
-        ctx.beginPath(); ctx.moveTo(-20, 4); ctx.lineTo(-22, 4); ctx.lineTo(-22, 8); ctx.lineTo(-18, 8); ctx.fill();
-        // Delantero
-        ctx.beginPath(); ctx.moveTo(24, 5); ctx.lineTo(26, 5); ctx.lineTo(26, 8); ctx.lineTo(22, 8); ctx.fill();
-        
-        // Protector lateral puerta
-        ctx.fillStyle = 'rgba(0,0,0,0.15)';
-        ctx.fillRect(-18, 3, 38, 2);
-
-        // 4. Ventanas
-        ctx.fillStyle = '#1e3a8a'; // Azul oscuro
-        ctx.beginPath();
-        // Ventana Lateral Conductor
-        ctx.moveTo(8, -1);
-        ctx.lineTo(8, -9);
-        ctx.lineTo(17, -6);
-        ctx.lineTo(19, -1);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Ventana Trasera (Tipo panel o tintada)
-        ctx.fillStyle = '#172554';
-        ctx.beginPath();
-        ctx.moveTo(-16, -1);
-        ctx.lineTo(-15, -9);
-        ctx.lineTo(5, -10);
-        ctx.lineTo(5, -1);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Marcos finos
-        ctx.lineWidth = 1; ctx.strokeStyle = '#334155'; ctx.stroke();
-        
-        // Separador pilar B
-        ctx.fillStyle = mainColor;
-        ctx.fillRect(5, -10, 3, 10);
-
-        // 5. Detalles de Reparto
-        // Baca en el techo (Roof Rack)
-        ctx.strokeStyle = '#475569';
-        ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(-14, -11); ctx.lineTo(4, -12); ctx.stroke();
-        ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.moveTo(-10, -11); ctx.lineTo(-10, -13); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(0, -12); ctx.lineTo(0, -14); ctx.stroke();
-
-        // Logo Empresa (Círculo blanco + Letra)
-        ctx.fillStyle = 'white';
-        ctx.beginPath(); ctx.arc(0, 1, 6, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = companyColors[selectedCompany];
-        ctx.font = 'bold 8px sans-serif'; 
-        ctx.textAlign='center'; 
-        ctx.textBaseline='middle';
-        ctx.fillText(selectedCompany.substring(0,1).toUpperCase(), 0, 2);
-        
-        // Manija Puerta
-        ctx.fillStyle = '#1f2937';
-        ctx.fillRect(9, 1, 4, 1.5);
-
-        // 6. Luces
-        // Delantero
-        const headColor = waiting ? '#ef4444' : '#fef08a';
-        ctx.fillStyle = headColor;
-        ctx.beginPath(); ctx.moveTo(25, 1); ctx.lineTo(26, 2); ctx.lineTo(25, 4); ctx.lineTo(23, 3); ctx.fill();
-        if (!waiting) { // Brillo
-            ctx.fillStyle = 'rgba(254, 240, 138, 0.5)';
-            ctx.beginPath(); ctx.arc(26, 2, 3, 0, Math.PI*2); ctx.fill();
-        }
-        
-        // Trasero
-        ctx.fillStyle = '#b91c1c'; // Rojo oscuro
-        ctx.fillRect(-21, 0, 2, 5);
-
-        // Ruedas (Al final para superponerse correctamente al chasis)
-        drawSideWheel(-12, 8, 5.5);
-        drawSideWheel(12, 8, 5.5);
-
-        // Espejos Retrovisores (Extra detalle)
-        ctx.fillStyle = '#334155';
-        ctx.beginPath();
-        // Espejo lado conductor (visible)
-        ctx.moveTo(10, -5); ctx.lineTo(13, -6); ctx.lineTo(13, -3); ctx.fill();
+        // --- MOTO BÁSICA (REEMPLAZA AL AUTO) ---
+        ctx.scale(1, 1);
+        drawImageCentered(vImgMotoBasica, 55);
 
     } else if (selectedVehicle === 'trucka') {
         // CAMIONETA PREMIUM
