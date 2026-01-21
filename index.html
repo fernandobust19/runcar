@@ -1098,7 +1098,17 @@ function startIntro() {
 
     let videoResolved = false;
     const videoPromise = new Promise(resolve => {
-        const finish = () => { if (!videoResolved) { videoResolved = true; resolve(); } };
+        const finish = () => { 
+            if (!videoResolved) { 
+                videoResolved = true; 
+                // DETENER VIDEO Y AUDIO AL SALTAR
+                if (video) {
+                    video.pause();
+                    video.currentTime = 0;
+                }
+                resolve(); 
+            } 
+        };
         if (video) {
             video.muted = false; // SONIDO ACTIVADO DIRECTAMENTE
             video.volume = 1.0;
@@ -3380,8 +3390,10 @@ function generateLevel(showLoading = true) {
         if (level >= 10 && missionRoll > 0.85) missionType = 'speed_run'; // Entregar rápido
         // else if (level >= 8 && missionRoll > 0.70) missionType = 'all_coins'; // DESACTIVADA POR PETICIÓN (MUY DIFÍCIL)
         else if (level >= 5 && missionRoll > 0.60) missionType = 'no_coins'; // Ninguna moneda
-        else if (level >= 3 && config.features.includes('semaphore') && missionRoll > 0.50) missionType = 'pass_semaphore'; // Misión Semáforo (NUEVO)
-        else if (missionRoll > 0.3) missionType = 'pickup'; // Recoger objeto
+        else if (level >= 3 && config.features.includes('semaphore') && missionRoll > 0.55) missionType = 'pass_semaphore'; // Cruza semáforo
+        else if (level >= 3 && missionRoll > 0.45) missionType = 'place_bridge'; // NUEVO: Construir Puente (Enseña mecánica)
+        else if (level >= 2 && missionRoll > 0.35) missionType = 'use_powerup'; // NUEVO: Usar Powerup (Enseña botones)
+        else if (missionRoll > 0.2) missionType = 'pickup'; // Recoger objeto
         // si no, 'coins' normal
         
         if (missionType === 'coins') {
@@ -3391,6 +3403,18 @@ function generateLevel(showLoading = true) {
                 target: target,
                 current: 0,
                 text: `Recoger ${target} Monedas`
+            };
+        } else if (missionType === 'place_bridge') {
+            currentMission = {
+                type: 'place_bridge',
+                completed: false,
+                text: '🌉 Construye al menos 1 Puente'
+            };
+        } else if (missionType === 'use_powerup') {
+            currentMission = {
+                type: 'use_powerup',
+                completed: false,
+                text: '⚡ Usa una Ayuda del Tablero'
             };
         } else if (missionType === 'pickup') {
             const item = MISSION_ITEMS[Math.floor(Math.random() * MISSION_ITEMS.length)];
@@ -3611,6 +3635,29 @@ function handleClick(e) {
             saveGameData();
             playSound('money');
 
+            // --- MISIÓN: CONSTRUIR PUENTE ---
+            if (currentMission && currentMission.type === 'place_bridge' && !currentMission.completed) {
+                currentMission.completed = true;
+                const mCheck = $('missionCheck');
+                const mText = $('missionText');
+                if (mCheck) mCheck.classList.remove('hidden');
+                if (mText) {
+                    mText.textContent = '¡Puente Construido!';
+                    mText.classList.add('text-emerald-400');
+                }
+                playSound('delivery');
+                
+                // Efecto visual
+                floatingTexts.push({
+                    x: (col * TILE_SIZE) + TILE_SIZE/2,
+                    y: (row * TILE_SIZE) + TILE_SIZE/2,
+                    text: '✔️ Misión!',
+                    color: '#34d399',
+                    life: 100,
+                    vy: -1
+                });
+            }
+
             // Desactivar modo puente automáticamente
             bridgeModeActive = false;
             const btn = $('btnBridge');
@@ -3712,6 +3759,19 @@ function addExtraTime() {
     saveGameData(); // Guardar el cambio de dinero
     playSound('money'); // Sonido de transacción
 
+    // --- MISIÓN: USAR POWERUP ---
+    if (currentMission && currentMission.type === 'use_powerup' && !currentMission.completed) {
+        currentMission.completed = true;
+        const mCheck = $('missionCheck');
+        const mText = $('missionText');
+        if (mCheck) mCheck.classList.remove('hidden');
+        if (mText) {
+            mText.textContent = '¡Ayuda Usada!';
+            mText.classList.add('text-emerald-400');
+        }
+        playSound('delivery');
+    }
+
     // Feedback visual directo
     $('timerDisplay').classList.add('pulse');
     setTimeout(() => $('timerDisplay').classList.remove('pulse'), 500);
@@ -3753,6 +3813,11 @@ function instantDeliver() {
             $('moneyDisplay').textContent = totalMoney;
             playSound('money');
             saveGameData();
+
+            // --- MISIÓN: USAR POWERUP ---
+            if (currentMission && currentMission.type === 'use_powerup') {
+                currentMission.completed = true;
+            }
             
             // Entregar instantáneamente
             setTimeout(() => {
@@ -4928,12 +4993,13 @@ function actuallyStartCar() {
         engineAudio = new Audio(engineSrc);
         engineAudio.loop = true; 
         
+        // NORMALIZACIÓN DE VOLUMEN (Reducido ~20% extra)
         let vol = 0.35; 
-        if (engineSrc === 'motoa.mp3') vol = 0.28; 
+        if (engineSrc === 'motoa.mp3') vol = 0.22; // Bajado de 0.28 a 0.22
         
         engineAudio.volume = vol;
         
-        // ... (setup start time omitido por brevedad en reemplazo)
+        // INICIO AL 2% para evitar silencio inicial de algunos MP3s
         const setStart = () => { if(engineAudio.duration) engineAudio.currentTime = engineAudio.duration * 0.02; };
         if (engineAudio.readyState >= 1) setStart();
         else engineAudio.addEventListener('loadedmetadata', setStart);
