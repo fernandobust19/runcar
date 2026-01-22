@@ -828,6 +828,7 @@
                     <p class="text-[10px] text-slate-400">Pedido <span id="levelDisplay">1</span>/100</p>
                     <div class="flex items-center gap-2">
                         <p class="text-yellow-400 font-bold text-xs">💰 $<span id="moneyDisplay">0</span></p>
+                        <p class="text-blue-400 font-bold text-xs">💎 <span id="diamondDisplay">0</span></p>
                         <p id="starDisplayContainer" class="text-orange-400 font-bold text-xs hidden pl-2 border-l border-slate-600">⭐ <span id="starDisplayCount">0</span></p>
                     </div>
                 </div>
@@ -2283,8 +2284,33 @@ let bridgesOwned = 0; // Número de puentes que tiene el jugador
 let semaphoreTimers = []; // Para gestionar los ciclos de semáforos
 const BRIDGE_PRICE = 50; // Precio de cada puente (ajustado)
 
-// --- SISTEMA DE MISIONES ---
-let currentMission = null; // { type: 'coins'|'pickup', target: 5, current: 0, item: '...' }
+// --- SISTEMA DE MISIONES MEJORADO ---
+let currentMission = null;
+let completedMissionsPerLevel = []; // Misiones completadas por nivel para evitar repetición
+let missionSuccessAnimation = null; // Animación de éxito
+
+// 10 NUEVAS MISIONES ADICIONALES
+const ALL_MISSIONS = {
+    // Misiones Básicas
+    'coins': { name: 'Recolector', icon: '💰', unlockLevel: 1 },
+    'pickup': { name: 'Mensajero', icon: '📦', unlockLevel: 2 },
+    'speed_run': { name: 'Velocista', icon: '⚡', unlockLevel: 10 },
+    'place_bridge': { name: 'Constructor', icon: '🌉', unlockLevel: 3 },
+    'use_powerup': { name: 'Estratégico', icon: '⚙️', unlockLevel: 2 },
+    
+    // 10 MISIONES NUEVAS CREATIVAS
+    'perfect_route': { name: 'Ruta Perfecta', icon: '🎯', unlockLevel: 5 },
+    'collect_all_stars': { name: 'Cazaestrellas', icon: '⭐', unlockLevel: 15 },
+    'no_damage': { name: 'Conductor Perfecto', icon: '😇', unlockLevel: 7 },
+    'minimal_tiles': { name: 'Minimalista', icon: '🧩', unlockLevel: 6 },
+    'chain_boosts': { name: 'Turbo Chain', icon: '🔥', unlockLevel: 12 },
+    'zigzag_master': { name: 'Zigzag Master', icon: '🔄', unlockLevel: 8 },
+    'coin_hunter': { name: 'Cazamonedas', icon: '🥇', unlockLevel: 4 },
+    'bridge_master': { name: 'Ingeniero', icon: '🔨', unlockLevel: 9 },
+    'speed_demon': { name: 'Demonio Veloz', icon: '🚀', unlockLevel: 11 },
+    'treasure_seeker': { name: 'Buscatesoros', icon: '🗺️', unlockLevel: 13 }
+};
+
 const MISSION_ITEMS = [
     { id: 'pizza', icon: '🍕', name: 'Pizza Olvidada' },
     { id: 'keys', icon: '🔑', name: 'Llaves de Casa' },
@@ -2302,6 +2328,8 @@ class Tile {
         this.isEnd = false; this.isDeadEnd = false;
         this.hasCoin = false; // Propiedad para monedas
         this.hasStar = false; // Propiedad para estrellas (Nivel 30+)
+        this.hasDiamond = false; // Propiedad para diamantes (cada 4 niveles)
+        this.hasDiamond = false; // Propiedad para diamantes (cada 4 niveles)
         this.missionItem = null; // { type: 'pizza', icon: '🍕', name: 'Pizza' }
     }
     getConnections() {
@@ -2550,6 +2578,10 @@ function loadGameData(playerName) {
                     $('savedMoneyAmount').textContent = totalMoney;
                 }
             }
+            
+            // Inicializar display de diamantes
+            const diamondDisplay = $('diamondDisplay');
+            if (diamondDisplay) diamondDisplay.textContent = diamondsCollected;
 
             // Cargar estado del tutorial
             if (gameData.tutorialCompleted !== undefined) {
@@ -3329,6 +3361,239 @@ function init() {
 let savedMissionForRetry = null;
 let savedLevelForRetry = null;
 
+// --- SISTEMA DE DIAMANTES Y ROMPECABEZAS ---
+let diamondsCollected = parseInt(localStorage.getItem('diamondsCollected') || '0');
+let puzzleActive = false;
+let puzzlePieces = [];
+let draggedPiece = null;
+let mouseOffset = { x: 0, y: 0 };
+
+// Función centralizada para actualizar progreso de misiones
+function updateMissionProgress(event, data = {}) {
+    if (!currentMission) return;
+
+    let completed = false;
+    const mText = $('missionText');
+
+    switch (currentMission.type) {
+        case 'coins':
+            if (event === 'coin_collected') {
+                currentMission.current++;
+                if (mText) {
+                    mText.innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> 💰 Recoger ${currentMission.current}/${currentMission.target} Monedas`;
+                }
+                if (currentMission.current >= currentMission.target) completed = true;
+            }
+            break;
+
+        case 'perfect_route':
+            if (event === 'tile_placed') {
+                currentMission.tilesUsed++;
+                if (currentMission.tilesUsed > currentMission.maxTiles) {
+                    // Marcar como fallida pero no llamar crash
+                    return;
+                }
+            }
+            if (event === 'level_completed') {
+                completed = currentMission.tilesUsed <= currentMission.maxTiles;
+            }
+            break;
+
+        case 'collect_all_stars':
+            if (event === 'star_collected') {
+                currentMission.current++;
+                if (mText) {
+                    mText.innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> ⭐ Recolecta ${currentMission.current}/${currentMission.target} Estrellas`;
+                }
+                if (currentMission.current >= currentMission.target) completed = true;
+            }
+            break;
+
+        case 'no_damage':
+            if (event === 'damage_taken') {
+                currentMission.damaged = true;
+                // No llamar crash aquí para evitar recursión
+                return;
+            }
+            if (event === 'level_completed') {
+                completed = !currentMission.damaged;
+                if (!completed) {
+                    // Solo marcar como fallida, no llamar crash
+                    return;
+                }
+            }
+            break;
+
+        case 'minimal_tiles':
+            if (event === 'tile_placed') {
+                currentMission.tilesUsed++;
+                if (currentMission.tilesUsed > currentMission.maxTiles) {
+                    // Marcar como fallida pero no llamar crash
+                    return;
+                }
+            }
+            if (event === 'level_completed') {
+                completed = currentMission.tilesUsed <= currentMission.maxTiles;
+            }
+            break;
+
+        case 'chain_boosts':
+            if (event === 'boost_hit') {
+                currentMission.consecutive++;
+                if (currentMission.consecutive >= currentMission.target) {
+                    completed = true;
+                }
+            } else if (event === 'boost_missed') {
+                currentMission.consecutive = 0;
+            }
+            break;
+
+        case 'zigzag_master':
+            if (event === 'direction_change') {
+                if (data.direction !== currentMission.lastDirection) {
+                    currentMission.current++;
+                    currentMission.lastDirection = data.direction;
+                    if (mText) {
+                        mText.innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> 🔄 Cambios ${currentMission.current}/${currentMission.target}`;
+                    }
+                    if (currentMission.current >= currentMission.target) completed = true;
+                }
+            }
+            break;
+
+        case 'coin_hunter':
+            if (event === 'coin_collected') {
+                if (!currentMission.startTime) {
+                    currentMission.startTime = Date.now();
+                }
+                const elapsed = (Date.now() - currentMission.startTime) / 1000;
+                if (elapsed > currentMission.timeLimit) {
+                    // Marcar como fallida pero no llamar crash
+                    return;
+                }
+                currentMission.current++;
+                if (currentMission.current >= currentMission.target) completed = true;
+            }
+            break;
+
+        case 'bridge_master':
+            if (event === 'bridge_built') {
+                currentMission.current++;
+                if (mText) {
+                    mText.innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> 🔨 Puentes ${currentMission.current}/${currentMission.target}`;
+                }
+                if (currentMission.current >= currentMission.target) completed = true;
+            }
+            break;
+
+        case 'speed_demon':
+            if (event === 'level_completed') {
+                const elapsed = data.timeElapsed || 0;
+                completed = elapsed < currentMission.timeLimit;
+                if (!completed) {
+                    // Solo marcar como fallida, no llamar crash
+                    return;
+                }
+            }
+            break;
+
+        case 'treasure_seeker':
+            if (event === 'coin_collected') {
+                currentMission.coinsCollected++;
+            } else if (event === 'item_collected') {
+                currentMission.itemsCollected++;
+            }
+            if (mText) {
+                mText.innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> 🗺️ ${currentMission.coinsCollected}/${currentMission.coinsRequired} monedas, ${currentMission.itemsCollected}/${currentMission.itemsRequired} objeto`;
+            }
+            completed = currentMission.coinsCollected >= currentMission.coinsRequired && 
+                      currentMission.itemsCollected >= currentMission.itemsRequired;
+            break;
+
+        // Misiones existentes
+        case 'place_bridge':
+            if (event === 'bridge_built') completed = true;
+            break;
+
+        case 'use_powerup':
+            if (event === 'powerup_used') completed = true;
+            break;
+
+        case 'pickup':
+            if (event === 'item_collected' && data.item?.id === currentMission.item.id) {
+                completed = true;
+            }
+            break;
+
+        case 'speed_run':
+            if (event === 'level_completed') {
+                const elapsed = data.timeElapsed || 0;
+                completed = elapsed < currentMission.targetTime;
+                if (!completed) {
+                    // Solo marcar como fallida, no llamar crash
+                    return;
+                }
+            }
+            break;
+    }
+
+    if (completed) {
+        showMissionSuccess();
+    }
+}
+
+// Función para mostrar éxito de misión
+function showMissionSuccess() {
+    const mCheck = $('missionCheck');
+    const mText = $('missionText');
+    
+    if (mCheck && mText) {
+        mCheck.classList.remove('hidden');
+        mText.classList.add('text-emerald-400');
+        
+        // Animación de celebración en pantalla
+        createSuccessAnimation();
+        
+        // Sonido de éxito
+        playSound('delivery');
+        
+        // Texto flotante
+        floatingTexts.push({
+            x: canvas.width / 2,
+            y: 50,
+            text: '✅ ¡MISIÓN CUMPLIDA!',
+            color: '#10b981',
+            life: 120,
+            vy: -0.5,
+            fontSize: 20
+        });
+    }
+}
+
+// Función para crear animación de éxito
+function createSuccessAnimation() {
+    // Efecto de confeti o celebración
+    for (let i = 0; i < 10; i++) {
+        setTimeout(() => {
+            floatingTexts.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * 100 + 50,
+                text: ['🎉', '⭐', '✨', '🏆', '💎'][Math.floor(Math.random() * 5)],
+                color: '#fbbf24',
+                life: 80,
+                vy: Math.random() * 2 - 1,
+                vx: Math.random() * 4 - 2
+            });
+        }, i * 100);
+    }
+    
+    // Highlight effect
+    if (missionContainer) {
+        missionContainer.classList.add('animate-pulse');
+        setTimeout(() => missionContainer.classList.remove('animate-pulse'), 2000);
+    }
+}
+
 // Genera el nivel actual: prepara grid, UI y piezas
 function generateLevel(showLoading = true) {
     if ($('levelDisplay')) $('levelDisplay').textContent = level;
@@ -3339,6 +3604,13 @@ function generateLevel(showLoading = true) {
     // Estado del juego y limpieza de overlay
     gameState = 'EDITING';
     bridgeModeActive = false;
+    
+    // --- INICIALIZAR CONTADORES DE MISIONES ---
+    if (currentMission) {
+        if (currentMission.type === 'perfect_route' || currentMission.type === 'minimal_tiles') {
+            currentMission.tilesUsed = 0;
+        }
+    }
     const ov = $('overlay');
     if (ov) {
         ov.removeAttribute('style');
@@ -3387,15 +3659,32 @@ function generateLevel(showLoading = true) {
     if (savedMissionForRetry && savedLevelForRetry === level) {
          // Clonar para evitar modificar la referencia guardada si reiniciamos de nuevo
          currentMission = JSON.parse(JSON.stringify(savedMissionForRetry));
-         // Reiniciar contadores
+         
+         // --- REINICIAR TODOS LOS CONTADORES DE MISIÓN ---
          if (currentMission.current !== undefined) currentMission.current = 0;
          if (currentMission.completed !== undefined) currentMission.completed = false;
          if (currentMission.passed !== undefined) currentMission.passed = false;
+         if (currentMission.damaged !== undefined) currentMission.damaged = false;
+         if (currentMission.tilesUsed !== undefined) currentMission.tilesUsed = 0;
+         if (currentMission.consecutive !== undefined) currentMission.consecutive = 0;
+         if (currentMission.startTime !== undefined) currentMission.startTime = null;
+         if (currentMission.coinsCollected !== undefined) currentMission.coinsCollected = 0;
+         if (currentMission.itemsCollected !== undefined) currentMission.itemsCollected = 0;
+         if (currentMission.lastDirection !== undefined) currentMission.lastDirection = null;
          
          // Asegurar texto correcto en UI
          if (currentMission.type === 'coins') currentMission.text = `Recoger ${currentMission.target} Monedas`;
          else if (currentMission.type === 'speed_run') currentMission.text = `⚡ Entrega en < ${currentMission.targetTime}s`;
-         // ... añadir otros si necesitan reset de texto dinámico
+         else if (currentMission.type === 'perfect_route') currentMission.text = `🎯 Usa máximo ${currentMission.maxTiles} rotaciones`;
+         else if (currentMission.type === 'collect_all_stars') currentMission.text = `⭐ Recolecta ${currentMission.target} estrellas`;
+         else if (currentMission.type === 'no_damage') currentMission.text = `😇 Sin tocar obstáculos`;
+         else if (currentMission.type === 'minimal_tiles') currentMission.text = `🧩 Usa máximo ${currentMission.maxTiles} piezas`;
+         else if (currentMission.type === 'chain_boosts') currentMission.text = `🔥 ${currentMission.target} boosts consecutivos`;
+         else if (currentMission.type === 'zigzag_master') currentMission.text = `🔄 ${currentMission.target} cambios de dirección`;
+         else if (currentMission.type === 'coin_hunter') currentMission.text = `🥇 ${currentMission.target} monedas en ${currentMission.timeLimit}s`;
+         else if (currentMission.type === 'bridge_master') currentMission.text = `🔨 Construye ${currentMission.target} puentes`;
+         else if (currentMission.type === 'speed_demon') currentMission.text = `🚀 Completa en < ${currentMission.timeLimit}s`;
+         else if (currentMission.type === 'treasure_seeker') currentMission.text = `🗺️ ${currentMission.coinsRequired} monedas + ${currentMission.itemsRequired} objeto`;
          
          console.log('Restaurada misión: ', currentMission);
     } 
@@ -3403,31 +3692,131 @@ function generateLevel(showLoading = true) {
         currentMission = null;
         $('missionContainer').classList.add('hidden');
     } else {
+        // SISTEMA DE MISIONES OBLIGATORIAS MEJORADO
         // Limpiar misión guardada si avanzamos de nivel
         savedMissionForRetry = null;
         savedLevelForRetry = null;
         
-        // Probabilidad de misión: 100% desde nivel 2
-        // Mix de misiones: 'coins', 'pickup', 'speed_run', etc. (semáforos eliminados)
-        const missionRoll = Math.random();
-        let missionType = 'coins'; // Default
-
-        if (level >= 10 && missionRoll > 0.85) missionType = 'speed_run'; // Entregar rápido
-        // else if (level >= 8 && missionRoll > 0.70) missionType = 'all_coins'; // DESACTIVADA POR PETICIÓN (MUY DIFÍCIL)
-        // else if (level >= 5 && missionRoll > 0.60) missionType = 'no_coins'; // ELIMINADA: Ninguna moneda
-        // else if (level >= 3 && config.features.includes('semaphore') && missionRoll > 0.55) missionType = 'pass_semaphore'; // ELIMINADO: ya no hay semáforos
-        else if (level >= 3 && missionRoll > 0.45) missionType = 'place_bridge'; // NUEVO: Construir Puente (Enseña mecánica)
-        else if (level >= 2 && missionRoll > 0.35) missionType = 'use_powerup'; // NUEVO: Usar Powerup (Enseña botones)
-        else if (missionRoll > 0.2) missionType = 'pickup'; // Recoger objeto
-        // si no, 'coins' normal
+        // Inicializar array de misiones completadas si no existe
+        if (!completedMissionsPerLevel[level]) {
+            completedMissionsPerLevel[level] = [];
+        }
         
+        // Obtener misiones disponibles para este nivel (con validación de contenido)
+        const availableMissions = Object.keys(ALL_MISSIONS).filter(type => {
+            if (ALL_MISSIONS[type].unlockLevel > level) return false;
+            if (completedMissionsPerLevel[level].includes(type)) return false;
+            
+            // Verificar si la misión es posible en este nivel
+            if (type === 'collect_all_stars' && level < 30) return false;
+            if ((type === 'place_bridge' || type === 'bridge_master') && level < 10) return false;
+            
+            return true;
+        });
+        
+        // Si no hay misiones disponibles, reiniciar para el nivel
+        if (availableMissions.length === 0) {
+            completedMissionsPerLevel[level] = [];
+            availableMissions.push(...Object.keys(ALL_MISSIONS).filter(type => 
+                ALL_MISSIONS[type].unlockLevel <= level
+            ));
+        }
+        
+        // Seleccionar misión aleatoria de las disponibles
+        const missionType = availableMissions[Math.floor(Math.random() * availableMissions.length)];
+        
+        // Marcar misión como usada en este nivel
+        completedMissionsPerLevel[level].push(missionType);
+        
+        // CREAR MISIÓN BASADA EN EL TIPO SELECCIONADO
         if (missionType === 'coins') {
-            const target = Math.min(3 + Math.floor(level / 5), 8); // Entre 3 y 8 monedas
+            const target = Math.min(3 + Math.floor(level / 5), 8);
             currentMission = {
                 type: 'coins',
                 target: target,
                 current: 0,
-                text: `Recoger ${target} Monedas`
+                text: `💰 Recoger ${target} Monedas`
+            };
+        } else if (missionType === 'perfect_route') {
+            const maxTiles = Math.min(COLS * ROWS * 0.7, 25); // Máximo 70% del tablero
+            currentMission = {
+                type: 'perfect_route',
+                maxTiles: Math.floor(maxTiles),
+                tilesUsed: 0,
+                completed: false,
+                text: `🎯 Llega usando máximo ${Math.floor(maxTiles)} piezas`
+            };
+        } else if (missionType === 'collect_all_stars') {
+            currentMission = {
+                type: 'collect_all_stars',
+                target: 0, // Se definirá después de placeStars()
+                current: 0,
+                text: '⭐ Recolecta TODAS las Estrellas'
+            };
+        } else if (missionType === 'no_damage') {
+            currentMission = {
+                type: 'no_damage',
+                damaged: false,
+                text: '😇 No toques charcos o obstáculos'
+            };
+        } else if (missionType === 'minimal_tiles') {
+            const targetTiles = Math.max(5, Math.floor((COLS + ROWS) / 2));
+            currentMission = {
+                type: 'minimal_tiles',
+                maxTiles: targetTiles,
+                tilesUsed: 0,
+                text: `🧩 Usa solo ${targetTiles} piezas máximo`
+            };
+        } else if (missionType === 'chain_boosts') {
+            currentMission = {
+                type: 'chain_boosts',
+                target: Math.min(3, Math.floor(level / 4) + 1),
+                current: 0,
+                consecutive: 0,
+                text: `🔥 Pisa ${Math.min(3, Math.floor(level / 4) + 1)} aceleradores seguidos`
+            };
+        } else if (missionType === 'zigzag_master') {
+            currentMission = {
+                type: 'zigzag_master',
+                target: Math.min(6, Math.floor(level / 2) + 2),
+                current: 0,
+                lastDirection: null,
+                text: `🔄 Cambia de dirección ${Math.min(6, Math.floor(level / 2) + 2)} veces`
+            };
+        } else if (missionType === 'coin_hunter') {
+            const coinTarget = Math.floor(level / 2) + 2;
+            currentMission = {
+                type: 'coin_hunter',
+                target: coinTarget,
+                current: 0,
+                timeLimit: 30,
+                startTime: null,
+                text: `🥇 Recolecta ${coinTarget} monedas en 30 segundos`
+            };
+        } else if (missionType === 'bridge_master') {
+            const bridgeTarget = Math.min(3, Math.floor(level / 5) + 1);
+            currentMission = {
+                type: 'bridge_master',
+                target: bridgeTarget,
+                current: 0,
+                text: `🔨 Construye ${bridgeTarget} puentes`
+            };
+        } else if (missionType === 'speed_demon') {
+            const timeLimit = Math.max(15, 25 - level);
+            currentMission = {
+                type: 'speed_demon',
+                timeLimit: timeLimit,
+                startTime: null,
+                text: `🚀 Completa en menos de ${timeLimit} segundos`
+            };
+        } else if (missionType === 'treasure_seeker') {
+            currentMission = {
+                type: 'treasure_seeker',
+                coinsRequired: Math.floor(level / 3) + 2,
+                itemsRequired: 1,
+                coinsCollected: 0,
+                itemsCollected: 0,
+                text: `🗺️ Recolecta ${Math.floor(level / 3) + 2} monedas Y 1 objeto`
             };
         } else if (missionType === 'place_bridge') {
             currentMission = {
@@ -3447,43 +3836,19 @@ function generateLevel(showLoading = true) {
                 type: 'pickup',
                 item: item,
                 completed: false,
-                text: `Recoger: ${item.name} ${item.icon}`
+                text: `📦 Recoger: ${item.name} ${item.icon}`
             };
-        } /* else if (missionType === 'pass_semaphore') {
-            currentMission = {
-                type: 'pass_semaphore',
-                passed: false,
-                text: '🚥 Cruza un Semáforo'
-            };
-        } // ELIMINADO: ya no hay semáforos */
-        /* else if (missionType === 'no_coins') {
-            currentMission = {
-                type: 'no_coins',
-                text: '🚫 NO Recojas Monedas'
-            };
-        } // ELIMINADA: Misión muy frustrante */ 
-        if (missionType === 'speed_run') {
-            // Tiempo objetivo basado en dificultad
-            // Estimacion base: distancia Manhattan * factor + margen
+        } else if (missionType === 'speed_run') {
             const distEst = (COLS + ROWS) * 1.5; 
             const targetTime = Math.max(5, Math.floor(distEst / (config.speed * 0.5)));
-            
             currentMission = {
                 type: 'speed_run',
                 targetTime: targetTime,
                 text: `⚡ Entrega en < ${targetTime}s`
             };
-        } else if (missionType === 'all_coins') {
-            // El target se definirá después de placeCoins()
-            currentMission = {
-                type: 'all_coins',
-                target: 0,
-                current: 0,
-                text: '💎 Recoge TODAS las Monedas'
-            };
         }
 
-        // --- MOSTRAR MISIÓN WIDGET ---
+        // --- MOSTRAR MISIÓN EN UI CON SISTEMA MEJORADO ---
         const mCont = $('missionContainer');
         const mText = $('missionText');
         const mIcon = $('missionIcon');
@@ -3493,20 +3858,16 @@ function generateLevel(showLoading = true) {
             mCont.classList.remove('hidden');
             mCheck.classList.add('hidden'); // Reset check
             
-            // Icono según tipo
-            let iconStr = '🎯';
-            if (currentMission.type === 'coins' || currentMission.type === 'all_coins') iconStr = '💰';
-            else if (currentMission.type === 'pickup') iconStr = currentMission.item.icon;
-            // else if (currentMission.type === 'no_coins') iconStr = '🚫'; // ELIMINADA
-            else if (currentMission.type === 'speed_run') iconStr = '⚡';
-            // else if (currentMission.type === 'pass_semaphore') iconStr = '🚥'; // ELIMINADO
+            // Icono específico de la misión
+            const missionData = ALL_MISSIONS[missionType];
+            const iconStr = missionData ? missionData.icon : '🎯';
             
-            mText.textContent = currentMission.text;
             mIcon.textContent = iconStr;
+            mText.textContent = currentMission.text;
+            mText.classList.remove('text-emerald-400'); // Reset color
             
-            // Highlight effect
-            mCont.classList.add('animate-pulse');
-            setTimeout(() => mCont.classList.remove('animate-pulse'), 2000);
+            // Agregar indicador de misión obligatoria
+            mText.innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> ${currentMission.text}`;
         }
     }
 
@@ -3521,6 +3882,16 @@ function generateLevel(showLoading = true) {
     randomizeRotations();
     addSpecials(config.features);
     placeCoins();
+    
+    // Colocar diamantes cada 4 niveles
+    if (level % 4 === 0) {
+        placeDiamonds();
+    }
+    
+    // Colocar diamantes cada 4 niveles
+    if (level % 4 === 0) {
+        placeDiamonds();
+    }
     
     // --- POST-PROCESAMIENTO MISIONES ---
     // Si es 'all_coins', contamos cuantas monedas se generaron realmente
@@ -3672,17 +4043,8 @@ function handleClick(e) {
             saveGameData();
             playSound('money');
 
-            // --- MISIÓN: CONSTRUIR PUENTE ---
-            if (currentMission && currentMission.type === 'place_bridge' && !currentMission.completed) {
-                currentMission.completed = true;
-                const mCheck = $('missionCheck');
-                const mText = $('missionText');
-                if (mCheck) mCheck.classList.remove('hidden');
-                if (mText) {
-                    mText.textContent = '¡Puente Construido!';
-                    mText.classList.add('text-emerald-400');
-                }
-                playSound('delivery');
+            // --- ACTUALIZAR MISIONES DE PUENTES ---
+            updateMissionProgress('bridge_built', { tile });
                 
                 // Efecto visual
                 floatingTexts.push({
@@ -3693,7 +4055,6 @@ function handleClick(e) {
                     life: 100,
                     vy: -1
                 });
-            }
 
             // Desactivar modo puente automáticamente
             bridgeModeActive = false;
@@ -3709,6 +4070,9 @@ function handleClick(e) {
             playSound('rotate');
             checkConnections();
             draw();
+            
+            // --- ACTUALIZAR MISIONES DE COLOCACIÓN DE TILES ---
+            updateMissionProgress('tile_placed', { tile });
         }
     }
 }
@@ -3796,18 +4160,8 @@ function addExtraTime() {
     saveGameData(); // Guardar el cambio de dinero
     playSound('money'); // Sonido de transacción
 
-    // --- MISIÓN: USAR POWERUP ---
-    if (currentMission && currentMission.type === 'use_powerup' && !currentMission.completed) {
-        currentMission.completed = true;
-        const mCheck = $('missionCheck');
-        const mText = $('missionText');
-        if (mCheck) mCheck.classList.remove('hidden');
-        if (mText) {
-            mText.textContent = '¡Ayuda Usada!';
-            mText.classList.add('text-emerald-400');
-        }
-        playSound('delivery');
-    }
+    // --- ACTUALIZAR MISIONES DE POWERUP ---
+    updateMissionProgress('powerup_used');
 
     // Feedback visual directo
     $('timerDisplay').classList.add('pulse');
@@ -3851,10 +4205,8 @@ function instantDeliver() {
             playSound('money');
             saveGameData();
 
-            // --- MISIÓN: USAR POWERUP ---
-            if (currentMission && currentMission.type === 'use_powerup') {
-                currentMission.completed = true;
-            }
+            // --- ACTUALIZAR MISIONES DE POWERUP ---
+            updateMissionProgress('powerup_used');
             
             // Entregar instantáneamente
             setTimeout(() => {
@@ -3939,6 +4291,34 @@ function placeStart() {
     const tile = new Tile(pos.col, pos.row, TILE_TYPES.START);
     tile.locked = true;
     grid[pos.row * COLS + pos.col] = tile;
+}
+
+function placeDiamonds() {
+    const candidates = grid.filter(t => 
+        t && !t.locked && !t.hasCoin && !t.hasStar && !t.hasDiamond && !t.special &&
+        t.type !== TILE_TYPES.START && t.type !== TILE_TYPES.END && t.type !== TILE_TYPES.BLOCKED
+    );
+    
+    if (candidates.length > 0) {
+        // Colocar 1 diamante por nivel
+        const diamondTile = candidates[Math.floor(Math.random() * candidates.length)];
+        diamondTile.hasDiamond = true;
+        console.log('Diamante colocado en nivel', level);
+    }
+}
+
+function placeDiamonds() {
+    const candidates = grid.filter(t => 
+        t && !t.locked && !t.hasCoin && !t.hasStar && !t.hasDiamond && !t.special &&
+        t.type !== TILE_TYPES.START && t.type !== TILE_TYPES.END && t.type !== TILE_TYPES.BLOCKED
+    );
+    
+    if (candidates.length > 0) {
+        // Colocar 1 diamante por nivel
+        const diamondTile = candidates[Math.floor(Math.random() * candidates.length)];
+        diamondTile.hasDiamond = true;
+        console.log('💎 Diamante colocado en nivel', level);
+    }
 }
 
 function placeEnd() {
@@ -5192,9 +5572,21 @@ function gameLoop() {
             animationId = requestAnimationFrame(gameLoop); return;
         }
         
-        if (tile?.special === 'puddle') car.speed = car.baseSpeed * 0.5;
-        else if (tile?.special === 'boost') car.speed = car.baseSpeed * 1.8;
-        else car.speed = car.baseSpeed;
+        if (tile?.special === 'puddle') {
+            car.speed = car.baseSpeed * 0.5;
+            updateMissionProgress('boost_missed');
+        }
+        else if (tile?.special === 'boost') {
+            car.speed = car.baseSpeed * 1.8;
+            updateMissionProgress('boost_hit');
+        }
+        else {
+            car.speed = car.baseSpeed;
+            // Solo llamar boost_missed si hay una misión chain_boosts activa
+            if (currentMission && currentMission.type === 'chain_boosts') {
+                updateMissionProgress('boost_missed');
+            }
+        }
         
         // RECOLECTAR MONEDA
         if (tile?.hasCoin) {
@@ -5202,35 +5594,63 @@ function gameLoop() {
             levelCoins++; // Contar para estadísticas
             playSound('money');
             
-            // --- ACTUALIZAR MISIONES RELACIONADAS CON MONEDAS ---
+            // --- ACTUALIZAR TODAS LAS MISIONES ---
             if (currentMission) {
-                // A) Misión Clasica y B) All Coins
-                if (currentMission.type === 'coins' || currentMission.type === 'all_coins') {
-                    currentMission.current++;
-                    
-                    // Actualizar UI Texto
-                    const mText = $('missionText');
-                    const mCheck = $('missionCheck');
-                    
-                    if (mText) {
-                        if (currentMission.type === 'all_coins') {
-                             mText.textContent = `💎 Todas (${currentMission.current}/${currentMission.target})`;
-                        } else {
-                             mText.textContent = `Monedas ${currentMission.current}/${currentMission.target}`;
-                        }
-                    }
-                    
-                    if (currentMission.current >= currentMission.target) {
-                        if (mCheck) mCheck.classList.remove('hidden');
-                        if (mText) mText.classList.add('text-emerald-400');
-                        playSound('delivery'); // Sonido logro
-                    }
-                } 
-                // C) Misión NO COINS - ELIMINADA por ser muy frustrante
-                /*else if (currentMission.type === 'no_coins') {
-                    crash('🚫 No debías recoger monedas', '¡MISIÓN FALLIDA!');
-                    return;
-                }*/
+                updateMissionProgress('coin_collected', { tile });
+            }
+        }
+        
+        // RECOLECTAR DIAMANTE
+        if (tile?.hasDiamond) {
+            tile.hasDiamond = false;
+            diamondsCollected++;
+            localStorage.setItem('diamondsCollected', diamondsCollected.toString());
+            playSound('money');
+            
+            // Actualizar display
+            const diamondDisplay = $('diamondDisplay');
+            if (diamondDisplay) diamondDisplay.textContent = diamondsCollected;
+            
+            // Texto flotante
+            floatingTexts.push({
+                x: car.x,
+                y: car.y - 30,
+                text: '💎 Diamante!',
+                color: '#3b82f6',
+                life: 80,
+                vy: -1.5
+            });
+            
+            // Verificar si se deben activar 3 diamantes para el mini-juego
+            if (diamondsCollected >= 3 && diamondsCollected % 3 === 0) {
+                setTimeout(() => {
+                    startPuzzleGame();
+                }, 1000);
+            }
+        }
+        
+        // RECOLECTAR DIAMANTE
+        if (tile?.hasDiamond) {
+            tile.hasDiamond = false;
+            diamondsCollected++;
+            localStorage.setItem('diamondsCollected', diamondsCollected.toString());
+            playSound('money');
+            
+            // Texto flotante
+            floatingTexts.push({
+                x: car.x,
+                y: car.y - 30,
+                text: '💎 Diamante!',
+                color: '#3b82f6',
+                life: 80,
+                vy: -1.5
+            });
+            
+            // Verificar si se deben activar 3 diamantes para el mini-juego
+            if (diamondsCollected >= 3 && diamondsCollected % 3 === 0) {
+                setTimeout(() => {
+                    startPuzzleGame();
+                }, 1000);
             }
 
             // Efecto visual en el mapa (texto flotante inmediato)
@@ -5252,30 +5672,8 @@ function gameLoop() {
              const mItem = tile.missionItem;
              tile.missionItem = null; // Recogido
              
-             if (currentMission && currentMission.type === 'pickup') {
-                 currentMission.completed = true;
-                 
-                 // Update UI
-                 const mText = $('missionText');
-                 const mCheck = $('missionCheck');
-                 if (mCheck) mCheck.classList.remove('hidden');
-                 if (mText) {
-                     mText.textContent = `¡${mItem.name} Recogido!`;
-                     mText.classList.add('text-emerald-400');
-                 }
-                 
-                 playSound('delivery'); // Sonido logro
-                 
-                 // Float text
-                 floatingTexts.push({
-                    x: car.x,
-                    y: car.y - 40,
-                    text: `${mItem.icon} Recogido!`,
-                    color: '#34d399',
-                    life: 100,
-                    vy: -1
-                });
-             }
+             // --- ACTUALIZAR MISIONES DE PICKUP ---
+             updateMissionProgress('item_collected', { item: mItem });
         }
         
         // RECOLECTAR ESTRELLA (Nivel 30+)
@@ -5314,40 +5712,159 @@ function gameLoop() {
 
         // CUALQUIER meta es válida - ¡GANAS! (Solo si se completó la misión)
         if (tile?.isEnd) { 
-            // Validar Misiones
+            // --- VALIDACIÓN OBLIGATORIA DE TODAS LAS MISIONES ---
             if (currentMission) {
-                // 1. Monedas Clásicas
-                if (currentMission.type === 'coins' && currentMission.current < currentMission.target) {
-                    crash(`Requeridas: ${currentMission.target}`, '¡FALTAN MONEDAS!');
+                let missionFailed = false;
+                let failMessage = '';
+                let failTitle = '¡MISIÓN FALLIDA!';
+
+                switch (currentMission.type) {
+                    case 'coins':
+                        if (currentMission.current < currentMission.target) {
+                            failMessage = `Requeridas: ${currentMission.target} monedas<br>Recogiste: ${currentMission.current}`;
+                            failTitle = '¡FALTAN MONEDAS!';
+                            missionFailed = true;
+                        }
+                        break;
+
+                    case 'pickup':
+                        if (!currentMission.completed) {
+                            failMessage = `Recoge: ${currentMission.item.name} ${currentMission.item.icon}`;
+                            failTitle = '¡OLVIDASTE EL OBJETO!';
+                            missionFailed = true;
+                        }
+                        break;
+
+                    case 'all_coins':
+                        if (currentMission.current < currentMission.target) {
+                            failMessage = `Debes recoger TODAS (${currentMission.current}/${currentMission.target})`;
+                            failTitle = '¡FALTAN MONEDAS!';
+                            missionFailed = true;
+                        }
+                        break;
+
+                    case 'speed_run':
+                        const elapsed = Math.floor((Date.now() - deliveryStartTime) / 1000);
+                        if (elapsed > currentMission.targetTime) {
+                            failMessage = `Límite: ${currentMission.targetTime}s<br>Tu tiempo: ${elapsed}s`;
+                            failTitle = '¡DEMASIADO LENTO!';
+                            missionFailed = true;
+                        }
+                        break;
+
+                    case 'perfect_route':
+                        if (currentMission.tilesUsed > currentMission.maxTiles) {
+                            failMessage = `Máximo: ${currentMission.maxTiles} rotaciones<br>Usaste: ${currentMission.tilesUsed}`;
+                            failTitle = '¡DEMASIADAS ROTACIONES!';
+                            missionFailed = true;
+                        }
+                        break;
+
+                    case 'collect_all_stars':
+                        if (currentMission.current < currentMission.target) {
+                            failMessage = `Requeridas: ${currentMission.target} estrellas<br>Recogiste: ${currentMission.current}`;
+                            failTitle = '¡FALTAN ESTRELLAS!';
+                            missionFailed = true;
+                        }
+                        break;
+
+                    case 'no_damage':
+                        if (currentMission.damaged) {
+                            failMessage = 'No debías tocar obstáculos';
+                            failTitle = '¡MISIÓN SIN DAÑOS FALLIDA!';
+                            missionFailed = true;
+                        }
+                        break;
+
+                    case 'minimal_tiles':
+                        if (currentMission.tilesUsed > currentMission.maxTiles) {
+                            failMessage = `Máximo: ${currentMission.maxTiles} piezas<br>Usaste: ${currentMission.tilesUsed}`;
+                            failTitle = '¡DEMASIADAS PIEZAS!';
+                            missionFailed = true;
+                        }
+                        break;
+
+                    case 'chain_boosts':
+                        if (currentMission.consecutive < currentMission.target) {
+                            failMessage = `Necesitas: ${currentMission.target} boosts consecutivos<br>Lograste: ${currentMission.consecutive}`;
+                            failTitle = '¡CADENA INCOMPLETA!';
+                            missionFailed = true;
+                        }
+                        break;
+
+                    case 'zigzag_master':
+                        if (currentMission.current < currentMission.target) {
+                            failMessage = `Necesitas: ${currentMission.target} cambios de dirección<br>Hiciste: ${currentMission.current}`;
+                            failTitle = '¡FALTAN ZIGZAGS!';
+                            missionFailed = true;
+                        }
+                        break;
+
+                    case 'coin_hunter':
+                        if (currentMission.current < currentMission.target) {
+                            failMessage = `Necesitas: ${currentMission.target} monedas en ${currentMission.timeLimit}s<br>Recogiste: ${currentMission.current}`;
+                            failTitle = '¡CAZA INCOMPLETA!';
+                            missionFailed = true;
+                        } else if (currentMission.startTime) {
+                            const timeTaken = (Date.now() - currentMission.startTime) / 1000;
+                            if (timeTaken > currentMission.timeLimit) {
+                                failMessage = `Límite: ${currentMission.timeLimit}s<br>Tu tiempo: ${timeTaken.toFixed(1)}s`;
+                                failTitle = '¡DEMASIADO LENTO!';
+                                missionFailed = true;
+                            }
+                        }
+                        break;
+
+                    case 'bridge_master':
+                        if (currentMission.current < currentMission.target) {
+                            failMessage = `Necesitas: ${currentMission.target} puentes<br>Construiste: ${currentMission.current}`;
+                            failTitle = '¡FALTAN PUENTES!';
+                            missionFailed = true;
+                        }
+                        break;
+
+                    case 'speed_demon':
+                        const speedTime = Math.floor((Date.now() - deliveryStartTime) / 1000);
+                        if (speedTime >= currentMission.timeLimit) {
+                            failMessage = `Límite: ${currentMission.timeLimit}s<br>Tu tiempo: ${speedTime}s`;
+                            failTitle = '¡MUY LENTO!';
+                            missionFailed = true;
+                        }
+                        break;
+
+                    case 'treasure_seeker':
+                        if (currentMission.coinsCollected < currentMission.coinsRequired || 
+                            currentMission.itemsCollected < currentMission.itemsRequired) {
+                            failMessage = `Necesitas: ${currentMission.coinsRequired} monedas y ${currentMission.itemsRequired} objeto<br>Tienes: ${currentMission.coinsCollected} monedas, ${currentMission.itemsCollected} objeto`;
+                            failTitle = '¡TESORO INCOMPLETO!';
+                            missionFailed = true;
+                        }
+                        break;
+
+                    case 'place_bridge':
+                        if (!currentMission.completed) {
+                            failMessage = 'Debes construir un puente';
+                            failTitle = '¡FALTA PUENTE!';
+                            missionFailed = true;
+                        }
+                        break;
+
+                    case 'use_powerup':
+                        if (!currentMission.completed) {
+                            failMessage = 'Debes usar una ayuda del menú';
+                            failTitle = '¡FALTA POWERUP!';
+                            missionFailed = true;
+                        }
+                        break;
+                }
+
+                // Si la misión falló, hacer crash y reiniciar el nivel
+                if (missionFailed) {
+                    // Mensaje extra para que el jugador entienda que debe completar la misión
+                    const fullMessage = `${failMessage}<br><br><span style="color: #ef4444; font-weight: bold;">⚠️ MISIÓN OBLIGATORIA ⚠️</span><br>Debes completarla para avanzar`;
+                    crash(fullMessage, failTitle);
                     return;
                 }
-                // 2. Pickup Objeto
-                if (currentMission.type === 'pickup' && !currentMission.completed) {
-                    crash(`Recoge: ${currentMission.item.name} ${currentMission.item.icon}`, '¡OLVIDASTE EL OBJETO!');
-                    return;
-                }
-                // 3. All Coins (Todas)
-                if (currentMission.type === 'all_coins' && currentMission.current < currentMission.target) {
-                    crash(`Debes recoger TODAS (${currentMission.current}/${currentMission.target})`, '¡FALTAN MONEDAS!');
-                    return;
-                }
-                // 4. Speed Run (Tiempo)
-                if (currentMission.type === 'speed_run') {
-                    // Cálculo de tiempo transcurrido
-                    const elapsed = Math.floor((Date.now() - deliveryStartTime) / 1000);
-                    if (elapsed > currentMission.targetTime) {
-                        crash(`Límite: ${currentMission.targetTime}s <br>Tu tiempo: ${elapsed}s`, '¡DEMASIADO LENTO!');
-                        return;
-                    }
-                }
-                // 5. Pass Semaphore - ELIMINADO
-                /*
-                if (currentMission.type === 'pass_semaphore' && !currentMission.passed) {
-                    crash('Debías cruzar un semáforo 🚦', '¡MISIÓN FALLIDA!');
-                    return;
-                }
-                */
-                // 6. No Coins: Ya se validó en gameLoop (si recogiste una, ya perdiste). Si llegas aquí sin crash, ganaste.
             }
             
             win(); 
@@ -5432,6 +5949,9 @@ function gameLoop() {
         
         car.dir = exitDir; car.col = nc; car.row = nr;
         car.angle = exitDir === DIR.N ? -Math.PI/2 : exitDir === DIR.E ? 0 : exitDir === DIR.S ? Math.PI/2 : Math.PI;
+        
+        // --- ACTUALIZAR MISIÓN ZIGZAG ---
+        updateMissionProgress('direction_change', { direction: exitDir });
     }
     
     const d = DIR_DELTA[car.dir];
@@ -5456,6 +5976,11 @@ function stopGameEffects() {
 
 function crash(msg, title = "¡PEDIDO CANCELADO!") {
     gameState = 'CRASHED';
+    
+    // --- MANEJAR MISIONES DE DAÑO SIN RECURSIÓN ---
+    if (currentMission && currentMission.type === 'no_damage') {
+        currentMission.damaged = true;
+    }
     
     // GUARDAR MISIÓN ACTUAL PARA REINTENTO
     if (currentMission) {
@@ -5666,18 +6191,311 @@ function animateCoinCollection(x, y, amount) {
     }, 800);
 }
 
+// --- MINI-JUEGO DE ROMPECABEZAS ---
+function startPuzzleGame() {
+    if (puzzleActive) return;
+    
+    puzzleActive = true;
+    gameState = 'PUZZLE';
+    
+    // Pausar el juego principal
+    cancelAnimationFrame(animationId);
+    clearInterval(countdownTimer);
+    
+    // Crear overlay del rompecabezas
+    const overlay = $('overlay');
+    overlay.classList.remove('hidden');
+    overlay.innerHTML = `
+        <div class="flex flex-col items-center justify-center h-full bg-black/90 p-4">
+            <h2 class="text-3xl font-bold text-yellow-400 mb-4">💎 MINI-JUEGO DIAMANTE 💎</h2>
+            <p class="text-lg text-white mb-6">¡Arma el rompecabezas para continuar!</p>
+            
+            <div class="relative">
+                <canvas id="puzzleCanvas" width="400" height="400" 
+                    class="border-4 border-yellow-400 rounded-lg cursor-pointer"></canvas>
+                <div class="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded">
+                    <span id="puzzleTimer">60</span>s
+                </div>
+            </div>
+            
+            <div class="mt-4 flex gap-4">
+                <button onclick="shufflePuzzle()" 
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-bold">
+                    🔄 Mezclar
+                </button>
+                <button onclick="skipPuzzle()" 
+                    class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-bold">
+                    ⏭️ Saltar (-10 monedas)
+                </button>
+            </div>
+        </div>
+    `;
+    
+    initializePuzzle();
+}
+
+function initializePuzzle() {
+    const canvas = $('puzzleCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Crear piezas del rompecabezas 3x3
+    puzzlePieces = [];
+    const pieceSize = 133; // 400/3 aprox
+    
+    // Cargar imagen del rompecabezas
+    const img = new Image();
+    img.src = 'rompecabezas.jpg';
+    img.onload = function() {
+        // Crear las 9 piezas
+        for (let row = 0; row < 3; row++) {
+            for (let col = 0; col < 3; col++) {
+                puzzlePieces.push({
+                    id: row * 3 + col,
+                    correctX: col * pieceSize,
+                    correctY: row * pieceSize,
+                    currentX: Math.random() * (400 - pieceSize),
+                    currentY: Math.random() * (400 - pieceSize),
+                    sourceX: col * (img.width / 3),
+                    sourceY: row * (img.height / 3),
+                    sourceWidth: img.width / 3,
+                    sourceHeight: img.height / 3,
+                    dragging: false
+                });
+            }
+        }
+        
+        // Mezclar piezas
+        shufflePuzzle();
+        drawPuzzle();
+    };
+    
+    img.onerror = function() {
+        // Si la imagen no carga, usar colores simples
+        for (let row = 0; row < 3; row++) {
+            for (let col = 0; col < 3; col++) {
+                puzzlePieces.push({
+                    id: row * 3 + col,
+                    correctX: col * pieceSize,
+                    correctY: row * pieceSize,
+                    currentX: Math.random() * (400 - pieceSize),
+                    currentY: Math.random() * (400 - pieceSize),
+                    color: `hsl(${(row * 3 + col) * 40}, 70%, 60%)`,
+                    dragging: false
+                });
+            }
+        }
+        shufflePuzzle();
+        drawPuzzle();
+    };
+    
+    // Event listeners para arrastrar piezas
+    canvas.addEventListener('mousedown', onPuzzleMouseDown);
+    canvas.addEventListener('mousemove', onPuzzleMouseMove);
+    canvas.addEventListener('mouseup', onPuzzleMouseUp);
+    
+    // Timer del rompecabezas
+    let timeLeft = 60;
+    const timer = setInterval(() => {
+        timeLeft--;
+        const timerEl = $('puzzleTimer');
+        if (timerEl) timerEl.textContent = timeLeft;
+        
+        if (timeLeft <= 0) {
+            clearInterval(timer);
+            skipPuzzle();
+        }
+    }, 1000);
+}
+
+function onPuzzleMouseDown(e) {
+    const rect = e.target.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    
+    // Encontrar pieza bajo el cursor (desde arriba hacia abajo)
+    for (let i = puzzlePieces.length - 1; i >= 0; i--) {
+        const piece = puzzlePieces[i];
+        if (mouseX >= piece.currentX && mouseX <= piece.currentX + 133 &&
+            mouseY >= piece.currentY && mouseY <= piece.currentY + 133) {
+            draggedPiece = piece;
+            mouseOffset.x = mouseX - piece.currentX;
+            mouseOffset.y = mouseY - piece.currentY;
+            piece.dragging = true;
+            break;
+        }
+    }
+}
+
+function onPuzzleMouseMove(e) {
+    if (!draggedPiece) return;
+    
+    const rect = e.target.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    
+    draggedPiece.currentX = Math.max(0, Math.min(400 - 133, mouseX - mouseOffset.x));
+    draggedPiece.currentY = Math.max(0, Math.min(400 - 133, mouseY - mouseOffset.y));
+    
+    drawPuzzle();
+}
+
+function onPuzzleMouseUp() {
+    if (draggedPiece) {
+        draggedPiece.dragging = false;
+        
+        // Verificar si está cerca de la posición correcta (snap)
+        const snapDistance = 30;
+        if (Math.abs(draggedPiece.currentX - draggedPiece.correctX) < snapDistance &&
+            Math.abs(draggedPiece.currentY - draggedPiece.correctY) < snapDistance) {
+            draggedPiece.currentX = draggedPiece.correctX;
+            draggedPiece.currentY = draggedPiece.correctY;
+        }
+        
+        draggedPiece = null;
+        drawPuzzle();
+        checkPuzzleComplete();
+    }
+}
+
+function drawPuzzle() {
+    const canvas = $('puzzleCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    ctx.clearRect(0, 0, 400, 400);
+    
+    // Dibujar guías
+    ctx.strokeStyle = '#444';
+    ctx.lineWidth = 1;
+    for (let i = 1; i < 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * 133, 0);
+        ctx.lineTo(i * 133, 400);
+        ctx.moveTo(0, i * 133);
+        ctx.lineTo(400, i * 133);
+        ctx.stroke();
+    }
+    
+    // Dibujar piezas
+    puzzlePieces.forEach(piece => {
+        if (piece.color) {
+            // Pieza de color simple
+            ctx.fillStyle = piece.color;
+            ctx.fillRect(piece.currentX, piece.currentY, 133, 133);
+            ctx.strokeStyle = piece.dragging ? '#fff' : '#333';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(piece.currentX, piece.currentY, 133, 133);
+            
+            // Número de la pieza
+            ctx.fillStyle = '#fff';
+            ctx.font = '30px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(piece.id + 1, piece.currentX + 66, piece.currentY + 70);
+        } else {
+            // Pieza de imagen (implementar si se carga la imagen)
+            ctx.fillStyle = '#666';
+            ctx.fillRect(piece.currentX, piece.currentY, 133, 133);
+            ctx.strokeStyle = piece.dragging ? '#fff' : '#333';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(piece.currentX, piece.currentY, 133, 133);
+        }
+    });
+}
+
+function shufflePuzzle() {
+    puzzlePieces.forEach(piece => {
+        piece.currentX = Math.random() * (400 - 133);
+        piece.currentY = Math.random() * (400 - 133);
+    });
+    drawPuzzle();
+}
+
+function checkPuzzleComplete() {
+    const isComplete = puzzlePieces.every(piece => 
+        piece.currentX === piece.correctX && piece.currentY === piece.correctY
+    );
+    
+    if (isComplete) {
+        completePuzzle();
+    }
+}
+
+function completePuzzle() {
+    puzzleActive = false;
+    puzzleComplete = true;
+    
+    // Reward
+    totalMoney += 100;
+    $('moneyDisplay').textContent = totalMoney;
+    saveGameData();
+    
+    // Mensaje de éxito
+    const overlay = $('overlay');
+    overlay.innerHTML = `
+        <div class="flex flex-col items-center justify-center h-full bg-black/90">
+            <div class="text-6xl mb-4">🎉</div>
+            <h2 class="text-3xl font-bold text-green-400 mb-4">¡ROMPECABEZAS COMPLETADO!</h2>
+            <p class="text-xl text-white mb-6">+$100 de recompensa</p>
+            <button onclick="closePuzzle()" 
+                class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold text-xl">
+                ✅ Continuar
+            </button>
+        </div>
+    `;
+}
+
+function skipPuzzle() {
+    if (totalMoney >= 10) {
+        totalMoney -= 10;
+        $('moneyDisplay').textContent = totalMoney;
+        saveGameData();
+    }
+    
+    const overlay = $('overlay');
+    overlay.innerHTML = `
+        <div class="flex flex-col items-center justify-center h-full bg-black/90">
+            <div class="text-6xl mb-4">⏭️</div>
+            <h2 class="text-3xl font-bold text-yellow-400 mb-4">Rompecabezas Saltado</h2>
+            <p class="text-xl text-white mb-6">${totalMoney >= 0 ? '-$10' : 'Sin dinero suficiente'}</p>
+            <button onclick="closePuzzle()" 
+                class="bg-yellow-600 hover:bg-yellow-700 text-white px-6 py-3 rounded-lg font-bold text-xl">
+                ➡️ Continuar
+            </button>
+        </div>
+    `;
+    
+    puzzleActive = false;
+}
+
+function closePuzzle() {
+    puzzleActive = false;
+    gameState = 'PLAYING';
+    
+    const overlay = $('overlay');
+    overlay.classList.add('hidden');
+    overlay.innerHTML = '';
+    
+    // Reanudar el juego
+    gameLoop();
+}
+
 function win() {
     gameState = 'WON';
     clearInterval(countdownTimer); 
     stopGameEffects(); 
     clearInterval(deliveryTimer);
     
+    // Calcular tiempo de entrega para misiones antes de que se resetee
+    const deliveryTime = Math.floor((Date.now() - deliveryStartTime) / 1000);
+    
+    // --- ACTUALIZAR MISIONES DE NIVEL COMPLETADO ---
+    updateMissionProgress('level_completed', { timeElapsed: deliveryTime });
+    
     // EVITAR DOBLES PANTALLAS: Asegurar que el modal del cofre no salte
     if(window.chestModalTimer) clearTimeout(window.chestModalTimer);
     $('videoOverlay').classList.add('hidden');
     
-    // Calcular tiempo de entrega en segundos
-    const deliveryTime = Math.floor((Date.now() - deliveryStartTime) / 1000);
+    // Calcular tiempo de entrega en segundos (usar variable ya declarada)
     const timeUsedRatio = deliveryTime / maxTime;
     
     // Reproducir sonido de entrega exitosa
@@ -6313,6 +7131,63 @@ function drawTile(tile) {
         ctx.restore();
     }
     
+    // DIBUJAR DIAMANTE (Si existe y no ha sido recolectado)
+    if (tile.hasDiamond) {
+        // Efecto flotante y rotativo usando el tiempo global
+        const time = Date.now() * 0.005;
+        const floatY = Math.sin(time) * 2;
+        const rotation = time * 2;
+        
+        ctx.save();
+        ctx.translate(cx, cy + floatY);
+        ctx.rotate(rotation);
+        
+        // Sombra en el suelo
+        ctx.save();
+        ctx.rotate(-rotation); // Contra-rotar para mantener sombra estable
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(0, 10 - floatY, 8, 3, 0, 0, Math.PI*2);
+        ctx.fill();
+        ctx.restore();
+        
+        // Diamante principal
+        const size = 8;
+        ctx.fillStyle = '#3b82f6'; // Blue-500
+        ctx.beginPath();
+        ctx.moveTo(0, -size);
+        ctx.lineTo(size * 0.7, -size * 0.3);
+        ctx.lineTo(size * 0.7, size * 0.3);
+        ctx.lineTo(0, size);
+        ctx.lineTo(-size * 0.7, size * 0.3);
+        ctx.lineTo(-size * 0.7, -size * 0.3);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Borde más claro
+        ctx.strokeStyle = '#60a5fa'; // Blue-400
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        
+        // Brillo interno
+        ctx.fillStyle = '#dbeafe'; // Blue-100
+        ctx.beginPath();
+        ctx.moveTo(0, -size * 0.7);
+        ctx.lineTo(size * 0.4, -size * 0.2);
+        ctx.lineTo(0, size * 0.2);
+        ctx.lineTo(-size * 0.4, -size * 0.2);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Destello brillante
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.beginPath();
+        ctx.arc(-size * 0.3, -size * 0.4, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+    }
+    
     // --- DIBUJAR OBJETO DE MISIÓN ---
     if (tile.missionItem) {
         const time = Date.now() * 0.003;
@@ -6823,6 +7698,260 @@ function startEditRender() {
         editRenderId = requestAnimationFrame(loop);
     };
     editRenderId = requestAnimationFrame(loop);
+}
+
+// --- MINI-JUEGO DE ROMPECABEZAS ---
+function startPuzzleGame() {
+    if (puzzleActive) return;
+    
+    puzzleActive = true;
+    gameState = 'PUZZLE';
+    
+    // Pausar el juego principal
+    cancelAnimationFrame(animationId);
+    clearInterval(countdownTimer);
+    
+    // Crear overlay del rompecabezas
+    const overlay = $('overlay');
+    overlay.classList.remove('hidden');
+    overlay.innerHTML = `
+        <div class="flex flex-col items-center justify-center h-full bg-black/90 p-4">
+            <h2 class="text-3xl font-bold text-yellow-400 mb-4">💎 MINI-JUEGO DIAMANTE 💎</h2>
+            <p class="text-lg text-white mb-6">¡Arma el rompecabezas para continuar!</p>
+            
+            <div class="relative">
+                <canvas id="puzzleCanvas" width="400" height="400" 
+                    class="border-4 border-yellow-400 rounded-lg cursor-pointer"></canvas>
+                <div class="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded">
+                    <span id="puzzleTimer">60</span>s
+                </div>
+            </div>
+            
+            <div class="mt-4 flex gap-4">
+                <button onclick="shufflePuzzle()" 
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-bold">
+                    🔄 Mezclar
+                </button>
+                <button onclick="skipPuzzle()" 
+                    class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-bold">
+                    ⏭️ Saltar (-10 monedas)
+                </button>
+            </div>
+        </div>
+    `;
+    
+    initializePuzzle();
+}
+
+function initializePuzzle() {
+    const canvas = $('puzzleCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Crear piezas del rompecabezas 3x3
+    puzzlePieces = [];
+    const pieceSize = 133; // 400/3 aprox
+    
+    // Crear las 9 piezas con colores
+    for (let row = 0; row < 3; row++) {
+        for (let col = 0; col < 3; col++) {
+            puzzlePieces.push({
+                id: row * 3 + col,
+                correctX: col * pieceSize,
+                correctY: row * pieceSize,
+                currentX: Math.random() * (400 - pieceSize),
+                currentY: Math.random() * (400 - pieceSize),
+                color: `hsl(${(row * 3 + col) * 40}, 70%, 60%)`,
+                dragging: false
+            });
+        }
+    }
+    
+    shufflePuzzle();
+    drawPuzzle();
+    
+    // Event listeners para arrastrar piezas
+    canvas.addEventListener('mousedown', onPuzzleMouseDown);
+    canvas.addEventListener('mousemove', onPuzzleMouseMove);
+    canvas.addEventListener('mouseup', onPuzzleMouseUp);
+    
+    // Timer del rompecabezas
+    let timeLeft = 60;
+    const timer = setInterval(() => {
+        timeLeft--;
+        const timerEl = $('puzzleTimer');
+        if (timerEl) timerEl.textContent = timeLeft;
+        
+        if (timeLeft <= 0) {
+            clearInterval(timer);
+            skipPuzzle();
+        }
+    }, 1000);
+    
+    window.puzzleTimer = timer;
+}
+
+function onPuzzleMouseDown(e) {
+    const rect = e.target.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    
+    // Encontrar pieza bajo el cursor
+    for (let i = puzzlePieces.length - 1; i >= 0; i--) {
+        const piece = puzzlePieces[i];
+        if (mouseX >= piece.currentX && mouseX <= piece.currentX + 133 &&
+            mouseY >= piece.currentY && mouseY <= piece.currentY + 133) {
+            draggedPiece = piece;
+            mouseOffset.x = mouseX - piece.currentX;
+            mouseOffset.y = mouseY - piece.currentY;
+            piece.dragging = true;
+            break;
+        }
+    }
+}
+
+function onPuzzleMouseMove(e) {
+    if (!draggedPiece) return;
+    
+    const rect = e.target.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    
+    draggedPiece.currentX = Math.max(0, Math.min(400 - 133, mouseX - mouseOffset.x));
+    draggedPiece.currentY = Math.max(0, Math.min(400 - 133, mouseY - mouseOffset.y));
+    
+    drawPuzzle();
+}
+
+function onPuzzleMouseUp() {
+    if (draggedPiece) {
+        draggedPiece.dragging = false;
+        
+        // Verificar si está cerca de la posición correcta (snap)
+        const snapDistance = 30;
+        if (Math.abs(draggedPiece.currentX - draggedPiece.correctX) < snapDistance &&
+            Math.abs(draggedPiece.currentY - draggedPiece.correctY) < snapDistance) {
+            draggedPiece.currentX = draggedPiece.correctX;
+            draggedPiece.currentY = draggedPiece.correctY;
+        }
+        
+        draggedPiece = null;
+        drawPuzzle();
+        checkPuzzleComplete();
+    }
+}
+
+function drawPuzzle() {
+    const canvas = $('puzzleCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    ctx.clearRect(0, 0, 400, 400);
+    
+    // Dibujar guías
+    ctx.strokeStyle = '#444';
+    ctx.lineWidth = 1;
+    for (let i = 1; i < 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * 133, 0);
+        ctx.lineTo(i * 133, 400);
+        ctx.moveTo(0, i * 133);
+        ctx.lineTo(400, i * 133);
+        ctx.stroke();
+    }
+    
+    // Dibujar piezas
+    puzzlePieces.forEach(piece => {
+        ctx.fillStyle = piece.color;
+        ctx.fillRect(piece.currentX, piece.currentY, 133, 133);
+        ctx.strokeStyle = piece.dragging ? '#fff' : '#333';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(piece.currentX, piece.currentY, 133, 133);
+        
+        // Número de la pieza
+        ctx.fillStyle = '#fff';
+        ctx.font = '30px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(piece.id + 1, piece.currentX + 66, piece.currentY + 70);
+    });
+}
+
+function shufflePuzzle() {
+    puzzlePieces.forEach(piece => {
+        piece.currentX = Math.random() * (400 - 133);
+        piece.currentY = Math.random() * (400 - 133);
+    });
+    if ($('puzzleCanvas')) drawPuzzle();
+}
+
+function checkPuzzleComplete() {
+    const isComplete = puzzlePieces.every(piece => 
+        piece.currentX === piece.correctX && piece.currentY === piece.correctY
+    );
+    
+    if (isComplete) {
+        completePuzzle();
+    }
+}
+
+function completePuzzle() {
+    puzzleActive = false;
+    if (window.puzzleTimer) clearInterval(window.puzzleTimer);
+    
+    // Reward
+    totalMoney += 100;
+    $('moneyDisplay').textContent = totalMoney;
+    saveGameData();
+    
+    // Mensaje de éxito
+    const overlay = $('overlay');
+    overlay.innerHTML = `
+        <div class="flex flex-col items-center justify-center h-full bg-black/90">
+            <div class="text-6xl mb-4">🎉</div>
+            <h2 class="text-3xl font-bold text-green-400 mb-4">¡ROMPECABEZAS COMPLETADO!</h2>
+            <p class="text-xl text-white mb-6">+$100 de recompensa</p>
+            <button onclick="closePuzzle()" 
+                class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold text-xl">
+                ✅ Continuar
+            </button>
+        </div>
+    `;
+}
+
+function skipPuzzle() {
+    if (window.puzzleTimer) clearInterval(window.puzzleTimer);
+    
+    if (totalMoney >= 10) {
+        totalMoney -= 10;
+        $('moneyDisplay').textContent = totalMoney;
+        saveGameData();
+    }
+    
+    const overlay = $('overlay');
+    overlay.innerHTML = `
+        <div class="flex flex-col items-center justify-center h-full bg-black/90">
+            <div class="text-6xl mb-4">⏭️</div>
+            <h2 class="text-3xl font-bold text-yellow-400 mb-4">Rompecabezas Saltado</h2>
+            <p class="text-xl text-white mb-6">${totalMoney >= 0 ? '-$10' : 'Sin dinero suficiente'}</p>
+            <button onclick="closePuzzle()" 
+                class="bg-yellow-600 hover:bg-yellow-700 text-white px-6 py-3 rounded-lg font-bold text-xl">
+                ➡️ Continuar
+            </button>
+        </div>
+    `;
+    
+    puzzleActive = false;
+}
+
+function closePuzzle() {
+    puzzleActive = false;
+    gameState = 'PLAYING';
+    
+    const overlay = $('overlay');
+    overlay.classList.add('hidden');
+    overlay.innerHTML = '';
+    
+    // Reanudar el juego
+    gameLoop();
 }
 
 // Al cargar NO iniciar intro directamente, esperar interacción en Splash
