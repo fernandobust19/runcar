@@ -54,18 +54,15 @@
         .timer-warning { animation: timerPulse 0.5s infinite; color: #ef4444 !important; }
         @keyframes timerPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
         
-        /* Animación para borde neón que se mueve */
+        /* Animación para borde neón simplificada */
         @keyframes neonBorderMove {
-            0% { box-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff, 0 0 60px #00ffff; }
-            25% { box-shadow: 20px 0 20px #ff00ff, 20px 0 40px #ff00ff, 20px 0 60px #ff00ff; }
-            50% { box-shadow: 0 20px 20px #ffff00, 0 20px 40px #ffff00, 0 20px 60px #ffff00; }
-            75% { box-shadow: -20px 0 20px #00ff00, -20px 0 40px #00ff00, -20px 0 60px #00ff00; }
-            100% { box-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff, 0 0 60px #00ffff; }
+            0%, 100% { box-shadow: 0 0 15px #00ffff; }
+            50% { box-shadow: 0 0 15px #ff00ff; }
         }
         
         .neon-border-animated {
-            animation: neonBorderMove 3s infinite;
-            border: 3px solid transparent;
+            animation: neonBorderMove 2s infinite;
+            border: 2px solid transparent;
         }
         .progress-bar { transition: width 1s linear; }
         
@@ -173,60 +170,45 @@
         }
         .vehicle-btn span.emoji { font-size: 2rem; }
 
-        /* Botones inferiores octagonales (Glass Octagon con Neón) */
+        /* Botones inferiores octagonales optimizados */
         .glass-btn {
-             border-radius: 0 !important; /* Override rounded-lg */
+             border-radius: 0 !important;
              clip-path: polygon(25% 0%, 75% 0%, 100% 25%, 100% 75%, 75% 100%, 25% 100%, 0% 75%, 0% 25%);
              background: rgba(30, 41, 59, 0.85); 
-             border: 2px solid;
-             border-color: #06b6d4;
+             border: 2px solid #06b6d4;
              width: 40px; height: 40px;
              position: relative;
              overflow: hidden;
-             animation: neonGlow 3s ease-in-out infinite;
-             transition: all 0.3s ease;
+             animation: neonGlow 2s ease-in-out infinite;
+             transition: all 0.2s ease;
         }
         .glass-btn:active { transform: scale(0.92); }
         .glass-btn .glass-icon { filter: drop-shadow(0 0 2px white); font-size: 1.2rem; z-index: 2; position: relative; }
         
-        /* Animación de neón cambiante */
+        /* Animación de neón simplificada */
         @keyframes neonGlow {
-            0% { 
-                border-color: #06b6d4; /* Cyan */
-                box-shadow: 0 0 8px #06b6d4, inset 0 0 8px rgba(6, 182, 212, 0.2);
-            }
-            25% { 
-                border-color: #8b5cf6; /* Púrpura */
-                box-shadow: 0 0 8px #8b5cf6, inset 0 0 8px rgba(139, 92, 246, 0.2);
+            0%, 100% { 
+                border-color: #06b6d4;
+                box-shadow: 0 0 8px #06b6d4;
             }
             50% { 
-                border-color: #10b981; /* Verde esmeralda */
-                box-shadow: 0 0 8px #10b981, inset 0 0 8px rgba(16, 185, 129, 0.2);
-            }
-            75% { 
-                border-color: #f59e0b; /* Ámbar */
-                box-shadow: 0 0 8px #f59e0b, inset 0 0 8px rgba(245, 158, 11, 0.2);
-            }
-            100% { 
-                border-color: #06b6d4; /* Volver a cyan */
-                box-shadow: 0 0 8px #06b6d4, inset 0 0 8px rgba(6, 182, 212, 0.2);
+                border-color: #10b981;
+                box-shadow: 0 0 8px #10b981;
             }
         }
         
-        /* Efecto hover más intenso */
+        /* Efecto hover simplificado */
         .glass-btn:hover {
-            animation-duration: 1.5s; /* Más rápido al hover */
+            animation-duration: 1s;
             transform: scale(1.05);
         }
 
         .color-btn { width: 32px; height: 32px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; }
         .color-btn.selected { border-color: white; transform: scale(1.15); }
         
-        /* Selector de empresa - NEON rectangular compacto */
         .company-btn {
-            width: 45px; /* Reducido de 56px */
-            height: 45px; /* Reducido de 56px */
-            --ring: rgba(56, 189, 248, 0.6);
+            width: 45px;
+            height: 45px;
             border: 2px solid rgba(56, 189, 248, 0.35);
             cursor: pointer;
             background: rgba(15, 23, 42, 0.75);
@@ -235,16 +217,15 @@
             position: relative;
             border-radius: 10px;
             overflow: hidden;
-            box-shadow: 0 0 12px rgba(56, 189, 248, 0.3), inset 0 0 12px rgba(0,0,0,0.6);
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
         }
-        .company-btn::before { content:''; position:absolute; inset:0; border-radius: inherit; border:1px solid rgba(255,255,255,0.08); pointer-events:none; }
-        .company-btn::after { content:''; position:absolute; inset:-1px; border-radius: inherit; background: conic-gradient(from var(--a), transparent 0 15%, var(--ring) 20%, transparent 25% 65%, var(--ring) 70%, transparent 75% 100%); filter: blur(5px); pointer-events:none; opacity:.9; animation: neonSpin 4s linear infinite; }
         .company-btn:hover { transform: scale(1.06); }
-        .company-btn.selected { --ring: rgba(16,185,129,.8); border-color: #10b981; transform: scale(1.08); box-shadow: 0 0 18px rgba(16, 185, 129, 0.55), inset 0 0 14px rgba(0,0,0,0.6); }
+        .company-btn.selected { 
+            border-color: #10b981; 
+            transform: scale(1.08); 
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.55);
+        }
         .company-btn img { width: 100%; height: 100%; object-fit: contain; border-radius: 0; }
-
-        @property --a { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
-        @keyframes neonSpin { to { --a: 360deg; } }
         
         /* Slider de color - Más grande */
         .color-slider-container {
@@ -726,6 +707,21 @@
 </head>
 <body class="h-[100dvh] w-screen flex items-center justify-center overflow-hidden bg-[#0a0a0a] p-1 sm:p-4 touch-none">
 
+<div id="coin-animation-container" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999;"></div>
+
+
+<script>
+// ===== FUNCIONES DE INICIO =====
+function startNeonIntro() {
+    // 1. Ocultar Splash Screen
+    const splash = document.getElementById('splashScreen');
+    if (splash) splash.classList.add('hidden');
+
+    // 2. Mostrar Overlay de Intro y Lanzar Video
+    startIntro();
+}
+</script>
+
     <!-- SPLASH SCREEN VERSION (Nuevo Pantalla de inicio con Neón) -->
     <div id="splashScreen" class="fixed inset-0 z-[600] bg-black flex flex-col items-center justify-center p-6 text-center">
         <!-- Título con efecto Neón -->
@@ -883,6 +879,13 @@
             </div>
             
 
+            <!-- Botón para mostrar misión actual -->
+            <div id="missionContainer" class="bg-slate-800/95 px-2 py-1 rounded-lg border border-slate-600 shadow-md flex items-center">
+                <button onclick="showCurrentMission()" id="missionInfoBtn" class="text-cyan-400 hover:text-cyan-300 transition-colors text-xs font-bold px-1 py-0.5 rounded" title="Ver misión actual">
+                    🎯 MISIÓN
+                </button>
+                <div id="missionText" class="text-[10px] text-slate-300 ml-2 max-w-32 hidden"></div>
+            </div>
             
             <!-- (Contenedor de estado eliminado por solicitud) -->
             <div class="bg-slate-800/95 px-2 py-1 rounded-lg border border-slate-600 shadow-md">
@@ -901,10 +904,7 @@
             
             <!-- Modal de Misión -->
             <div id="missionModal" class="hidden fixed inset-0 bg-black flex items-center justify-center z-50">
-                <div class="relative bg-gradient-to-br from-slate-800 via-blue-900 to-purple-900 rounded-2xl p-8 max-w-md mx-4 neon-border-animated">
-                    <!-- Efecto de brillo interno -->
-                    <div class="absolute inset-1 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-cyan-500/10 rounded-2xl"></div>
-                    
+                <div class="relative bg-gradient-to-br from-slate-800 via-blue-900 to-purple-900 rounded-2xl p-8 max-w-md mx-4 border border-slate-600">
                     <!-- Contenido del modal -->
                     <div class="relative z-10 text-center">
                         <!-- Título con icono -->
@@ -988,7 +988,7 @@
             <div class="w-full flex justify-center gap-1 px-0 py-1 overflow-x-auto">
                 <button onclick="instantDeliver()" class="glass-btn w-10 h-10 rounded-lg" title="Entregar Ya ($500)"><span class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #f472b6);">⚡</span></button>
                 <button onclick="addExtraTime()" class="glass-btn w-10 h-10 rounded-lg" title="+5 seg ($5)"><span class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #f97316);">⏱️</span></button>
-                <button onclick="toggleBridgeMode()" id="btnBridge" class="glass-btn w-10 h-10 rounded-lg relative" title="Puente ($50)"><span class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #a855f7);">🌉</span></button>
+                <button onclick="toggleBridgeMode()" id="btnBridge" class="glass-btn w-10 h-10 rounded-lg relative" title="Puente ($75)"><span class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #a855f7);">🌉</span></button>
                 <button onclick="toggleSound()" class="glass-btn w-10 h-10 rounded-lg"><span id="soundIcon" class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #3b82f6);">🔊</span></button>
                 <button onclick="openShop()" class="glass-btn w-10 h-10 rounded-lg"><span class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #eab308);">🛍️</span></button>
                 <button onclick="showMenu()" class="glass-btn w-10 h-10 rounded-lg"><span class="glass-icon text-lg">☰</span></button>
@@ -1146,14 +1146,7 @@ function preloadAssets(paths, onProgress) {
     });
 }
 
-function startNeonIntro() {
-    // 1. Ocultar Splash Screen
-    const splash = document.getElementById('splashScreen');
-    if (splash) splash.classList.add('hidden');
 
-    // 2. Mostrar Overlay de Intro y Lanzar Video
-    startIntro();
-}
 
 function startIntro() {
     const overlay = document.getElementById('introOverlay');
@@ -1195,7 +1188,6 @@ function startIntro() {
             
             // Reproducir directamente (ya estamos en un evento de click de usuario)
             video.play().catch(e => {
-                console.log("Error play intro:", e);
                 // Si falla por alguna razón extraña, terminar intro
                 finish();
             });
@@ -1278,7 +1270,6 @@ function playTrack(index) {
             marquee.textContent = `🎵 Reproduciendo: ${file.name} ... `;
             trackInfo.appendChild(marquee);
         }).catch(err => {
-            console.error("Error al reproducir audio:", err);
             // Algunos navegadores bloquean autoplay sin interacción previa
         });
         
@@ -1321,27 +1312,19 @@ function updateSpeedometer() {
     // Detectar si el coche (variable global 'car') se está moviendo
     let targetSpeed = 0;
 
-    if (typeof car !== 'undefined' && car && gameState === 'RUNNING' && !car.waiting) {
+    if (typeof car !== 'undefined' && car && gameState === 'RUNNING' && !car.waiting && car.baseSpeed > 0) {
         // Mapear velocidad real relativa a una escala de 0-160
-        // 100 corresponde a car.baseSpeed, >100 indica boost, <100 indica ralentización
-        if (car.baseSpeed > 0) {
-            const ratio = car.speed / car.baseSpeed; // 1.0 => 100 km/h visual
-            const mapped = Math.max(0, Math.min(160, Math.round(100 * ratio)));
-            // Variación leve para dar vida
-            targetSpeed = mapped + (Math.random() * 4 - 2);
-        } else {
-            targetSpeed = 0;
-        }
-    } else {
-        // Si está parado o esperando
-        targetSpeed = 0;
+        const ratio = car.speed / car.baseSpeed; // 1.0 => 100 km/h visual
+        targetSpeed = Math.max(0, Math.min(160, Math.round(100 * ratio)));
     }
     
-    // Interpolación suave (lerp)
-    currentSpeed += (targetSpeed - currentSpeed) * 0.1;
-    
-    // Evitar decimales feos y ceros negativos
-    if (Math.abs(currentSpeed) < 0.5) currentSpeed = 0;
+    // Interpolación suave (lerp) más eficiente
+    const diff = targetSpeed - currentSpeed;
+    if (Math.abs(diff) > 0.5) {
+        currentSpeed += diff * 0.1;
+    } else {
+        currentSpeed = targetSpeed;
+    }
     
     // --- DIBUJAR VELOCÍMETRO ANALÓGICO ---
     const canvas = document.getElementById('speedoCanvas');
@@ -2330,7 +2313,8 @@ grassImg.src = 'cesped.jpg';
 // carImg eliminado
 const pavementImg = new Image();
 pavementImg.src = 'pavimento.jpg';
-let gameState = 'START', animationId, countdownTimer, timeLeft, maxTime, engineSoundInterval;
+let gameState = 'START', animationId, countdownTimer, timeLeft, maxTime;
+let engineSoundInterval, deliveryTimer; // Consolidar variables de timer
 let engineAudio = null; // Variable para audio continuo de motor
 let totalMoney = 0; // Dinero acumulado por propinas
 let tutorialCompleted = false;
@@ -2354,10 +2338,9 @@ let unlocked_uber = false; const PRICE_UBER = 4000;         // UBER.png
 let unlocked_indriver = false; const PRICE_INDRIVER = 5000; // INDRIVER.png
 let unlocked_servi = false; const PRICE_SERVI = 6000;       // SERVIENTREGA.png
 let deliveryStartTime = 0; // Tiempo cuando comenzó la entrega
-let deliveryTimer = null; // Timer para la entrega
 let bridgesOwned = 0; // Número de puentes que tiene el jugador
 let semaphoreTimers = []; // Para gestionar los ciclos de semáforos
-const BRIDGE_PRICE = 50; // Precio de cada puente (ajustado)
+const BRIDGE_PRICE = 75; // Precio de cada puente (ajustado)
 
 // --- SISTEMA DE MISIONES MEJORADO ---
 let currentMission = null;
@@ -2378,9 +2361,8 @@ const ALL_MISSIONS = {
     'collect_all_stars': { name: 'Cazaestrellas', icon: '⭐', unlockLevel: 15 },
     'no_damage': { name: 'Conductor Perfecto', icon: '😇', unlockLevel: 7 },
     'minimal_tiles': { name: 'Minimalista', icon: '🧩', unlockLevel: 6 },
-    'chain_boosts': { name: 'Turbo Chain', icon: '🔥', unlockLevel: 12 },
+    'chain_boosts': { name: 'Velocidades Chain', icon: '🔥', unlockLevel: 12 },
     'zigzag_master': { name: 'Zigzag Master', icon: '🔄', unlockLevel: 8 },
-    'coin_hunter': { name: 'Cazamonedas', icon: '🥇', unlockLevel: 4 },
     'bridge_master': { name: 'Ingeniero', icon: '🔨', unlockLevel: 9 },
     'speed_demon': { name: 'Demonio Veloz', icon: '🚀', unlockLevel: 11 },
     'treasure_seeker': { name: 'Buscatesoros', icon: '🗺️', unlockLevel: 13 }
@@ -2602,7 +2584,7 @@ function saveGameData() {
             localStorage.setItem('deliveryRushPlayers', JSON.stringify(playersList));
         }
     } catch (e) {
-        console.log('No se pudo guardar:', e);
+        // Error al guardar los datos
     }
 }
 
@@ -2725,7 +2707,7 @@ function loadGameData(playerName) {
             showPlayersList();
         }
     } catch (e) {
-        console.log('No se pudo cargar:', e);
+        // Error al cargar los datos
     }
     return false;
 }
@@ -2800,7 +2782,7 @@ function deletePlayer(playerName) {
                 });
                 
             } catch (e) {
-                console.error(e);
+                // Error en reproducción de audio
             }
         }
     });
@@ -2920,6 +2902,16 @@ function clearGameData() {
         localStorage.removeItem('deliveryRushSave');
         location.reload();
     }
+}
+
+function cleanupTimers() {
+    if (animationId) cancelAnimationFrame(animationId);
+    if (countdownTimer) clearInterval(countdownTimer);
+    if (deliveryTimer) clearInterval(deliveryTimer);
+    if (engineSoundInterval) clearInterval(engineSoundInterval);
+    if (tutorialInterval) clearInterval(tutorialInterval);
+    semaphoreTimers.forEach(t => clearTimeout(t));
+    semaphoreTimers = [];
 }
 
 function clearSemaphoreTimers() {
@@ -3057,7 +3049,7 @@ function chooseProfessionalVoice() {
     if (best) {
         speech.voice = best;
         speech.lang = best.lang || 'es-ES';
-        // console.log("Voz seleccionada:", best.name);
+
     }
 }
 
@@ -3536,21 +3528,6 @@ function updateMissionProgress(event, data = {}) {
             }
             break;
 
-        case 'coin_hunter':
-            if (event === 'coin_collected') {
-                if (!currentMission.startTime) {
-                    currentMission.startTime = Date.now();
-                }
-                const elapsed = (Date.now() - currentMission.startTime) / 1000;
-                if (elapsed > currentMission.timeLimit) {
-                    // Marcar como fallida pero no llamar crash
-                    return;
-                }
-                currentMission.current++;
-                if (currentMission.current >= currentMission.target) completed = true;
-            }
-            break;
-
         case 'bridge_master':
             if (event === 'bridge_built') {
                 currentMission.current++;
@@ -3792,9 +3769,8 @@ function generateLevel(showLoading = true) {
          else if (currentMission.type === 'collect_all_stars') currentMission.text = `⭐ Recolecta ${currentMission.target} estrellas`;
          else if (currentMission.type === 'no_damage') currentMission.text = `😇 Sin tocar obstáculos`;
          else if (currentMission.type === 'minimal_tiles') currentMission.text = `🧩 Usa máximo ${currentMission.maxTiles} piezas`;
-         else if (currentMission.type === 'chain_boosts') currentMission.text = `⚡ ${currentMission.target} aceleradores seguidos`;
+         else if (currentMission.type === 'chain_boosts') currentMission.text = `🔥 ${currentMission.target} velocidades seguidas`;
          else if (currentMission.type === 'zigzag_master') currentMission.text = `🔄 ${currentMission.target} cambios de dirección`;
-         else if (currentMission.type === 'coin_hunter') currentMission.text = `🥇 ${currentMission.target} monedas en ${currentMission.timeLimit}s`;
          else if (currentMission.type === 'bridge_master') currentMission.text = `🔨 Construye ${currentMission.target} puentes`;
          else if (currentMission.type === 'speed_demon') currentMission.text = `🚀 Completa en < ${currentMission.timeLimit}s`;
          else if (currentMission.type === 'treasure_seeker') currentMission.text = `🗺️ ${currentMission.coinsRequired} monedas + ${currentMission.itemsRequired} objeto`;
@@ -3877,12 +3853,26 @@ function generateLevel(showLoading = true) {
                 text: '😇 No toques charcos o obstáculos'
             };
         } else if (missionType === 'minimal_tiles') {
-            const targetTiles = Math.max(5, Math.floor((COLS + ROWS) / 2));
+            // Calcular distancia real entre inicio y destino para hacer la misión realista
+            const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
+            const endTile = grid.find(t => t && t.type === TILE_TYPES.END);
+            
+            let targetTiles = Math.max(8, Math.floor((COLS + ROWS) / 2));
+            
+            if (startTile && endTile) {
+                // Distancia Manhattan mínima + margen realista
+                const minDistance = Math.abs(startTile.col - endTile.col) + Math.abs(startTile.row - endTile.row);
+                // Agregar 50% más como margen para obstáculos y curvas
+                const realisticTarget = Math.floor(minDistance * 1.5);
+                // Asegurar que sea al menos la distancia mínima + 2
+                targetTiles = Math.max(targetTiles, realisticTarget, minDistance + 2);
+            }
+            
             currentMission = {
                 type: 'minimal_tiles',
                 maxTiles: targetTiles,
                 tilesUsed: 0,
-                text: `🧩 Usa solo ${targetTiles} piezas máximo`
+                text: `🧩 Usa máximo ${targetTiles} piezas`
             };
         } else if (missionType === 'chain_boosts') {
             currentMission = {
@@ -3899,20 +3889,6 @@ function generateLevel(showLoading = true) {
                 current: 0,
                 lastDirection: null,
                 text: `🔄 Cambia de dirección ${Math.min(6, Math.floor(level / 2) + 2)} veces`
-            };
-        } else if (missionType === 'coin_hunter') {
-            // Calcular target realista basado en el tamaño del nivel
-            const maxPossibleCoins = Math.floor((COLS * ROWS) * 0.25); // 25% del mapa
-            const baseTarget = Math.floor(level / 3) + 2; // Más conservador
-            const coinTarget = Math.min(baseTarget, maxPossibleCoins, 8); // Máximo 8 monedas
-            
-            currentMission = {
-                type: 'coin_hunter',
-                target: coinTarget,
-                current: 0,
-                timeLimit: 30,
-                startTime: null,
-                text: `🥇 Recolecta ${coinTarget} monedas en 30 segundos`
             };
         } else if (missionType === 'bridge_master') {
             const bridgeTarget = Math.min(3, Math.floor(level / 5) + 1);
@@ -4591,24 +4567,21 @@ function placeCoins() {
     const possibleTiles = getReachableTiles(startTile.col, startTile.row);
     
     // --- MONEDAS INTELIGENTES SEGÚN MISIÓN ---
-    let coinsToPlace = 10; // Base por defecto
+    let coinsToPlace = 15; // Aumentado de 10 a 15 para más monedas
     
     // Ajustar cantidad según la misión actual
     if (currentMission) {
         if (currentMission.type === 'coins') {
             // Asegurar que hay suficientes monedas para la misión + extra
-            coinsToPlace = Math.max(currentMission.target + 2, coinsToPlace);
-        } else if (currentMission.type === 'coin_hunter') {
-            // Para misión de cazamonedas, generar suficientes + margen
-            coinsToPlace = Math.max(currentMission.target + 3, coinsToPlace);
+            coinsToPlace = Math.max(currentMission.target + 4, coinsToPlace); // +4 en lugar de +2
         } else if (currentMission.type === 'treasure_seeker') {
             // Para buscatesoros, asegurar monedas requeridas + extra
-            coinsToPlace = Math.max(currentMission.coinsRequired + 2, coinsToPlace);
+            coinsToPlace = Math.max(currentMission.coinsRequired + 4, coinsToPlace); // +4 en lugar de +2
         }
     }
     
-    // Limite máximo para evitar saturar el mapa
-    const maxCoins = Math.min(possibleTiles.length * 0.6, 25);
+    // Limite máximo aumentado para más monedas
+    const maxCoins = Math.min(possibleTiles.length * 0.7, 35); // Aumentado de 25 a 35
     coinsToPlace = Math.min(coinsToPlace, maxCoins);
     
     // Filtrar candidatos para monedas
@@ -4631,7 +4604,7 @@ function placeCoins() {
     // Log para debugging
     const actualCoinsPlaced = candidates.filter(idx => grid[idx].hasCoin).length;
     console.log(`Monedas colocadas: ${actualCoinsPlaced}`);
-    if (currentMission && (currentMission.type === 'coins' || currentMission.type === 'coin_hunter')) {
+    if (currentMission && currentMission.type === 'coins') {
         const actualCoinsPlaced = grid.filter(t => t && t.hasCoin).length;
         console.log(`Misión requiere: ${currentMission.target}, Monedas disponibles: ${actualCoinsPlaced}`);
     }
@@ -4750,7 +4723,13 @@ function ensureSolvablePath() {
     
     let finalNode = null;
 
-    while (openSet.length > 0) {
+    const maxIterations = ROWS * COLS; // Límite más realista
+    let iterations = 0;
+    
+    while (openSet.length > 0 && iterations < maxIterations) {
+        iterations++;
+        
+        // Encontrar el nodo con menor fScore
         openSet.sort((a, b) => a.f - b.f);
         const current = openSet.shift();
         const key = `${current.c},${current.r}`;
@@ -5121,9 +5100,11 @@ function calculatePreviewPath() {
     visited.add(`${car.col},${car.row}`);
     visited.add(`${nCol},${nRow}`);
     
+    const maxIterations = ROWS * COLS * 2; // Límite más realista
     let iterations = 0;
     
-    while (queue.length > 0 && iterations < 500) {
+    while (queue.length > 0 && iterations < maxIterations) {
+        iterations++;
         // Ordenar cola: Preferir nodos más cerca de la meta y caminos más largos
         queue.sort((a, b) => {
             if (!endTile) return b.pathPoints.length - a.pathPoints.length;
@@ -5265,7 +5246,7 @@ function showKeyChestModal() {
             <div style="font-size:60px; margin-bottom:10px;">🔑</div>
             <strong>¡HAS CONSEGUIDO UNA LLAVE!</strong><br>
             <p style="color:#fbbf24; margin:10px 0;">Recolectaste 20 Estrellas</p>
-            <p>Puedes usar esta llave para abrir el <strong>Cofre del Tesoro</strong>.</p>
+            <p>Puedes usar esta llave para abrir el <strong>Cofre del Tesoro</strong> y recibir <b>$10,000</b> monedas.</p>
         </div>
     `;
     
@@ -5527,6 +5508,125 @@ function closeMissionModal() {
     playSound('start');
 }
 
+// Nueva función para mostrar información de la misión actual
+function showCurrentMission() {
+    if (!currentMission) {
+        showGameModal({
+            icon: '📦',
+            title: 'Sin Misión Especial',
+            message: 'En este nivel solo necesitas entregar el pedido a tiempo.',
+            type: 'info',
+            buttons: [{ text: 'Entendido', primary: true }]
+        });
+        return;
+    }
+    
+    // Determinar el icono y estado de la misión
+    let missionIcon = '🎯';
+    let statusText = '';
+    let statusColor = '#fbbf24'; // Amarillo por defecto (en progreso)
+    
+    // Verificar progreso de la misión
+    switch (currentMission.type) {
+        case 'coins':
+            missionIcon = '💰';
+            statusText = `Progreso: ${currentMission.current || 0}/${currentMission.target}`;
+            break;
+        case 'collect_all_stars':
+            missionIcon = '⭐';
+            statusText = `Progreso: ${currentMission.current || 0}/${currentMission.target}`;
+            break;
+        case 'perfect_route':
+            missionIcon = '🎯';
+            statusText = `Rotaciones usadas: ${currentMission.tilesUsed || 0}/${currentMission.maxTiles}`;
+            break;
+        case 'minimal_tiles':
+            missionIcon = '🧩';
+            statusText = `Piezas usadas: ${currentMission.tilesUsed || 0}/${currentMission.maxTiles}`;
+            break;
+        case 'chain_boosts':
+            missionIcon = '⚡';
+            statusText = `Consecutivos: ${currentMission.consecutive || 0}/${currentMission.target}`;
+            break;
+        case 'zigzag_master':
+            missionIcon = '🔄';
+            statusText = `Cambios: ${currentMission.current || 0}/${currentMission.target}`;
+            break;
+        case 'bridge_master':
+            missionIcon = '🔨';
+            statusText = `Puentes: ${currentMission.current || 0}/${currentMission.target}`;
+            break;
+        case 'treasure_seeker':
+            missionIcon = '🗺️';
+            statusText = `Monedas: ${currentMission.coinsCollected || 0}/${currentMission.coinsRequired} | Objetos: ${currentMission.itemsCollected || 0}/${currentMission.itemsRequired}`;
+            break;
+        case 'no_damage':
+            missionIcon = '😇';
+            statusText = currentMission.damaged ? 'FALLIDA - Tocaste un obstáculo' : 'En progreso - No toques obstáculos';
+            statusColor = currentMission.damaged ? '#ef4444' : '#22c55e';
+            break;
+        case 'speed_run':
+        case 'speed_demon':
+            missionIcon = '🚀';
+            const timeLimit = currentMission.targetTime || currentMission.timeLimit;
+            statusText = `Límite de tiempo: ${timeLimit} segundos`;
+            break;
+        case 'place_bridge':
+            missionIcon = '🌉';
+            statusText = currentMission.completed ? 'COMPLETADA' : 'Construye al menos 1 puente';
+            statusColor = currentMission.completed ? '#22c55e' : '#fbbf24';
+            break;
+        case 'use_powerup':
+            missionIcon = '⚡';
+            statusText = currentMission.completed ? 'COMPLETADA' : 'Usa una ayuda del tablero';
+            statusColor = currentMission.completed ? '#22c55e' : '#fbbf24';
+            break;
+        case 'pickup':
+            missionIcon = '📦';
+            statusText = currentMission.completed ? 'COMPLETADA' : `Recoger: ${currentMission.item?.name || 'objeto'}`;
+            statusColor = currentMission.completed ? '#22c55e' : '#fbbf24';
+            break;
+        default:
+            statusText = 'Completa la misión para avanzar';
+    }
+    
+    // Verificar si la misión está completada
+    const isCompleted = currentMission.completed || 
+                       (currentMission.type === 'coins' && currentMission.current >= currentMission.target) ||
+                       (currentMission.type === 'collect_all_stars' && currentMission.current >= currentMission.target) ||
+                       (currentMission.type === 'chain_boosts' && currentMission.consecutive >= currentMission.target) ||
+                       (currentMission.type === 'zigzag_master' && currentMission.current >= currentMission.target) ||
+                       (currentMission.type === 'bridge_master' && currentMission.current >= currentMission.target) ||
+                       (currentMission.type === 'treasure_seeker' && currentMission.coinsCollected >= currentMission.coinsRequired && currentMission.itemsCollected >= currentMission.itemsRequired);
+    
+    if (isCompleted) {
+        statusText = '✅ COMPLETADA';
+        statusColor = '#22c55e';
+    }
+    
+    const message = `
+        <div style="text-align: center;">
+            <div style="font-size: 60px; margin-bottom: 15px;">${missionIcon}</div>
+            <h3 style="color: #ffffff; font-size: 18px; margin-bottom: 10px;">${currentMission.text}</h3>
+            <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; margin: 15px 0;">
+                <p style="color: ${statusColor}; font-weight: bold; margin: 0;">${statusText}</p>
+            </div>
+            <div style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; padding: 8px; border-radius: 6px; margin-top: 15px;">
+                <p style="color: #fca5a5; font-size: 12px; margin: 0;">⚠️ MISIÓN OBLIGATORIA</p>
+                <p style="color: #fca5a5; font-size: 11px; margin: 0;">Debes completarla para poder ganar el nivel</p>
+            </div>
+        </div>
+    `;
+    
+    showGameModal({
+        icon: missionIcon,
+        title: 'Misión Actual',
+        message: message,
+        type: isCompleted ? 'success' : 'info',
+        buttons: [{ text: 'Entendido', primary: true }]
+    });
+}
+
 function startCar() {
     initAudio();
     if (gameState !== 'EDITING') return;
@@ -5713,19 +5813,22 @@ function gameLoop() {
     if (car.waiting) {
         const tile = grid[car.row * COLS + car.col];
         // Lógica de semáforos: controlada por secuencia
-        if (tile?.special === 'semaphore') {
-             if (tile.semaphoreState === 'green' && !tile.isSequenceActive) car.waiting = false;
-             // Si está en secuencia, el timeout final se encargará de liberar
-        } 
-        else { draw(); animationId = requestAnimationFrame(gameLoop); return; }
+        if (tile?.special === 'semaphore' && tile.semaphoreState === 'green' && !tile.isSequenceActive) {
+            car.waiting = false;
+        } else {
+            draw(); 
+            animationId = requestAnimationFrame(gameLoop); 
+            return;
+        }
     }
     
     const cx = car.col * TILE_SIZE + TILE_SIZE / 2;
     const cy = car.row * TILE_SIZE + TILE_SIZE / 2;
-    const dist = Math.sqrt((cx - car.x) ** 2 + (cy - car.y) ** 2);
+    const dx = cx - car.x;
+    const dy = cy - car.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
     
     // AUMENTADO EL RADIO DE DETECCIÓN para evitar que el coche se salte la verificación (Tunneling)
-    // Antes era 4, ahora depende de la velocidad.
     const hitRadius = Math.max(5, car.speed * 1.5);
 
     if (dist < hitRadius) {
@@ -5792,8 +5895,9 @@ function gameLoop() {
         // RECOLECTAR MONEDA
         if (tile?.hasCoin) {
             tile.hasCoin = false;
-            levelCoins++; // Contar para estadísticas
-            playSound('money');
+            
+            // ANTES: solo sumaba. AHORA: Llama a la animación que a su vez suma.
+            animateCoinCollection(car.x, car.y, 1);
             
             // --- ACTUALIZAR TODAS LAS MISIONES ---
             if (currentMission) {
@@ -5807,11 +5911,9 @@ function gameLoop() {
             diamondsCollected++;
             localStorage.setItem('diamondsCollected', diamondsCollected.toString());
             playSound('money');
-            
             // Actualizar display
             const diamondDisplay = $('diamondDisplay');
             if (diamondDisplay) diamondDisplay.textContent = diamondsCollected;
-            
             // Texto flotante
             floatingTexts.push({
                 x: car.x,
@@ -5821,51 +5923,12 @@ function gameLoop() {
                 life: 80,
                 vy: -1.5
             });
-            
-            // Verificar si se deben activar 3 diamantes para el mini-juego
-            if (diamondsCollected >= 3 && diamondsCollected % 3 === 0) {
+            // Si se recogen 6 diamantes, mostrar ruleta de premios
+            if (diamondsCollected > 0 && diamondsCollected % 6 === 0) {
                 setTimeout(() => {
-                    startPuzzleGame();
+                    showPrizeWheelModal();
                 }, 1000);
             }
-        }
-        
-        // RECOLECTAR DIAMANTE
-        if (tile?.hasDiamond) {
-            tile.hasDiamond = false;
-            diamondsCollected++;
-            localStorage.setItem('diamondsCollected', diamondsCollected.toString());
-            playSound('money');
-            
-            // Texto flotante
-            floatingTexts.push({
-                x: car.x,
-                y: car.y - 30,
-                text: '💎 Diamante!',
-                color: '#3b82f6',
-                life: 80,
-                vy: -1.5
-            });
-            
-            // Verificar si se deben activar 3 diamantes para el mini-juego
-            if (diamondsCollected >= 3 && diamondsCollected % 3 === 0) {
-                setTimeout(() => {
-                    startPuzzleGame();
-                }, 1000);
-            }
-
-            // Efecto visual en el mapa (texto flotante inmediato)
-            floatingTexts.push({
-                x: car.x,
-                y: car.y - 20,
-                text: '+$20',
-                color: '#fbbf24',
-                life: 60,
-                vy: -1
-            });
-            
-            // Animación: moneda vuela y suma el dinero al llegar
-            animateCoinCollection(car.x, car.y, 20);
         }
         
         // --- LOGICA ITEM DE MISION (PICKUP) ---
@@ -5987,7 +6050,7 @@ function gameLoop() {
 
                     case 'chain_boosts':
                         if (currentMission.consecutive < currentMission.target) {
-                            failMessage = `Necesitas: ${currentMission.target} boosts consecutivos<br>Lograste: ${currentMission.consecutive}`;
+                            failMessage = `Necesitas: ${currentMission.target} velocidades consecutivas<br>Lograste: ${currentMission.consecutive}`;
                             failTitle = '¡CADENA INCOMPLETA!';
                             missionFailed = true;
                         }
@@ -5998,21 +6061,6 @@ function gameLoop() {
                             failMessage = `Necesitas: ${currentMission.target} cambios de dirección<br>Hiciste: ${currentMission.current}`;
                             failTitle = '¡FALTAN ZIGZAGS!';
                             missionFailed = true;
-                        }
-                        break;
-
-                    case 'coin_hunter':
-                        if (currentMission.current < currentMission.target) {
-                            failMessage = `Necesitas: ${currentMission.target} monedas en ${currentMission.timeLimit}s<br>Recogiste: ${currentMission.current}`;
-                            failTitle = '¡CAZA INCOMPLETA!';
-                            missionFailed = true;
-                        } else if (currentMission.startTime) {
-                            const timeTaken = (Date.now() - currentMission.startTime) / 1000;
-                            if (timeTaken > currentMission.timeLimit) {
-                                failMessage = `Límite: ${currentMission.timeLimit}s<br>Tu tiempo: ${timeTaken.toFixed(1)}s`;
-                                failTitle = '¡DEMASIADO LENTO!';
-                                missionFailed = true;
-                            }
                         }
                         break;
 
@@ -6170,8 +6218,11 @@ function gameLoop() {
 }
 
 function stopGameEffects() {
-    clearInterval(engineSoundInterval);
-    if (engineAudio) { engineAudio.pause(); engineAudio.currentTime = 0; }
+    if (engineSoundInterval) clearInterval(engineSoundInterval);
+    if (engineAudio) { 
+        engineAudio.pause(); 
+        engineAudio.currentTime = 0; 
+    }
     stopFluidMotoSound(); // DETENER SONIDO PROCEDURAL
 }
 
@@ -6189,8 +6240,7 @@ function crash(msg, title = "¡PEDIDO CANCELADO!") {
         savedLevelForRetry = level;
     }
     
-    cancelAnimationFrame(animationId); // Detener el loop del juego
-    clearInterval(countdownTimer); stopGameEffects(); clearInterval(deliveryTimer);
+    cleanupTimers(); // Usar función optimizada
     playSound('crash');
     
     const overlay = $('overlay');
@@ -6333,63 +6383,83 @@ function animateCoinCollection(x, y, amount) {
         return;
     }
 
-    // Calcular coordenadas de pantalla desde coordenadas de canvas (game world)
+    const container = $('coin-animation-container');
+    if (!container) return;
+
+    // Coordenadas de pantalla desde coordenadas de canvas
     const scaleX = canvasRect.width / canvas.width;
     const scaleY = canvasRect.height / canvas.height;
     const startScreenX = canvasRect.left + x * scaleX;
     const startScreenY = canvasRect.top + y * scaleY;
 
-    // Coordenadas destino (centro del contador de dinero)
+    // Coordenadas destino
     const moneyRect = moneyEl.getBoundingClientRect();
     const targetX = moneyRect.left + moneyRect.width / 2;
     const targetY = moneyRect.top + moneyRect.height / 2;
-    
-    // Crear elemento moneda flotante
-    const coin = document.createElement('div');
-    coin.textContent = '🪙';
-    coin.style.position = 'fixed';
-    coin.style.left = `${startScreenX}px`;
-    coin.style.top = `${startScreenY}px`;
-    coin.style.fontSize = '24px';
-    coin.style.zIndex = '9999';
-    coin.style.transform = 'translate(-50%, -50%)'; // Centrar en el punto
-    coin.style.transition = 'all 0.8s cubic-bezier(0.25, 1, 0.5, 1)';
-    coin.style.pointerEvents = 'none';
-    
-    document.body.appendChild(coin);
-    
-    // Forzar reflow
-    void coin.offsetWidth;
-    
-    // Animar hacia el destino
-    coin.style.left = `${targetX}px`;
-    coin.style.top = `${targetY}px`;
-    coin.style.opacity = '0.5';
-    
-    // Cuando llegue...
-    setTimeout(() => {
-        coin.remove();
-        
-        // Sumar dinero REALMENTE
-        totalMoney = (totalMoney || 0) + amount;
-        moneyEl.textContent = totalMoney;
-        if ($('shopMoney')) $('shopMoney').textContent = totalMoney;
-        saveGameData();
 
-        // Efecto de "golpe" en el contador
-        moneyEl.style.transition = 'transform 0.1s';
-        moneyEl.style.transform = 'scale(1.5)';
-        moneyEl.style.color = '#fbbf24';
-        
-        // Sonido de "llegada" (opcional, o reusar money)
-        // playSound('money'); // Ya suena al recoger, evitar saturación o usar un sonido más corto 'click'
-        
+    for (let i = 0; i < Math.min(amount, 10); i++) { // Limitar a 10 monedas visuales
+        const coin = document.createElement('div');
+        coin.textContent = '🪙';
+        coin.style.position = 'fixed';
+        const randomOffsetX = (Math.random() - 0.5) * 40;
+        const randomOffsetY = (Math.random() - 0.5) * 40;
+        coin.style.left = `${startScreenX + randomOffsetX}px`;
+        coin.style.top = `${startScreenY + randomOffsetY}px`;
+        coin.style.fontSize = '20px';
+        coin.style.zIndex = '9999';
+        coin.style.transform = 'translate(-50%, -50%)';
+        coin.style.transition = `all ${0.6 + i * 0.05}s cubic-bezier(0.5, 0, 0.75, 1)`;
+        coin.style.pointerEvents = 'none';
+        coin.style.textShadow = '0 0 10px #fde047';
+
+        container.appendChild(coin);
+
         setTimeout(() => {
-            moneyEl.style.transform = 'scale(1)';
-            moneyEl.style.color = '';
-        }, 150);
-        
-    }, 800);
+            coin.style.left = `${targetX}px`;
+            coin.style.top = `${targetY}px`;
+            coin.style.transform = 'translate(-50%, -50%) scale(0.3)';
+            coin.style.opacity = '0';
+        }, 50 + i * 30); // Stagger the animation start
+
+        setTimeout(() => {
+            container.removeChild(coin);
+        }, 800 + i * 30); // Remove after animation
+    }
+
+    // Actualizar el contador de dinero
+    updateMoneyCounter(amount);
+}
+
+function updateMoneyCounter(amount) {
+    const moneyEl = $('moneyDisplay');
+    if (!moneyEl) {
+        totalMoney += amount;
+        return;
+    }
+    
+    const startMoney = totalMoney;
+    totalMoney += amount;
+    const endMoney = totalMoney;
+    
+    let currentMoney = startMoney;
+    const duration = 500; // ms
+    const stepTime = 20; // ms
+    const steps = duration / stepTime;
+    const increment = (endMoney - startMoney) / steps;
+
+    function step() {
+        currentMoney += increment;
+        if (currentMoney >= endMoney) {
+            moneyEl.textContent = Math.floor(endMoney);
+            moneyEl.parentElement.classList.remove('text-yellow-300', 'scale-125');
+            return;
+        }
+        moneyEl.textContent = Math.floor(currentMoney);
+        requestAnimationFrame(step);
+    }
+
+    moneyEl.parentElement.classList.add('text-yellow-300', 'scale-125');
+    step();
 }
 
 // --- MINI-JUEGO DE ROMPECABEZAS ---
@@ -6443,10 +6513,12 @@ function initializePuzzle() {
     puzzlePieces = [];
     const pieceSize = 133; // 400/3 aprox
     
-    // Cargar imagen del rompecabezas
+    // Cargar imagen del rompecabezas con manejo mejorado de errores
     const img = new Image();
-    img.src = 'rompecabezas.jpg';
+    img.crossOrigin = "anonymous"; // Para evitar problemas CORS
+    
     img.onload = function() {
+        console.log('Imagen del rompecabezas cargada correctamente');
         // Crear las 9 piezas
         for (let row = 0; row < 3; row++) {
             for (let col = 0; col < 3; col++) {
@@ -6460,7 +6532,8 @@ function initializePuzzle() {
                     sourceY: row * (img.height / 3),
                     sourceWidth: img.width / 3,
                     sourceHeight: img.height / 3,
-                    dragging: false
+                    dragging: false,
+                    img: img // Guardar referencia a la imagen
                 });
             }
         }
@@ -6470,7 +6543,9 @@ function initializePuzzle() {
         drawPuzzle();
     };
     
-    img.onerror = function() {
+    img.onerror = function(e) {
+        console.error('Error cargando imagen del rompecabezas:', e);
+        console.log('Usando colores de respaldo para el rompecabezas');
         // Si la imagen no carga, usar colores simples
         for (let row = 0; row < 3; row++) {
             for (let col = 0; col < 3; col++) {
@@ -6488,6 +6563,16 @@ function initializePuzzle() {
         shufflePuzzle();
         drawPuzzle();
     };
+    
+    // Intentar cargar la imagen con timeout
+    setTimeout(() => {
+        if (puzzlePieces.length === 0) {
+            console.log('Timeout de carga de imagen, usando colores de respaldo');
+            img.onerror();
+        }
+    }, 3000); // 3 segundos de timeout
+    
+    img.src = './rompecabezas.jpg'; // Usar ruta relativa más explícita
     
     // Event listeners para arrastrar piezas
     canvas.addEventListener('mousedown', onPuzzleMouseDown);
@@ -6590,7 +6675,27 @@ function drawPuzzle() {
         // Determinar si está en posición correcta
         const isCorrect = piece.currentX === piece.correctX && piece.currentY === piece.correctY;
         
-        if (piece.color) {
+        if (piece.img && piece.sourceX !== undefined) {
+            // Pieza de imagen - dibujar la porción correcta de la imagen
+            try {
+                ctx.drawImage(
+                    piece.img,
+                    piece.sourceX, piece.sourceY, piece.sourceWidth, piece.sourceHeight,
+                    piece.currentX, piece.currentY, 133, 133
+                );
+            } catch(e) {
+                console.error('Error dibujando pieza de imagen:', e);
+                // Fallback a color si hay error
+                ctx.fillStyle = `hsl(${piece.id * 40}, 70%, 60%)`;
+                ctx.fillRect(piece.currentX, piece.currentY, 133, 133);
+            }
+            
+            // Borde de la pieza
+            ctx.strokeStyle = piece.dragging ? '#ffff00' : (isCorrect ? '#00ff00' : '#333');
+            ctx.lineWidth = isCorrect ? 4 : 2;
+            ctx.strokeRect(piece.currentX, piece.currentY, 133, 133);
+            
+        } else if (piece.color) {
             // Pieza de color simple
             ctx.fillStyle = piece.color;
             ctx.fillRect(piece.currentX, piece.currentY, 133, 133);
@@ -6604,8 +6709,8 @@ function drawPuzzle() {
             ctx.textAlign = 'center';
             ctx.fillText(piece.id + 1, piece.currentX + 66, piece.currentY + 70);
         } else {
-            // Pieza de imagen (implementar si se carga la imagen)
-            ctx.fillStyle = '#666';
+            // Fallback: pieza genérica con número
+            ctx.fillStyle = `hsl(${piece.id * 40}, 70%, 60%)`;
             ctx.fillRect(piece.currentX, piece.currentY, 133, 133);
             ctx.strokeStyle = piece.dragging ? '#ffff00' : (isCorrect ? '#00ff00' : '#333');
             ctx.lineWidth = isCorrect ? 4 : 2;
@@ -6708,14 +6813,27 @@ function skipPuzzle() {
 
 function closePuzzle() {
     puzzleActive = false;
+    puzzleComplete = false; // Reset para próxima vez
     gameState = 'PLAYING';
     
     const overlay = $('overlay');
     overlay.classList.add('hidden');
     overlay.innerHTML = '';
     
-    // Reanudar el juego
-    gameLoop();
+    // Asegurar que el juego esté en el estado correcto
+    if (!currentLevel || currentLevel <= 0) {
+        currentLevel = 1; // Fallback al nivel 1 si hay problema
+    }
+    
+    // Actualizar interfaz para asegurar coherencia
+    updateLevelDisplay();
+    updateStats();
+    
+    // Reanudar el juego con verificación de estado
+    if (gameState === 'PLAYING') {
+        console.log('Reanudando juego después del rompecabezas');
+        gameLoop();
+    }
 }
 
 function win() {
@@ -6972,13 +7090,21 @@ function draw() {
     // Actualizar UI del velocímetro
     updateSpeedometer();
 
-    if (grassImg.complete && grassImg.naturalWidth > 0) {
-        ctx.fillStyle = ctx.createPattern(grassImg, 'repeat');
-    } else {
-        ctx.fillStyle = '#166534'; // Verde césped fallback
+    // Optimizar patrón de fondo
+    if (!window.grassPattern) {
+        if (grassImg.complete && grassImg.naturalWidth > 0) {
+            window.grassPattern = ctx.createPattern(grassImg, 'repeat');
+        } else {
+            window.grassPattern = '#166534';
+        }
     }
+    ctx.fillStyle = window.grassPattern;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    grid.forEach(t => { if (t) drawTile(t); });
+    
+    // Dibujar solo tiles visibles
+    for (let i = 0; i < grid.length; i++) {
+        if (grid[i]) drawTile(grid[i]);
+    }
     
     if (gameState === 'EDITING' && previewPath.length > 1) {
         drawPreviewPath();
@@ -7143,9 +7269,12 @@ function drawPreviewPath() {
 }
 
 function drawTile(tile) {
-    const x = tile.col * TILE_SIZE, y = tile.row * TILE_SIZE;
-    const cx = x + TILE_SIZE / 2, cy = y + TILE_SIZE / 2;
-    const rw = TILE_SIZE * 0.45, h = rw / 2;
+    const x = tile.col * TILE_SIZE;
+    const y = tile.row * TILE_SIZE;
+    const cx = x + TILE_SIZE / 2;
+    const cy = y + TILE_SIZE / 2;
+    const rw = TILE_SIZE * 0.45;
+    const h = rw / 2;
     
     ctx.save();
     ctx.fillStyle = '#1a3a1a'; // Verde oscuro como césped/terreno
@@ -7329,40 +7458,50 @@ function drawTile(tile) {
 
     // DIBUJAR MONEDA (Si existe y no ha sido recolectada)
     if (tile.hasCoin) {
-        // Efecto flotante usando el tiempo global
-        const time = Date.now() * 0.005;
-        const floatY = Math.sin(time) * 2;
+        // Efecto de rotación en su eje (como moneda parada girando)
+        if (!window.coinSpinTime) window.coinSpinTime = 0;
+        window.coinSpinTime += 0.002; // Giro aún más lento
+        const spinScale = Math.abs(Math.cos(window.coinSpinTime)); // Escala para simular perspectiva
         
         ctx.save();
-        ctx.translate(cx, cy + floatY);
+        ctx.translate(cx, cy);
+        ctx.scale(spinScale, 1); // Solo escalar horizontalmente para simular giro
         
-        // Sombra en el suelo (fija, no flota con la moneda)
-        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        // Sombra en el suelo (fija)
+        ctx.save();
+        ctx.scale(1/spinScale, 1); // Normalizar escala para sombra
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
         ctx.beginPath();
-        ctx.ellipse(0, 10 - floatY, 6, 2, 0, 0, Math.PI*2);
+        ctx.ellipse(0, 5, 5, 2, 0, 0, Math.PI*2);
         ctx.fill();
+        ctx.restore();
         
-        // Borde moneda
+        // Borde moneda (más grande)
         ctx.fillStyle = '#d97706'; // Amber-600
         ctx.beginPath();
         ctx.arc(0, 0, 7, 0, Math.PI * 2);
         ctx.fill();
         
-        // Centro moneda
+        // Centro moneda (más grande)
         ctx.fillStyle = '#fbbf24'; // Amber-400
         ctx.beginPath();
-        ctx.arc(0, 0, 5.5, 0, Math.PI * 2);
+        ctx.arc(0, 0, 5, 0, Math.PI * 2);
         ctx.fill();
         
-        // Símbolo
-        ctx.fillStyle = '#92400e'; // Amber-800
-        ctx.font = 'bold 9px monospace';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('$', 0, 0.5);
+        // Símbolo (más grande) - solo visible cuando está de frente
+        if (spinScale > 0.3) { // Solo mostrar símbolo cuando esté visible
+            ctx.fillStyle = '#92400e'; // Amber-800
+            ctx.font = 'bold 8px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.save();
+            ctx.scale(1/spinScale, 1); // Normalizar texto para que no se deforme
+            ctx.fillText('$', 0, 0.5);
+            ctx.restore();
+        }
         
-        // Brillo
-        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        // Brillo (más grande)
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
         ctx.beginPath();
         ctx.arc(-2, -2, 1.5, 0, Math.PI * 2);
         ctx.fill();
@@ -7372,10 +7511,11 @@ function drawTile(tile) {
     
     // DIBUJAR DIAMANTE (Si existe y no ha sido recolectado)
     if (tile.hasDiamond) {
-        // Efecto flotante y rotativo usando el tiempo global
-        const time = Date.now() * 0.005;
-        const floatY = Math.sin(time) * 2;
-        const rotation = time * 2;
+        // Efecto flotante y rotativo usando tiempo cacheado
+        if (!window.diamondFloatTime) window.diamondFloatTime = 0;
+        window.diamondFloatTime += 0.1;
+        const floatY = Math.sin(window.diamondFloatTime) * 2;
+        const rotation = window.diamondFloatTime * 2;
         
         ctx.save();
         ctx.translate(cx, cy + floatY);
@@ -7429,9 +7569,9 @@ function drawTile(tile) {
     
     // --- DIBUJAR OBJETO DE MISIÓN ---
     if (tile.missionItem) {
-        const time = Date.now() * 0.003;
-        // Sin escala excesiva, solo flotación suave si se quiere, o estático para máxima nitidez
-        // const scale = 1 + Math.sin(time) * 0.05; 
+        // Usar tiempo cacheado para mejor performance
+        if (!window.missionItemTime) window.missionItemTime = 0;
+        window.missionItemTime += 0.05; 
         
         ctx.save();
         ctx.translate(cx, cy);
@@ -7473,9 +7613,10 @@ function drawTile(tile) {
     
     // DIBUJAR ESTRELLA (Nivel 30+)
     if (tile.hasStar) {
-        // Efecto flotante
-        const time = Date.now() * 0.005;
-        const floatY = Math.sin(time + Math.PI) * 2; // Desfase con moneda
+        // Efecto flotante usando tiempo cacheado
+        if (!window.starFloatTime) window.starFloatTime = 0;
+        window.starFloatTime += 0.08; // Ligeramente diferente para variación
+        const floatY = Math.sin(window.starFloatTime + Math.PI) * 2; // Desfase con moneda
         
         ctx.save();
         ctx.translate(cx, cy + floatY);
@@ -8179,18 +8320,6 @@ function skipPuzzle() {
     `;
     
     puzzleActive = false;
-}
-
-function closePuzzle() {
-    puzzleActive = false;
-    gameState = 'PLAYING';
-    
-    const overlay = $('overlay');
-    overlay.classList.add('hidden');
-    overlay.innerHTML = '';
-    
-    // Reanudar el juego
-    gameLoop();
 }
 
 // Al cargar NO iniciar intro directamente, esperar interacción en Splash
