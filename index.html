@@ -53,6 +53,20 @@
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         .timer-warning { animation: timerPulse 0.5s infinite; color: #ef4444 !important; }
         @keyframes timerPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        
+        /* Animación para borde neón que se mueve */
+        @keyframes neonBorderMove {
+            0% { box-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff, 0 0 60px #00ffff; }
+            25% { box-shadow: 20px 0 20px #ff00ff, 20px 0 40px #ff00ff, 20px 0 60px #ff00ff; }
+            50% { box-shadow: 0 20px 20px #ffff00, 0 20px 40px #ffff00, 0 20px 60px #ffff00; }
+            75% { box-shadow: -20px 0 20px #00ff00, -20px 0 40px #00ff00, -20px 0 60px #00ff00; }
+            100% { box-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff, 0 0 60px #00ffff; }
+        }
+        
+        .neon-border-animated {
+            animation: neonBorderMove 3s infinite;
+            border: 3px solid transparent;
+        }
         .progress-bar { transition: width 1s linear; }
         
         /* ESTILO BOTONES DE CRISTAL (Glassmorphism) */
@@ -159,17 +173,51 @@
         }
         .vehicle-btn span.emoji { font-size: 2rem; }
 
-        /* Botones inferiores octagonales (Glass Octagon) */
+        /* Botones inferiores octagonales (Glass Octagon con Neón) */
         .glass-btn {
              border-radius: 0 !important; /* Override rounded-lg */
              clip-path: polygon(25% 0%, 75% 0%, 100% 25%, 100% 75%, 75% 100%, 25% 100%, 0% 75%, 0% 25%);
-             filter: drop-shadow(0 0 3px rgba(56, 189, 248, 0.5));
              background: rgba(30, 41, 59, 0.85); 
-             border: none;
-             width: 40px; height: 40px; /* Reducido de 48px */
+             border: 2px solid;
+             border-color: #06b6d4;
+             width: 40px; height: 40px;
+             position: relative;
+             overflow: hidden;
+             animation: neonGlow 3s ease-in-out infinite;
+             transition: all 0.3s ease;
         }
         .glass-btn:active { transform: scale(0.92); }
-        .glass-btn .glass-icon { filter: drop-shadow(0 0 2px white); font-size: 1.2rem; }
+        .glass-btn .glass-icon { filter: drop-shadow(0 0 2px white); font-size: 1.2rem; z-index: 2; position: relative; }
+        
+        /* Animación de neón cambiante */
+        @keyframes neonGlow {
+            0% { 
+                border-color: #06b6d4; /* Cyan */
+                box-shadow: 0 0 8px #06b6d4, inset 0 0 8px rgba(6, 182, 212, 0.2);
+            }
+            25% { 
+                border-color: #8b5cf6; /* Púrpura */
+                box-shadow: 0 0 8px #8b5cf6, inset 0 0 8px rgba(139, 92, 246, 0.2);
+            }
+            50% { 
+                border-color: #10b981; /* Verde esmeralda */
+                box-shadow: 0 0 8px #10b981, inset 0 0 8px rgba(16, 185, 129, 0.2);
+            }
+            75% { 
+                border-color: #f59e0b; /* Ámbar */
+                box-shadow: 0 0 8px #f59e0b, inset 0 0 8px rgba(245, 158, 11, 0.2);
+            }
+            100% { 
+                border-color: #06b6d4; /* Volver a cyan */
+                box-shadow: 0 0 8px #06b6d4, inset 0 0 8px rgba(6, 182, 212, 0.2);
+            }
+        }
+        
+        /* Efecto hover más intenso */
+        .glass-btn:hover {
+            animation-duration: 1.5s; /* Más rápido al hover */
+            transform: scale(1.05);
+        }
 
         .color-btn { width: 32px; height: 32px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; }
         .color-btn.selected { border-color: white; transform: scale(1.15); }
@@ -834,15 +882,7 @@
                 </div>
             </div>
             
-            <!-- MISIÓN DEL NIVEL (Más pequeño pero legible) -->
-            <div id="missionContainer" class="hidden flex items-center gap-1.5 bg-slate-800/90 px-2 py-0.5 rounded-lg border border-blue-500/50 shadow-[0_0_10px_rgba(59,130,246,0.3)]">
-                <div id="missionIcon" class="text-base animate-bounce">🎯</div>
-                <div class="flex flex-col leading-none">
-                    <span class="text-[8px] text-blue-300 font-bold uppercase tracking-wider">MISIÓN</span>
-                    <span id="missionText" class="text-[11px] text-white font-bold">...</span>
-                </div>
-                <div id="missionCheck" class="hidden text-emerald-400 text-base font-bold">✓</div>
-            </div>
+
             
             <!-- (Contenedor de estado eliminado por solicitud) -->
             <div class="bg-slate-800/95 px-2 py-1 rounded-lg border border-slate-600 shadow-md">
@@ -857,6 +897,43 @@
             <!-- Mensaje de salida del pedido -->
             <div id="orderReady" class="order-ready hidden">
                 <img src="sale.jpg" alt="¡SALE EL PEDIDO!">
+            </div>
+            
+            <!-- Modal de Misión -->
+            <div id="missionModal" class="hidden fixed inset-0 bg-black flex items-center justify-center z-50">
+                <div class="relative bg-gradient-to-br from-slate-800 via-blue-900 to-purple-900 rounded-2xl p-8 max-w-md mx-4 neon-border-animated">
+                    <!-- Efecto de brillo interno -->
+                    <div class="absolute inset-1 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-cyan-500/10 rounded-2xl"></div>
+                    
+                    <!-- Contenido del modal -->
+                    <div class="relative z-10 text-center">
+                        <!-- Título con icono -->
+                        <div class="flex items-center justify-center gap-3 mb-6">
+                            <div class="text-4xl animate-bounce">🎯</div>
+                            <h2 class="text-2xl font-bold text-white uppercase tracking-wider">Nueva Misión</h2>
+                        </div>
+                        
+                        <!-- Información del nivel -->
+                        <div class="bg-black/50 rounded-lg p-4 mb-6 border border-cyan-400/50">
+                            <p class="text-center text-cyan-300 font-bold text-xl mb-3">Pedido <span id="modalLevelDisplay">1</span></p>
+                            <div id="modalMissionText" class="text-center text-white font-semibold text-lg leading-relaxed">
+                                <!-- Texto de misión se insertará aquí -->
+                            </div>
+                        </div>
+                        
+                        <!-- Indicador de tiempo -->
+                        <div class="flex items-center justify-center gap-3 text-yellow-300 font-bold text-lg mb-8">
+                            <span class="text-2xl">⏱️</span>
+                            <span id="modalTimeDisplay">30</span>
+                            <span>segundos</span>
+                        </div>
+                        
+                        <!-- Botón COMENZAR -->
+                        <button id="startMissionBtn" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white font-bold py-4 px-8 rounded-full text-xl uppercase tracking-wider shadow-2xl transform hover:scale-105 transition-all duration-300 border-2 border-green-300 hover:border-green-200">
+                            🚀 COMENZAR
+                        </button>
+                    </div>
+                </div>
             </div>
             
             <div id="overlay" class="hidden absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-20 rounded-xl p-3">
@@ -923,17 +1000,15 @@
     <!-- MOTO TRANSITION IMG -->
     <img id="transitionMoto" src="motoa.gif" alt="Moto Transition">
 
-    <!-- CAMBIO CRÍTICO: bg-slate-900 (Opaco) para tapar la carga -->
+    <!-- ANUNCIO DE NIVEL COMPACTO -->
     <div id="levelAnnouncement" class="hidden absolute inset-0 z-[60] bg-slate-900 flex flex-col items-center justify-center transition-opacity duration-300">
         <div class="transform scale-50 transition-transform duration-500 cubic-bezier(0.175, 0.885, 0.32, 1.275)" id="levelMsgBox">
-            <h1 class="text-5xl font-black text-white drop-shadow-[0_0_15px_rgba(16,185,129,0.8)] tracking-tighter text-center">
-                <span class="block text-2xl text-emerald-400 font-bold mb-2 tracking-widest uppercase">Preparado para el</span>
-                NIVEL <span id="announceLevelNum" class="text-emerald-500">1</span>
-            </h1>
-        </div>
-        <div id="levelStartBtn" class="absolute bottom-16 cursor-pointer">
-            <div class="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center text-white text-5xl animate-pulse shadow-lg ring-4 ring-emerald-500 ring-opacity-50 transition-transform active:scale-90">
-                <span>▶</span>
+            <div class="text-center bg-slate-800/90 p-6 rounded-2xl border-2 border-emerald-400 shadow-2xl">
+                <h2 class="text-emerald-400 text-lg font-bold mb-2 tracking-widest uppercase">Nivel</h2>
+                <div class="text-4xl font-black text-white mb-4" id="announceLevelNum">1</div>
+                <button id="levelStartBtn" class="bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform active:scale-90">
+                    ▶ COMENZAR
+                </button>
             </div>
         </div>
     </div>
@@ -3514,6 +3589,25 @@ function updateMissionProgress(event, data = {}) {
         case 'place_bridge':
             if (event === 'bridge_built') completed = true;
             break;
+            
+        case 'bridge_master':
+            if (event === 'bridge_built') {
+                currentMission.current++;
+                completed = currentMission.current >= currentMission.target;
+                if (mText) {
+                    mText.innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> 🔨 ${currentMission.current}/${currentMission.target} puentes`;
+                }
+            } else if (event === 'level_completed') {
+                // Contar puentes construidos en el nivel
+                let bridgesBuilt = 0;
+                grid.forEach(t => {
+                    if (t && t.type === TILE_TYPES.BRIDGE || t && t.isBridge) {
+                        bridgesBuilt++;
+                    }
+                });
+                completed = bridgesBuilt >= currentMission.target;
+            }
+            break;
 
         case 'use_powerup':
             if (event === 'powerup_used') completed = true;
@@ -3533,6 +3627,25 @@ function updateMissionProgress(event, data = {}) {
                     // Solo marcar como fallida, no llamar crash
                     return;
                 }
+            }
+            break;
+            
+        // Validar otras misiones al completar nivel
+        case 'no_damage':
+            if (event === 'level_completed') {
+                completed = !currentMission.damaged;
+            }
+            break;
+            
+        case 'minimal_tiles':
+            if (event === 'level_completed') {
+                completed = currentMission.tilesUsed <= currentMission.maxTiles;
+            }
+            break;
+            
+        case 'perfect_route':
+            if (event === 'level_completed') {
+                completed = currentMission.tilesUsed <= currentMission.maxTiles;
             }
             break;
     }
@@ -3679,7 +3792,7 @@ function generateLevel(showLoading = true) {
          else if (currentMission.type === 'collect_all_stars') currentMission.text = `⭐ Recolecta ${currentMission.target} estrellas`;
          else if (currentMission.type === 'no_damage') currentMission.text = `😇 Sin tocar obstáculos`;
          else if (currentMission.type === 'minimal_tiles') currentMission.text = `🧩 Usa máximo ${currentMission.maxTiles} piezas`;
-         else if (currentMission.type === 'chain_boosts') currentMission.text = `🔥 ${currentMission.target} boosts consecutivos`;
+         else if (currentMission.type === 'chain_boosts') currentMission.text = `⚡ ${currentMission.target} aceleradores seguidos`;
          else if (currentMission.type === 'zigzag_master') currentMission.text = `🔄 ${currentMission.target} cambios de dirección`;
          else if (currentMission.type === 'coin_hunter') currentMission.text = `🥇 ${currentMission.target} monedas en ${currentMission.timeLimit}s`;
          else if (currentMission.type === 'bridge_master') currentMission.text = `🔨 Construye ${currentMission.target} puentes`;
@@ -3730,7 +3843,11 @@ function generateLevel(showLoading = true) {
         
         // CREAR MISIÓN BASADA EN EL TIPO SELECCIONADO
         if (missionType === 'coins') {
-            const target = Math.min(3 + Math.floor(level / 5), 8);
+            // Calcular target inteligente basado en tamaño del nivel
+            const maxPossibleCoins = Math.floor((COLS * ROWS) * 0.3); // 30% del mapa como máximo
+            const baseTarget = Math.min(3 + Math.floor(level / 5), 8);
+            const target = Math.min(baseTarget, maxPossibleCoins);
+            
             currentMission = {
                 type: 'coins',
                 target: target,
@@ -3773,7 +3890,7 @@ function generateLevel(showLoading = true) {
                 target: Math.min(3, Math.floor(level / 4) + 1),
                 current: 0,
                 consecutive: 0,
-                text: `🔥 Pisa ${Math.min(3, Math.floor(level / 4) + 1)} aceleradores seguidos`
+                text: `⚡ Pisa ${Math.min(3, Math.floor(level / 4) + 1)} aceleradores seguidos`
             };
         } else if (missionType === 'zigzag_master') {
             currentMission = {
@@ -3784,7 +3901,11 @@ function generateLevel(showLoading = true) {
                 text: `🔄 Cambia de dirección ${Math.min(6, Math.floor(level / 2) + 2)} veces`
             };
         } else if (missionType === 'coin_hunter') {
-            const coinTarget = Math.floor(level / 2) + 2;
+            // Calcular target realista basado en el tamaño del nivel
+            const maxPossibleCoins = Math.floor((COLS * ROWS) * 0.25); // 25% del mapa
+            const baseTarget = Math.floor(level / 3) + 2; // Más conservador
+            const coinTarget = Math.min(baseTarget, maxPossibleCoins, 8); // Máximo 8 monedas
+            
             currentMission = {
                 type: 'coin_hunter',
                 target: coinTarget,
@@ -3810,13 +3931,18 @@ function generateLevel(showLoading = true) {
                 text: `🚀 Completa en menos de ${timeLimit} segundos`
             };
         } else if (missionType === 'treasure_seeker') {
+            // Calcular requisitos realistas basados en el tamaño del nivel
+            const maxPossibleCoins = Math.floor((COLS * ROWS) * 0.2); // 20% del mapa
+            const baseCoinsRequired = Math.floor(level / 4) + 2;
+            const coinsRequired = Math.min(baseCoinsRequired, maxPossibleCoins, 6); // Máximo 6 monedas
+            
             currentMission = {
                 type: 'treasure_seeker',
-                coinsRequired: Math.floor(level / 3) + 2,
+                coinsRequired: coinsRequired,
                 itemsRequired: 1,
                 coinsCollected: 0,
                 itemsCollected: 0,
-                text: `🗺️ Recolecta ${Math.floor(level / 3) + 2} monedas Y 1 objeto`
+                text: `🗺️ Recolecta ${coinsRequired} monedas Y 1 objeto`
             };
         } else if (missionType === 'place_bridge') {
             currentMission = {
@@ -3957,8 +4083,8 @@ function generateLevel(showLoading = true) {
     draw();
     startEditRender();
 
-    // Mostrar anuncio de nivel
-    showLevelAnnouncement();
+    // Mostrar modal de misión directamente
+    showMissionModal();
 
     // Ocultar overlay de carga en el siguiente frame
     if (lvlLoading && showLoading) {
@@ -4248,32 +4374,26 @@ function showLevelAnnouncement() {
     
     // Función de cierre seguro
     const closeAnnouncement = () => {
-        if (announcementTimer) clearTimeout(announcementTimer);
-        startBtn.onclick = null; // Limpiar listener del botón
-
-        overlay.classList.add('opacity-0'); // Iniciar fade out
-        msgBox.classList.remove('scale-100');
-        msgBox.classList.add('scale-150'); // Efecto de zoom out
+        overlay.classList.add('hidden');
         
-        setTimeout(() => {
-            overlay.classList.add('hidden'); 
-            
-            // CRÍTICO: Redibujar TODO al ocultar para evitar pantalla negra
-            resize();
-            draw();
-            requestAnimationFrame(() => {
-                resize();
-                draw();
-            });
-            
-            startCountdown(); // Iniciar el timer del juego AHORA
-        }, 300); // Esperar que termine la animación de fade-out
+        // Limpiar el timer y listener
+        if (announcementTimer) {
+            clearTimeout(announcementTimer);
+            announcementTimer = null;
+        }
+        if (startBtn) startBtn.onclick = null;
+        
+        // Redibujar para evitar problemas visuales
+        resize();
+        draw();
+        
+        // Iniciar el modal de misión en lugar del countdown
+        showMissionModal();
     };
 
     // Animar entrada
     setTimeout(() => {
-        msgBox.classList.remove('scale-50');
-        msgBox.classList.add('scale-100');
+        msgBox.className = 'transform scale-100 transition-transform duration-500 cubic-bezier(0.175, 0.885, 0.32, 1.275)';
         if(typeof playSound === 'function') playSound('start');
     }, 50);
     
@@ -4470,15 +4590,33 @@ function placeCoins() {
     // Obtener tiles válidos (lógica de camino alcanzable)
     const possibleTiles = getReachableTiles(startTile.col, startTile.row);
     
-    // --- MONEDAS ---
-    let coinsToPlace = 10;
+    // --- MONEDAS INTELIGENTES SEGÚN MISIÓN ---
+    let coinsToPlace = 10; // Base por defecto
+    
+    // Ajustar cantidad según la misión actual
+    if (currentMission) {
+        if (currentMission.type === 'coins') {
+            // Asegurar que hay suficientes monedas para la misión + extra
+            coinsToPlace = Math.max(currentMission.target + 2, coinsToPlace);
+        } else if (currentMission.type === 'coin_hunter') {
+            // Para misión de cazamonedas, generar suficientes + margen
+            coinsToPlace = Math.max(currentMission.target + 3, coinsToPlace);
+        } else if (currentMission.type === 'treasure_seeker') {
+            // Para buscatesoros, asegurar monedas requeridas + extra
+            coinsToPlace = Math.max(currentMission.coinsRequired + 2, coinsToPlace);
+        }
+    }
+    
+    // Limite máximo para evitar saturar el mapa
+    const maxCoins = Math.min(possibleTiles.length * 0.6, 25);
+    coinsToPlace = Math.min(coinsToPlace, maxCoins);
     
     // Filtrar candidatos para monedas
     const candidates = possibleTiles.filter(idx => {
         const t = grid[idx];
         const dist = Math.abs(t.col - startTile.col) + Math.abs(t.row - startTile.row);
         // Evitar cercanía exagerada al inicio
-        return t && !t.hasCoin && !t.hasStar && !t.special && dist > 2; 
+        return t && !t.hasCoin && !t.hasStar && !t.special && dist > 1; 
     });
     
     // Barajar
@@ -4488,6 +4626,14 @@ function placeCoins() {
     for (let i = 0; i < candidates.length && coinsToPlace > 0; i++) {
         grid[candidates[i]].hasCoin = true;
         coinsToPlace--;
+    }
+    
+    // Log para debugging
+    const actualCoinsPlaced = candidates.filter(idx => grid[idx].hasCoin).length;
+    console.log(`Monedas colocadas: ${actualCoinsPlaced}`);
+    if (currentMission && (currentMission.type === 'coins' || currentMission.type === 'coin_hunter')) {
+        const actualCoinsPlaced = grid.filter(t => t && t.hasCoin).length;
+        console.log(`Misión requiere: ${currentMission.target}, Monedas disponibles: ${actualCoinsPlaced}`);
     }
 
     // --- ESTRELLAS (Nivel 30+) ---
@@ -4807,8 +4953,28 @@ function addSpecials(features) {
     eligible.sort(() => Math.random() - 0.5);
     
     let idx = 0;
+    
+    // --- LÓGICA ESPECIAL PARA MISIÓN CHAIN_BOOSTS ---
+    if (currentMission && currentMission.type === 'chain_boosts') {
+        const requiredBoosts = currentMission.target + 1; // +1 para tener margen
+        
+        // Colocar aceleradores garantizados para la misión
+        let boostsPlaced = 0;
+        for (let i = 0; i < eligible.length && boostsPlaced < requiredBoosts; i++) {
+            const tile = grid[eligible[i]];
+            tile.special = 'boost';
+            boostsPlaced++;
+            idx++; // Marcar índice como usado
+        }
+        
+        console.log(`Misión chain_boosts: Colocados ${boostsPlaced} aceleradores para target ${currentMission.target}`);
+    }
+    
+    // Colocar features normales
     features.forEach(f => {
-        for (let i = 0; i < 2 && idx < eligible.length; i++, idx++) {
+        const count = (f === 'boost' && currentMission && currentMission.type === 'chain_boosts') ? 0 : 2; // Ya colocamos boosts arriba
+        
+        for (let i = 0; i < count && idx < eligible.length; i++, idx++) {
             const tile = grid[eligible[idx]];
             if (f === 'semaphore') { tile.special = 'semaphore'; tile.semaphoreState = 'red'; specialTiles.push(tile); }
             else if (f === 'puddle') tile.special = 'puddle';
@@ -5318,6 +5484,49 @@ function resetCar() {
     gameState = 'EDITING';
 }
 
+// === FUNCIONES DEL MODAL DE MISIÓN ===
+function showMissionModal() {
+    const modal = $('missionModal');
+    if (!modal) return;
+    
+    // Actualizar contenido del modal
+    if ($('modalLevelDisplay')) $('modalLevelDisplay').textContent = level;
+    if ($('modalTimeDisplay')) $('modalTimeDisplay').textContent = maxTime;
+    
+    // Mostrar texto de misión
+    const modalText = $('modalMissionText');
+    if (modalText) {
+        if (currentMission) {
+            modalText.innerHTML = `<span class="text-cyan-300">🎯</span> ${currentMission.text}`;
+        } else {
+            modalText.innerHTML = '¡Entrega el pedido antes de que se acabe el tiempo!';
+        }
+    }
+    
+    // Mostrar modal
+    modal.classList.remove('hidden');
+    
+    // Configurar evento del botón COMENZAR
+    const startBtn = $('startMissionBtn');
+    if (startBtn) {
+        startBtn.onclick = closeMissionModal;
+    }
+}
+
+function closeMissionModal() {
+    const modal = $('missionModal');
+    if (!modal) return;
+    
+    // Ocultar modal con animación
+    modal.classList.add('hidden');
+    
+    // INICIAR EL CRONÓMETRO cuando se cierre el modal
+    startCountdown();
+    
+    // Opcional: Sonido cuando inicia el cronómetro
+    playSound('start');
+}
+
 function startCar() {
     initAudio();
     if (gameState !== 'EDITING') return;
@@ -5545,22 +5754,14 @@ function gameLoop() {
                     const t2 = setTimeout(() => {
                         if (tile.isSequenceActive) {
                             tile.semaphoreState = 'green';
-                            draw(); // Mostrar verde con semáforo grande
-                        }
-                        
-                        // PASO 4: SOLO DESPUÉS de haber mostrado los 3 colores, permitir avanzar
-                        const tFinal = setTimeout(() => {
-                             car.waiting = false; // AHORA SÍ puede avanzar
-                             draw();
-                             
-                             // Mantener el semáforo en verde por más tiempo antes de limpiar
-                             setTimeout(() => {
-                                 tile.isSequenceActive = false; 
-                             }, 2000);
-                             
-                        }, 2500); // Tiempo para ver el verde antes de liberar
-                        semaphoreTimers.push(tFinal);
-
+                                car.waiting = false; // Salir INMEDIATAMENTE cuando cambie a verde
+                                draw(); // Mostrar verde con semáforo grande
+                            }
+                            
+                            // PASO 4: Mantener el semáforo en verde por un tiempo antes de limpiar
+                            const tFinal = setTimeout(() => {
+                                tile.isSequenceActive = false;
+                            }, 1500);
                     }, 1200); // Tiempo en amarillo
                     semaphoreTimers.push(t2);
                     
@@ -6364,10 +6565,10 @@ function drawPuzzle() {
     
     ctx.clearRect(0, 0, 400, 400);
     
-    // Dibujar guías
-    ctx.strokeStyle = '#444';
-    ctx.lineWidth = 1;
-    for (let i = 1; i < 3; i++) {
+    // Dibujar cuadrícula de fondo más visible
+    ctx.strokeStyle = '#666';
+    ctx.lineWidth = 2;
+    for (let i = 0; i <= 3; i++) {
         ctx.beginPath();
         ctx.moveTo(i * 133, 0);
         ctx.lineTo(i * 133, 400);
@@ -6376,14 +6577,25 @@ function drawPuzzle() {
         ctx.stroke();
     }
     
+    // Resaltar posiciones correctas
+    ctx.fillStyle = 'rgba(0, 255, 0, 0.1)';
+    puzzlePieces.forEach(piece => {
+        if (piece.currentX === piece.correctX && piece.currentY === piece.correctY) {
+            ctx.fillRect(piece.correctX, piece.correctY, 133, 133);
+        }
+    });
+    
     // Dibujar piezas
     puzzlePieces.forEach(piece => {
+        // Determinar si está en posición correcta
+        const isCorrect = piece.currentX === piece.correctX && piece.currentY === piece.correctY;
+        
         if (piece.color) {
             // Pieza de color simple
             ctx.fillStyle = piece.color;
             ctx.fillRect(piece.currentX, piece.currentY, 133, 133);
-            ctx.strokeStyle = piece.dragging ? '#fff' : '#333';
-            ctx.lineWidth = 2;
+            ctx.strokeStyle = piece.dragging ? '#ffff00' : (isCorrect ? '#00ff00' : '#333');
+            ctx.lineWidth = isCorrect ? 4 : 2;
             ctx.strokeRect(piece.currentX, piece.currentY, 133, 133);
             
             // Número de la pieza
@@ -6395,18 +6607,45 @@ function drawPuzzle() {
             // Pieza de imagen (implementar si se carga la imagen)
             ctx.fillStyle = '#666';
             ctx.fillRect(piece.currentX, piece.currentY, 133, 133);
-            ctx.strokeStyle = piece.dragging ? '#fff' : '#333';
-            ctx.lineWidth = 2;
+            ctx.strokeStyle = piece.dragging ? '#ffff00' : (isCorrect ? '#00ff00' : '#333');
+            ctx.lineWidth = isCorrect ? 4 : 2;
             ctx.strokeRect(piece.currentX, piece.currentY, 133, 133);
+            
+            // Número de la pieza para identificarla
+            ctx.fillStyle = '#fff';
+            ctx.font = '30px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(piece.id + 1, piece.currentX + 66, piece.currentY + 70);
         }
     });
 }
 
 function shufflePuzzle() {
-    puzzlePieces.forEach(piece => {
-        piece.currentX = Math.random() * (400 - 133);
-        piece.currentY = Math.random() * (400 - 133);
+    // Crear posiciones válidas en una cuadrícula
+    const validPositions = [];
+    for (let row = 0; row < 3; row++) {
+        for (let col = 0; col < 3; col++) {
+            validPositions.push({
+                x: col * 133,
+                y: row * 133
+            });
+        }
+    }
+    
+    // Barajar las posiciones válidas
+    for (let i = validPositions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [validPositions[i], validPositions[j]] = [validPositions[j], validPositions[i]];
+    }
+    
+    // Asignar posiciones barajadas a las piezas
+    puzzlePieces.forEach((piece, index) => {
+        if (validPositions[index]) {
+            piece.currentX = validPositions[index].x;
+            piece.currentY = validPositions[index].y;
+        }
     });
+    
     drawPuzzle();
 }
 
