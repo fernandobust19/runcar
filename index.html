@@ -864,32 +864,33 @@ function startNeonIntro() {
     <div id="gameInterface" class="hidden flex flex-col h-full w-full relative overflow-hidden">
 
         <!-- Header -->
-        <div class="w-full p-1 flex justify-between items-center z-10 bg-slate-900/50 backdrop-blur-sm relative shrink-0">
-            <div class="bg-slate-800/95 px-2 py-1 rounded-lg border border-slate-600 shadow-md flex items-center gap-1.5">
-                <img id="companyLogo" src="LOGO-RAPPI.png" alt="Empresa" class="w-8 h-8 rounded-md object-contain bg-white p-0.5">
+        <div class="w-full px-1 py-0.5 flex justify-between items-center z-10 bg-slate-900/50 backdrop-blur-sm relative shrink-0 gap-1">
+            <div class="bg-slate-800/95 px-1.5 py-0.5 rounded-lg border border-slate-600 shadow-md flex items-center gap-1">
+                <img id="companyLogo" src="LOGO-RAPPI.png" alt="Empresa" class="w-6 h-6 rounded-md object-contain bg-white p-0.5">
                 <div>
-                    <p class="text-emerald-400 font-bold text-xs"><span id="vehicleIcon">🏍️</span> <span id="driverDisplay">Repartidor</span></p>
-                    <p class="text-[10px] text-slate-400">Pedido <span id="levelDisplay">1</span>/100</p>
-                    <div class="flex items-center gap-2">
-                        <p class="text-yellow-400 font-bold text-xs">💰 $<span id="moneyDisplay">0</span></p>
-                        <p class="text-blue-400 font-bold text-xs">💎 <span id="diamondDisplay">0</span></p>
-                        <p id="starDisplayContainer" class="text-orange-400 font-bold text-xs hidden pl-2 border-l border-slate-600">⭐ <span id="starDisplayCount">0</span></p>
+                    <p class="text-emerald-400 font-bold text-[10px]"><span id="vehicleIcon">🏍️</span> <span id="driverDisplay">Repartidor</span></p>
+                    <p class="text-[9px] text-slate-400">Pedido <span id="levelDisplay">1</span>/100</p>
+                    <div class="flex items-center gap-1">
+                        <p class="text-yellow-400 font-bold text-[10px]">💰$<span id="moneyDisplay">0</span></p>
+                        <p class="text-blue-400 font-bold text-[10px]">💎<span id="diamondDisplay">0</span></p>
+                        <p id="starDisplayContainer" class="text-orange-400 font-bold text-[10px] hidden pl-1 border-l border-slate-600">⭐<span id="starDisplayCount">0</span></p>
                     </div>
                 </div>
             </div>
             
 
             <!-- Botón para mostrar misión actual -->
-            <div id="missionContainer" class="bg-slate-800/95 px-2 py-1 rounded-lg border border-slate-600 shadow-md flex items-center">
-                <button onclick="showCurrentMission()" id="missionInfoBtn" class="text-cyan-400 hover:text-cyan-300 transition-colors text-xs font-bold px-1 py-0.5 rounded" title="Ver misión actual">
+            <div id="missionContainer" class="bg-slate-800/95 px-1.5 py-0.5 rounded-lg border border-slate-600 shadow-md flex items-center">
+                <button onclick="showCurrentMission()" id="missionInfoBtn" class="text-cyan-400 hover:text-cyan-300 transition-colors text-[10px] font-bold px-0.5 py-0.5 rounded" title="Ver misión actual">
                     <span id="missionIcon">🎯</span> MISIÓN
                 </button>
-                <div id="missionText" class="text-[10px] text-slate-300 ml-2 max-w-32 hidden"></div>
+                <div id="missionText" class="text-[9px] text-slate-300 ml-1 max-w-24 hidden"></div>
             </div>
             
             <!-- (Contenedor de estado eliminado por solicitud) -->
-            <div class="bg-slate-800/95 px-2 py-1 rounded-lg border border-slate-600 shadow-md">
-                <span id="timerDisplay" class="text-blue-400 font-bold text-sm">⏱️ 30</span>
+            <div class="bg-slate-800/95 px-1.5 py-0.5 rounded-lg border border-slate-600 shadow-md flex items-center gap-1">
+                <span class="text-[10px] text-slate-400">Entrega tu pedido</span>
+                <span id="timerDisplay" class="text-blue-400 font-bold text-sm">⏱️ 42</span>
             </div>
         </div>
 
@@ -2963,6 +2964,10 @@ function cleanupTimers() {
     if (tutorialInterval) clearInterval(tutorialInterval);
     semaphoreTimers.forEach(t => clearTimeout(t));
     semaphoreTimers = [];
+    
+    // Detener todos los sonidos procedurales
+    stopFluidMotoSound();
+    stopGameEffects();
 }
 
 function clearSemaphoreTimers() {
@@ -4396,6 +4401,20 @@ function instantDeliver() {
 
 // Función para reintentar el nivel manteniendo la posición de la casa
 function retryLevel() {
+    // Detener cualquier sonido que pueda estar activo
+    stopFluidMotoSound();
+    stopGameEffects();
+    
+    // Ocultar el overlay de crash
+    const overlay = $('overlay');
+    if (overlay) {
+        overlay.classList.add('hidden');
+        overlay.innerHTML = '';
+    }
+    
+    // Resetear estado del juego
+    gameState = 'IDLE';
+    
     // Se llama a generateLevel() para asegurar un comportamiento consistente
     // al reiniciar o pasar de nivel, incluyendo la pantalla "Preparado para el nivel".
     // Esto también reduce la duplicación de código.
@@ -6351,6 +6370,10 @@ function stopGameEffects() {
 function crash(msg, title = "¡PEDIDO CANCELADO!") {
     gameState = 'CRASHED';
     
+    // DETENER INMEDIATAMENTE TODOS LOS SONIDOS
+    stopFluidMotoSound();
+    stopGameEffects();
+    
     // Ocultar overlay de espera
     hideDeliveryWaitOverlay();
     
@@ -7052,46 +7075,46 @@ function win() {
     const repartidorImg = document.createElement('img');
     repartidorImg.src = repartidorSrc;
     repartidorImg.alt = 'Repartidor';
-    repartidorImg.style.width = '120px';
-    repartidorImg.style.height = '120px';
+    repartidorImg.style.width = '80px';
+    repartidorImg.style.height = '80px';
     repartidorImg.style.objectFit = 'cover';
     repartidorImg.style.borderRadius = '50%';
-    repartidorImg.style.border = '4px solid #10b981';
-    repartidorImg.style.boxShadow = '0 0 30px rgba(16,185,129,0.5)';
-    repartidorImg.style.marginBottom = '15px';
+    repartidorImg.style.border = '3px solid #10b981';
+    repartidorImg.style.boxShadow = '0 0 20px rgba(16,185,129,0.5)';
+    repartidorImg.style.marginBottom = '8px';
     repartidorImg.style.animation = 'popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
     ov.appendChild(repartidorImg);
     
     // 1. Número de Nivel (Next Level) - INSTANTÁNEO
     const nextLvlDiv = document.createElement('div');
     nextLvlDiv.className = 'level-transition-title';
-    nextLvlDiv.innerHTML = `<span class="text-slate-400 text-lg font-light uppercase tracking-widest">Nivel Completado</span><br><span class="text-6xl font-black text-white" style="text-shadow: 0 0 30px rgba(16,185,129,0.5);">${level}</span>`;
+    nextLvlDiv.innerHTML = `<span class="text-slate-400 text-sm font-light uppercase tracking-widest">Nivel Completado</span><br><span class="text-4xl font-black text-white" style="text-shadow: 0 0 20px rgba(16,185,129,0.5);">${level}</span>`;
     nextLvlDiv.style.textAlign = 'center';
-    nextLvlDiv.style.marginBottom = '15px';
+    nextLvlDiv.style.marginBottom = '10px';
     nextLvlDiv.style.animation = 'popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.1s backwards';
     ov.appendChild(nextLvlDiv);
     
     // 2. Stats (Monedas ganadas) - INSTANTÁNEO
     const statsDiv = document.createElement('div');
-    statsDiv.className = 'flex flex-col gap-2 mb-8 items-center'; // Cambiado a columna para mostrar detalle
+    statsDiv.className = 'flex flex-col gap-1 mb-4 items-center'; // Más compacto
     statsDiv.style.animation = 'fadeIn 0.5s ease-out 0.2s backwards';
     
     // Detalle de ganancias
     let bonusText = '';
-    if (complexityBonus > 0) bonusText += `<br><span class="text-sm text-cyan-300">🏗️ Bono Constructor: +$${complexityBonus}</span>`;
-    if (halfTimeBonus > 0) bonusText += `<br><span class="text-sm text-blue-300">⚡ Bono Velocidad: +$${halfTimeBonus}</span>`;
+    if (complexityBonus > 0) bonusText += `<span class="text-xs text-cyan-300">🏗️ Bono Constructor: +$${complexityBonus}</span><br>`;
+    if (halfTimeBonus > 0) bonusText += `<span class="text-xs text-blue-300">⚡ Bono Velocidad: +$${halfTimeBonus}</span>`;
     
     statsDiv.innerHTML = `
-        <div class="flex gap-4">
-            <div class="bg-slate-800/50 p-3 rounded-2xl border border-slate-700 backdrop-blur text-center min-w-[120px]">
-                <div class="text-3xl mb-1">💰</div>
-                <div class="text-yellow-400 font-bold text-2xl">+$${totalEarned}</div>
-                ${bonusText ? `<div class="mt-2 pt-2 border-t border-slate-600/50">${bonusText}</div>` : ''}
+        <div class="flex gap-3">
+            <div class="bg-slate-800/50 p-2 rounded-xl border border-slate-700 backdrop-blur text-center min-w-[100px]">
+                <div class="text-2xl mb-0.5">💰</div>
+                <div class="text-yellow-400 font-bold text-xl">+$${totalEarned}</div>
+                ${bonusText ? `<div class="mt-1 pt-1 border-t border-slate-600/50 text-xs">${bonusText}</div>` : ''}
             </div>
             ${levelStars > 0 ? `
-            <div class="bg-slate-800/50 p-3 rounded-2xl border border-slate-700 backdrop-blur text-center min-w-[90px] h-fit">
-                <div class="text-3xl mb-1">⭐</div>
-                <div class="text-purple-400 font-bold text-xl">+${levelStars}</div>
+            <div class="bg-slate-800/50 p-2 rounded-xl border border-slate-700 backdrop-blur text-center min-w-[70px] h-fit">
+                <div class="text-2xl mb-0.5">⭐</div>
+                <div class="text-purple-400 font-bold text-lg">+${levelStars}</div>
             </div>` : ''}
         </div>
     `;
