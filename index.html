@@ -752,7 +752,7 @@ function startNeonIntro() {
     <div id="introOverlay" class="fixed inset-0 z-[500] bg-black hidden">
         <div class="absolute inset-0 flex items-center justify-center bg-black">
              <!-- Video a pantalla completa real del contenedor -->
-             <video id="introVideo" class="w-full h-full object-contain bg-black" src="intro.mp4" playsinline preload="auto"></video>
+             <video id="introVideo" class="w-full h-full object-contain bg-black" src="https://drive.google.com/uc?export=download&id=1Xu36HNGsuhfRkqKOeH_gBlM2jitmuPNw" playsinline preload="auto"></video>
         </div>
         <div class="absolute inset-x-0 bottom-0 pb-[env(safe-area-inset-bottom)] flex flex-col items-center gap-2 px-4 text-center">
             
@@ -882,7 +882,7 @@ function startNeonIntro() {
             <!-- Botón para mostrar misión actual -->
             <div id="missionContainer" class="bg-slate-800/95 px-2 py-1 rounded-lg border border-slate-600 shadow-md flex items-center">
                 <button onclick="showCurrentMission()" id="missionInfoBtn" class="text-cyan-400 hover:text-cyan-300 transition-colors text-xs font-bold px-1 py-0.5 rounded" title="Ver misión actual">
-                    🎯 MISIÓN
+                    <span id="missionIcon">🎯</span> MISIÓN
                 </button>
                 <div id="missionText" class="text-[10px] text-slate-300 ml-2 max-w-32 hidden"></div>
             </div>
@@ -909,8 +909,8 @@ function startNeonIntro() {
                     <div class="relative z-10 text-center">
                         <!-- Título con icono -->
                         <div class="flex items-center justify-center gap-3 mb-6">
-                            <div class="text-4xl animate-bounce">🎯</div>
-                            <h2 class="text-2xl font-bold text-white uppercase tracking-wider">Nueva Misión</h2>
+                            <div id="modalMissionIcon" class="text-4xl animate-bounce">🎯</div>
+                            <h2 id="modalTitleText" class="text-2xl font-bold text-white uppercase tracking-wider">Nueva Misión</h2>
                         </div>
                         
                         <!-- Información del nivel -->
@@ -947,6 +947,48 @@ function startNeonIntro() {
             </div>
             <!-- Overlay de carga corto para evitar flicker al generar niveles -->
             <div id="levelLoading" class="hidden fixed inset-0 z-[80] bg-black/95"></div>
+            
+            <!-- Overlay de ESPERA mientras el vehículo entrega -->
+            <div id="deliveryWaitOverlay" class="hidden fixed inset-0 z-[60] bg-gradient-to-b from-slate-900 via-blue-900 to-slate-900 flex flex-col items-center justify-center">
+                <!-- Fondo decorativo con patrón -->
+                <div class="absolute inset-0 opacity-10" style="background-image: url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.4\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
+                
+                <!-- Contenedor principal -->
+                <div class="relative z-10 flex flex-col items-center justify-center w-full max-w-sm px-4">
+                    <!-- Video de espera -->
+                    <div class="relative w-full rounded-2xl overflow-hidden border-4 border-yellow-400/50 shadow-2xl mb-6" style="box-shadow: 0 0 40px rgba(250, 204, 21, 0.3);">
+                        <video id="waitVideo" class="w-full h-auto object-cover" loop muted playsinline preload="auto">
+                            <source src="ESPERA.mp4" type="video/mp4">
+                        </video>
+                        <!-- Overlay brillante en el video -->
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none"></div>
+                    </div>
+                    
+                    <!-- Icono animado -->
+                    <div class="flex items-center justify-center gap-2 mb-4">
+                        <span class="text-4xl animate-bounce" style="animation-delay: 0s;">📦</span>
+                        <span class="text-3xl animate-bounce" style="animation-delay: 0.2s;">🛵</span>
+                        <span class="text-4xl animate-bounce" style="animation-delay: 0.4s;">🏠</span>
+                    </div>
+                    
+                    <!-- Texto principal -->
+                    <h2 class="text-2xl font-bold text-white mb-2 text-center uppercase tracking-wider">
+                        🚚 Esperando el Pedido
+                    </h2>
+                    
+                    <!-- Indicador de progreso animado -->
+                    <div class="flex items-center gap-1 mb-4">
+                        <div class="w-3 h-3 bg-yellow-400 rounded-full animate-pulse" style="animation-delay: 0s;"></div>
+                        <div class="w-3 h-3 bg-yellow-400 rounded-full animate-pulse" style="animation-delay: 0.3s;"></div>
+                        <div class="w-3 h-3 bg-yellow-400 rounded-full animate-pulse" style="animation-delay: 0.6s;"></div>
+                    </div>
+                    
+                    <!-- Mensaje motivacional -->
+                    <p class="text-cyan-300 text-sm text-center font-medium opacity-90">
+                        Tu repartidor está en camino... 🏃‍♂️💨
+                    </p>
+                </div>
+            </div>
         </div>
 
         <!-- ZONA INFERIOR FIJA: Contenedor para todos los controles -->
@@ -1115,7 +1157,8 @@ function getCoreAssets() {
         'fulgoneta.png',
         'LOGO-RAPPI.png',
         'INDRIVER.png',
-        'favicon.png'
+        'favicon.png',
+        'ESPERA.mp4'
     ];
     // Unir con imágenes ya declaradas para precarga si existen
     try {
@@ -3151,8 +3194,10 @@ const tutorialSteps = [
             const mc = $('missionContainer');
             if (mc) {
                 mc.style.zIndex = '205'; 
-                $('missionText').textContent = "COMPLETAR RUTA";
-                $('missionIcon').className = "text-base animate-bounce";
+                const missionText = $('missionText');
+                const missionIcon = $('missionIcon');
+                if (missionText) missionText.textContent = "COMPLETAR RUTA";
+                if (missionIcon) missionIcon.className = "text-base animate-bounce";
             }
         }
     },
@@ -3628,8 +3673,15 @@ function updateMissionProgress(event, data = {}) {
     }
 
     if (completed) {
+        currentMission.completed = true; // Marcar misión como completada
         showMissionSuccess();
     }
+}
+
+// Función para verificar si la misión actual está completa
+function isMissionComplete() {
+    if (!currentMission) return true; // Sin misión = puede continuar
+    return currentMission.completed === true;
 }
 
 // Función para mostrar éxito de misión
@@ -3745,8 +3797,11 @@ function generateLevel(showLoading = true) {
     updateStarUI();
 
     // --- GENERAR MISIÓN DEL NIVEL (Nuevos Tipos Agregados) ---
-    // Si estamos reintentando el nivel y hay misión guardada, usarla
-    if (savedMissionForRetry && savedLevelForRetry === level) {
+    // Misiones SOLO aparecen cada 4 niveles (4, 8, 12, 16, etc.)
+    const isLevelWithMission = (level % 4 === 0) && level >= 4;
+    
+    // Si estamos reintentando el nivel y hay misión guardada Y es nivel de misión, usarla
+    if (savedMissionForRetry && savedLevelForRetry === level && isLevelWithMission) {
          // Clonar para evitar modificar la referencia guardada si reiniciamos de nuevo
          currentMission = JSON.parse(JSON.stringify(savedMissionForRetry));
          
@@ -3777,11 +3832,23 @@ function generateLevel(showLoading = true) {
          
          console.log('Restaurada misión: ', currentMission);
     } 
-    else if (level < 2) {
+    else if (!isLevelWithMission) {
+        // Niveles normales: solo entregar el pedido, sin misión especial
         currentMission = null;
-        $('missionContainer').classList.add('hidden');
+        const mCont = $('missionContainer');
+        const mText = $('missionText');
+        const mIcon = $('missionIcon');
+        if (mCont) {
+            mCont.classList.remove('hidden');
+            if (mIcon) mIcon.textContent = '📦';
+            if (mText) {
+                mText.classList.remove('hidden');
+                mText.innerHTML = 'Entrega tu pedido';
+                mText.classList.remove('text-emerald-400');
+            }
+        }
     } else {
-        // SISTEMA DE MISIONES OBLIGATORIAS MEJORADO
+        // NIVEL CON MISIÓN (cada 4 niveles: 4, 8, 12, 16...)
         // Limpiar misión guardada si avanzamos de nivel
         savedMissionForRetry = null;
         savedLevelForRetry = null;
@@ -3958,6 +4025,7 @@ function generateLevel(showLoading = true) {
 
         if (mCont && mText && mIcon) {
             mCont.classList.remove('hidden');
+            mText.classList.remove('hidden'); // Mostrar texto de misión
             mCheck.classList.add('hidden'); // Reset check
             
             // Icono específico de la misión
@@ -5417,6 +5485,31 @@ function timeExpired() {
     crash('¡El cliente canceló por demora!', '¡TIEMPO AGOTADO!');
 }
 
+// === FUNCIONES DEL OVERLAY DE ESPERA ===
+function showDeliveryWaitOverlay() {
+    const overlay = $('deliveryWaitOverlay');
+    const video = $('waitVideo');
+    if (overlay) {
+        overlay.classList.remove('hidden');
+        if (video) {
+            video.currentTime = 0;
+            video.play().catch(() => {}); // Ignorar errores de autoplay
+        }
+    }
+}
+
+function hideDeliveryWaitOverlay() {
+    const overlay = $('deliveryWaitOverlay');
+    const video = $('waitVideo');
+    if (overlay) {
+        overlay.classList.add('hidden');
+        if (video) {
+            video.pause();
+            video.currentTime = 0;
+        }
+    }
+}
+
 // Función para mostrar mensaje de salida del pedido
 function showOrderReady() {
     // Verificar si el juego ya terminó (por tiempo) antes de mostrar
@@ -5474,14 +5567,21 @@ function showMissionModal() {
     if ($('modalLevelDisplay')) $('modalLevelDisplay').textContent = level;
     if ($('modalTimeDisplay')) $('modalTimeDisplay').textContent = maxTime;
     
-    // Mostrar texto de misión
+    // Mostrar texto de misión y actualizar título según tipo de nivel
     const modalText = $('modalMissionText');
-    if (modalText) {
-        if (currentMission) {
-            modalText.innerHTML = `<span class="text-cyan-300">🎯</span> ${currentMission.text}`;
-        } else {
-            modalText.innerHTML = '¡Entrega el pedido antes de que se acabe el tiempo!';
-        }
+    const modalTitle = $('modalTitleText');
+    const modalIcon = $('modalMissionIcon');
+    
+    if (currentMission) {
+        // Nivel con misión especial
+        if (modalTitle) modalTitle.textContent = 'Nueva Misión';
+        if (modalIcon) modalIcon.textContent = '🎯';
+        if (modalText) modalText.innerHTML = `<span class="text-cyan-300">🎯</span> ${currentMission.text}`;
+    } else {
+        // Nivel normal sin misión
+        if (modalTitle) modalTitle.textContent = 'Nuevo Pedido';
+        if (modalIcon) modalIcon.textContent = '📦';
+        if (modalText) modalText.innerHTML = 'Entrega tu pedido';
     }
     
     // Mostrar modal
@@ -5675,6 +5775,9 @@ function actuallyStartCar() {
     // Detener render de edición si estuviera activo
     if (editRenderId) { cancelAnimationFrame(editRenderId); editRenderId = null; }
     $('btnStart').classList.add('opacity-50', 'pointer-events-none');
+    
+    // Mostrar overlay de espera con video
+    showDeliveryWaitOverlay();
     
     if($('statusText')) {
         $('statusText').textContent = '¡ENTREGANDO! ⏱️';
@@ -6228,6 +6331,9 @@ function stopGameEffects() {
 
 function crash(msg, title = "¡PEDIDO CANCELADO!") {
     gameState = 'CRASHED';
+    
+    // Ocultar overlay de espera
+    hideDeliveryWaitOverlay();
     
     // --- MANEJAR MISIONES DE DAÑO SIN RECURSIÓN ---
     if (currentMission && currentMission.type === 'no_damage') {
@@ -6842,11 +6948,35 @@ function win() {
     stopGameEffects(); 
     clearInterval(deliveryTimer);
     
+    // Ocultar overlay de espera
+    hideDeliveryWaitOverlay();
+    
     // Calcular tiempo de entrega para misiones antes de que se resetee
     const deliveryTime = Math.floor((Date.now() - deliveryStartTime) / 1000);
     
     // --- ACTUALIZAR MISIONES DE NIVEL COMPLETADO ---
     updateMissionProgress('level_completed', { timeElapsed: deliveryTime });
+    
+    // --- VERIFICAR SI LA MISIÓN ESTÁ COMPLETA ---
+    if (currentMission && !isMissionComplete()) {
+        // Misión no completada - mostrar mensaje de fallo
+        gameState = 'EDITING';
+        
+        const overlay = $('overlay');
+        overlay.classList.remove('hidden');
+        overlay.innerHTML = `
+            <div class="flex flex-col items-center justify-center h-full bg-black/95 p-6">
+                <div class="text-8xl mb-6">❌</div>
+                <h2 class="text-3xl font-bold text-red-400 mb-4 text-center">¡MISIÓN NO COMPLETADA!</h2>
+                <p class="text-lg text-white mb-2 text-center">Llegaste a la meta pero no cumpliste la misión:</p>
+                <p class="text-xl text-yellow-400 mb-6 text-center font-bold">${currentMission.text}</p>
+                <button onclick="retryLevel()" class="bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-xl font-bold text-xl transition-all">
+                    🔄 Reintentar Nivel
+                </button>
+            </div>
+        `;
+        return; // No continuar con la victoria
+    }
     
     // EVITAR DOBLES PANTALLAS: Asegurar que el modal del cofre no salte
     if(window.chestModalTimer) clearTimeout(window.chestModalTimer);
@@ -6895,13 +7025,31 @@ function win() {
     ov.style.padding = '10px';
     ov.style.zIndex = '1000'; // Superponer a todo
     
+    // 0. Imagen del repartidor según el nivel
+    const repartidorImages = ['repartidor.jpeg', 'repartidor1.png', 'repartidor2.png', 'repartidor3.png'];
+    const repartidorIndex = (level - 1) % repartidorImages.length;
+    const repartidorSrc = repartidorImages[repartidorIndex];
+    
+    const repartidorImg = document.createElement('img');
+    repartidorImg.src = repartidorSrc;
+    repartidorImg.alt = 'Repartidor';
+    repartidorImg.style.width = '120px';
+    repartidorImg.style.height = '120px';
+    repartidorImg.style.objectFit = 'cover';
+    repartidorImg.style.borderRadius = '50%';
+    repartidorImg.style.border = '4px solid #10b981';
+    repartidorImg.style.boxShadow = '0 0 30px rgba(16,185,129,0.5)';
+    repartidorImg.style.marginBottom = '15px';
+    repartidorImg.style.animation = 'popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+    ov.appendChild(repartidorImg);
+    
     // 1. Número de Nivel (Next Level) - INSTANTÁNEO
     const nextLvlDiv = document.createElement('div');
     nextLvlDiv.className = 'level-transition-title';
     nextLvlDiv.innerHTML = `<span class="text-slate-400 text-lg font-light uppercase tracking-widest">Nivel Completado</span><br><span class="text-6xl font-black text-white" style="text-shadow: 0 0 30px rgba(16,185,129,0.5);">${level}</span>`;
     nextLvlDiv.style.textAlign = 'center';
-    nextLvlDiv.style.marginBottom = '20px'; // Reducido un poco
-    nextLvlDiv.style.animation = 'popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+    nextLvlDiv.style.marginBottom = '15px';
+    nextLvlDiv.style.animation = 'popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.1s backwards';
     ov.appendChild(nextLvlDiv);
     
     // 2. Stats (Monedas ganadas) - INSTANTÁNEO
@@ -7511,27 +7659,36 @@ function drawTile(tile) {
     
     // DIBUJAR DIAMANTE (Si existe y no ha sido recolectado)
     if (tile.hasDiamond) {
-        // Efecto flotante y rotativo usando tiempo cacheado
-        if (!window.diamondFloatTime) window.diamondFloatTime = 0;
-        window.diamondFloatTime += 0.1;
-        const floatY = Math.sin(window.diamondFloatTime) * 2;
-        const rotation = window.diamondFloatTime * 2;
+        // Efecto flotante mejorado usando tiempo basado en performance
+        const now = performance.now() / 1000;
+        const floatY = Math.sin(now * 3) * 5; // Mayor amplitud de flotación
+        const pulseScale = 1 + Math.sin(now * 5) * 0.15; // Efecto pulsante
+        const glowIntensity = 0.5 + Math.sin(now * 4) * 0.3; // Brillo pulsante
         
         ctx.save();
         ctx.translate(cx, cy + floatY);
-        ctx.rotate(rotation);
         
-        // Sombra en el suelo
-        ctx.save();
-        ctx.rotate(-rotation); // Contra-rotar para mantener sombra estable
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        // Aura de brillo pulsante
+        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 18 * pulseScale);
+        gradient.addColorStop(0, `rgba(59, 130, 246, ${glowIntensity})`);
+        gradient.addColorStop(0.5, `rgba(96, 165, 250, ${glowIntensity * 0.5})`);
+        gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+        ctx.fillStyle = gradient;
         ctx.beginPath();
-        ctx.ellipse(0, 10 - floatY, 8, 3, 0, 0, Math.PI*2);
+        ctx.arc(0, 0, 18 * pulseScale, 0, Math.PI * 2);
         ctx.fill();
-        ctx.restore();
+        
+        // Sombra en el suelo (se mueve con la flotación)
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.beginPath();
+        ctx.ellipse(0, 12 - floatY, 10, 4, 0, 0, Math.PI*2);
+        ctx.fill();
+        
+        // Escalar diamante con efecto pulsante
+        ctx.scale(pulseScale, pulseScale);
         
         // Diamante principal
-        const size = 8;
+        const size = 10;
         ctx.fillStyle = '#3b82f6'; // Blue-500
         ctx.beginPath();
         ctx.moveTo(0, -size);
