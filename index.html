@@ -904,32 +904,40 @@ function startNeonIntro() {
             
             <!-- Modal de Misión -->
             <div id="missionModal" class="hidden fixed inset-0 bg-black flex items-center justify-center z-50">
-                <div class="relative bg-gradient-to-br from-slate-800 via-blue-900 to-purple-900 rounded-2xl p-8 max-w-md mx-4 border border-slate-600">
+                <div class="relative bg-gradient-to-br from-slate-800 via-blue-900 to-purple-900 rounded-2xl p-6 max-w-md mx-4 border border-slate-600">
                     <!-- Contenido del modal -->
                     <div class="relative z-10 text-center">
+                        <!-- Video de espera en la parte superior -->
+                        <div class="relative w-full max-w-xs mx-auto rounded-xl overflow-hidden border-2 border-yellow-400/50 shadow-xl mb-4" style="box-shadow: 0 0 20px rgba(250, 204, 21, 0.3);">
+                            <video id="waitVideoModal" class="w-full h-auto object-cover" loop muted playsinline preload="auto">
+                                <source src="ESPERA.mp4" type="video/mp4">
+                            </video>
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none"></div>
+                        </div>
+                        
                         <!-- Título con icono -->
-                        <div class="flex items-center justify-center gap-3 mb-6">
-                            <div id="modalMissionIcon" class="text-4xl animate-bounce">🎯</div>
-                            <h2 id="modalTitleText" class="text-2xl font-bold text-white uppercase tracking-wider">Nueva Misión</h2>
+                        <div class="flex items-center justify-center gap-3 mb-4">
+                            <div id="modalMissionIcon" class="text-3xl animate-bounce">🎯</div>
+                            <h2 id="modalTitleText" class="text-xl font-bold text-white uppercase tracking-wider">Nueva Misión</h2>
                         </div>
                         
                         <!-- Información del nivel -->
-                        <div class="bg-black/50 rounded-lg p-4 mb-6 border border-cyan-400/50">
-                            <p class="text-center text-cyan-300 font-bold text-xl mb-3">Pedido <span id="modalLevelDisplay">1</span></p>
-                            <div id="modalMissionText" class="text-center text-white font-semibold text-lg leading-relaxed">
+                        <div class="bg-black/50 rounded-lg p-3 mb-4 border border-cyan-400/50">
+                            <p class="text-center text-cyan-300 font-bold text-lg mb-2">Pedido <span id="modalLevelDisplay">1</span></p>
+                            <div id="modalMissionText" class="text-center text-white font-semibold text-base leading-relaxed">
                                 <!-- Texto de misión se insertará aquí -->
                             </div>
                         </div>
                         
                         <!-- Indicador de tiempo -->
-                        <div class="flex items-center justify-center gap-3 text-yellow-300 font-bold text-lg mb-8">
-                            <span class="text-2xl">⏱️</span>
+                        <div class="flex items-center justify-center gap-3 text-yellow-300 font-bold text-base mb-6">
+                            <span class="text-xl">⏱️</span>
                             <span id="modalTimeDisplay">30</span>
                             <span>segundos</span>
                         </div>
                         
                         <!-- Botón COMENZAR -->
-                        <button id="startMissionBtn" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white font-bold py-4 px-8 rounded-full text-xl uppercase tracking-wider shadow-2xl transform hover:scale-105 transition-all duration-300 border-2 border-green-300 hover:border-green-200">
+                        <button id="startMissionBtn" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white font-bold py-3 px-6 rounded-full text-lg uppercase tracking-wider shadow-2xl transform hover:scale-105 transition-all duration-300 border-2 border-green-300 hover:border-green-200">
                             🚀 COMENZAR
                         </button>
                     </div>
@@ -4026,7 +4034,7 @@ function generateLevel(showLoading = true) {
         if (mCont && mText && mIcon) {
             mCont.classList.remove('hidden');
             mText.classList.remove('hidden'); // Mostrar texto de misión
-            mCheck.classList.add('hidden'); // Reset check
+            if (mCheck) mCheck.classList.add('hidden'); // Reset check
             
             // Icono específico de la misión
             const missionData = ALL_MISSIONS[missionType];
@@ -5584,6 +5592,13 @@ function showMissionModal() {
         if (modalText) modalText.innerHTML = 'Entrega tu pedido';
     }
     
+    // Iniciar el video de espera en el modal
+    const waitVideoModal = $('waitVideoModal');
+    if (waitVideoModal) {
+        waitVideoModal.currentTime = 0;
+        waitVideoModal.play().catch(() => {}); // Ignorar errores de autoplay
+    }
+    
     // Mostrar modal
     modal.classList.remove('hidden');
     
@@ -5597,6 +5612,13 @@ function showMissionModal() {
 function closeMissionModal() {
     const modal = $('missionModal');
     if (!modal) return;
+    
+    // Detener el video de espera
+    const waitVideoModal = $('waitVideoModal');
+    if (waitVideoModal) {
+        waitVideoModal.pause();
+        waitVideoModal.currentTime = 0;
+    }
     
     // Ocultar modal con animación
     modal.classList.add('hidden');
@@ -5775,9 +5797,6 @@ function actuallyStartCar() {
     // Detener render de edición si estuviera activo
     if (editRenderId) { cancelAnimationFrame(editRenderId); editRenderId = null; }
     $('btnStart').classList.add('opacity-50', 'pointer-events-none');
-    
-    // Mostrar overlay de espera con video
-    showDeliveryWaitOverlay();
     
     if($('statusText')) {
         $('statusText').textContent = '¡ENTREGANDO! ⏱️';
