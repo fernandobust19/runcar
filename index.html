@@ -3546,6 +3546,7 @@ const PRIZE_WHEEL_OPTIONS = [
 let isWheelSpinning = false;
 let prizeWheelActive = false;
 let pendingWinCallback = null;
+let shouldShowPrizeWheel = false; // Indica si se debe mostrar la ruleta al completar el nivel
 
 function showPrizeWheelModal() {
     const modal = $('prizeWheelModal');
@@ -6343,11 +6344,9 @@ function gameLoop() {
                 life: 80,
                 vy: -1.5
             });
-            // Si se recogen 6 diamantes, mostrar ruleta de premios
+            // Si se recogen 6 diamantes, marcar para mostrar ruleta al completar el nivel
             if (diamondsCollected > 0 && diamondsCollected % 6 === 0) {
-                setTimeout(() => {
-                    showPrizeWheelModal();
-                }, 1000);
+                shouldShowPrizeWheel = true;
             }
         }
         
@@ -7269,12 +7268,7 @@ function win() {
     stopGameEffects(); 
     clearInterval(deliveryTimer);
     
-    // Si la ruleta de premios está activa, esperar a que se cierre
-    if (prizeWheelActive) {
-        pendingWinCallback = () => showWinScreen();
-        return;
-    }
-    
+    // Mostrar pantalla de victoria (la ruleta se mostrará dentro si corresponde)
     showWinScreen();
 }
 
@@ -7309,7 +7303,20 @@ function showWinScreen() {
         return; // No continuar con la victoria
     }
     
-    // EVITAR DOBLES PANTALLAS: Asegurar que el modal del cofre no salte
+    // --- SI SE DEBE MOSTRAR LA RULETA, MOSTRARLA PRIMERO ---
+    if (shouldShowPrizeWheel) {
+        shouldShowPrizeWheel = false; // Resetear
+        prizeWheelActive = true;
+        pendingWinCallback = () => showVictoryOverlay(deliveryTime);
+        showPrizeWheelModal();
+        return;
+    }
+    
+    // Mostrar pantalla de victoria normal
+    showVictoryOverlay(deliveryTime);
+}
+
+function showVictoryOverlay(deliveryTime) {
     if(window.chestModalTimer) clearTimeout(window.chestModalTimer);
     $('videoOverlay').classList.add('hidden');
     
