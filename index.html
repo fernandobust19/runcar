@@ -1153,7 +1153,7 @@ function startNeonIntro() {
     </div>
 
     <!-- RULETA DE PREMIOS (6 diamantes) -->
-    <div id="prizeWheelModal" class="hidden fixed inset-0 z-[300] bg-black/95 flex items-center justify-center">
+    <div id="prizeWheelModal" class="hidden fixed inset-0 z-[2000] bg-black/95 flex items-center justify-center">
         <div class="relative w-full max-w-sm mx-4 bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 rounded-3xl p-6 border-4 border-yellow-400 shadow-2xl">
             <!-- Título -->
             <div class="text-center mb-4">
@@ -3544,10 +3544,15 @@ const PRIZE_WHEEL_OPTIONS = [
 ];
 
 let isWheelSpinning = false;
+let prizeWheelActive = false;
+let pendingWinCallback = null;
 
 function showPrizeWheelModal() {
     const modal = $('prizeWheelModal');
     if (!modal) return;
+    
+    // Marcar ruleta como activa
+    prizeWheelActive = true;
     
     // Pausar el juego
     if (gameState === 'RUNNING') {
@@ -3720,6 +3725,9 @@ function closePrizeWheelModal(prize) {
     const modal = $('prizeWheelModal');
     if (modal) modal.classList.add('hidden');
     
+    // Marcar ruleta como inactiva
+    prizeWheelActive = false;
+    
     // Mostrar mensaje si ganó comida
     if (prize && prize.isFood) {
         showGameModal({
@@ -3727,8 +3735,22 @@ function closePrizeWheelModal(prize) {
             title: '¡Premio Reclamado!',
             message: `Has ganado: ${prize.text}. ¡Muestra este mensaje en tu próximo pedido!`,
             type: 'success',
-            buttons: [{ text: '¡Genial!', primary: true }]
+            buttons: [{ text: '¡Genial!', primary: true, onClick: () => {
+                // Ejecutar callback pendiente de victoria después de cerrar el modal de premio
+                if (pendingWinCallback) {
+                    const callback = pendingWinCallback;
+                    pendingWinCallback = null;
+                    callback();
+                }
+            }}]
         });
+    } else {
+        // Si no ganó comida, ejecutar callback pendiente inmediatamente
+        if (pendingWinCallback) {
+            const callback = pendingWinCallback;
+            pendingWinCallback = null;
+            callback();
+        }
     }
     
     // Continuar el juego
@@ -4080,7 +4102,7 @@ function generateLevel(showLoading = true) {
          else if (currentMission.type === 'perfect_route') currentMission.text = `🎯 Usa máximo ${currentMission.maxTiles} rotaciones`;
          else if (currentMission.type === 'collect_all_stars') currentMission.text = `⭐ Recolecta ${currentMission.target} estrellas`;
          else if (currentMission.type === 'no_damage') currentMission.text = `😇 Sin tocar obstáculos`;
-         else if (currentMission.type === 'minimal_tiles') currentMission.text = `🧩 Usa máximo ${currentMission.maxTiles} piezas`;
+         else if (currentMission.type === 'minimal_tiles') currentMission.text = `🧩 Usa exactamente ${currentMission.maxTiles} piezas`;
          else if (currentMission.type === 'chain_boosts') currentMission.text = `🔥 ${currentMission.target} velocidades seguidas`;
          else if (currentMission.type === 'zigzag_master') currentMission.text = `🔄 ${currentMission.target} cambios de dirección`;
          else if (currentMission.type === 'bridge_master') currentMission.text = `🔨 Construye ${currentMission.target} puentes`;
@@ -4196,7 +4218,7 @@ function generateLevel(showLoading = true) {
                 type: 'minimal_tiles',
                 maxTiles: targetTiles,
                 tilesUsed: 0,
-                text: `🧩 Usa máximo ${targetTiles} piezas`
+                text: `🧩 Usa exactamente ${targetTiles} piezas`
             };
         } else if (missionType === 'chain_boosts') {
             currentMission = {
@@ -4223,7 +4245,7 @@ function generateLevel(showLoading = true) {
                 text: `🔨 Construye ${bridgeTarget} puentes`
             };
         } else if (missionType === 'speed_demon') {
-            const timeLimit = Math.max(15, 25 - level);
+            const timeLimit = Math.max(30, 40 - level);
             currentMission = {
                 type: 'speed_demon',
                 timeLimit: timeLimit,
@@ -6439,9 +6461,9 @@ function gameLoop() {
                         break;
 
                     case 'minimal_tiles':
-                        if (currentMission.tilesUsed > currentMission.maxTiles) {
-                            failMessage = `Máximo: ${currentMission.maxTiles} piezas<br>Usaste: ${currentMission.tilesUsed}`;
-                            failTitle = '¡DEMASIADAS PIEZAS!';
+                        if (currentMission.tilesUsed !== currentMission.maxTiles) {
+                            failMessage = `Exactas: ${currentMission.maxTiles} piezas<br>Usaste: ${currentMission.tilesUsed}`;
+                            failTitle = '¡CANTIDAD INCORRECTA!';
                             missionFailed = true;
                         }
                         break;
@@ -7247,6 +7269,16 @@ function win() {
     stopGameEffects(); 
     clearInterval(deliveryTimer);
     
+    // Si la ruleta de premios está activa, esperar a que se cierre
+    if (prizeWheelActive) {
+        pendingWinCallback = () => showWinScreen();
+        return;
+    }
+    
+    showWinScreen();
+}
+
+function showWinScreen() {
     // Ocultar overlay de espera
     hideDeliveryWaitOverlay();
     
