@@ -717,8 +717,53 @@ function startNeonIntro() {
     const splash = document.getElementById('splashScreen');
     if (splash) splash.classList.add('hidden');
 
-    // 2. Mostrar Overlay de Intro y Lanzar Video
-    startIntro();
+    // 2. Mostrar Pre-Intro primero, luego el Intro principal
+    startPreIntro();
+}
+
+function startPreIntro() {
+    const overlay = document.getElementById('preIntroOverlay');
+    const iframe = document.getElementById('preIntroVideo');
+    const skip = document.getElementById('preIntroSkipBtn');
+    
+    if (!overlay || !iframe) {
+        // Si no existe el pre-intro, ir directo al intro
+        startIntro();
+        return;
+    }
+    
+    // Mostrar overlay
+    overlay.classList.remove('hidden');
+    
+    // Cargar el video de Kapwing con autoplay
+    // URL embed de Kapwing: https://www.kapwing.com/e/ID?autoplay=true
+    iframe.src = 'https://www.kapwing.com/e/jJrKxWbSGM?autoplay=true';
+    
+    let videoFinished = false;
+    const finishPreIntro = () => {
+        if (videoFinished) return;
+        videoFinished = true;
+        
+        // Detener iframe
+        iframe.src = '';
+        
+        // Ocultar pre-intro
+        overlay.classList.add('hidden');
+        
+        // Continuar con el intro principal
+        startIntro();
+    };
+    
+    // El video de Kapwing dura 8 segundos, agregamos 1 segundo extra de margen
+    const videoDuration = 9000; // 9 segundos
+    setTimeout(() => {
+        if (!videoFinished) {
+            finishPreIntro();
+        }
+    }, videoDuration);
+    
+    // Botón saltar
+    if (skip) skip.onclick = finishPreIntro;
 }
 </script>
 
@@ -748,11 +793,29 @@ function startNeonIntro() {
         </div>
     </div>
 
+    <!-- PRE-INTRO VIDEO (Video antes del intro principal) -->
+    <div id="preIntroOverlay" class="fixed inset-0 z-[550] bg-black hidden">
+        <div class="absolute inset-0 flex items-center justify-center bg-black">
+             <!-- Iframe de Kapwing con autoplay -->
+             <iframe id="preIntroVideo" 
+                 class="w-full h-full" 
+                 src="" 
+                 frameborder="0" 
+                 allow="autoplay; fullscreen" 
+                 allowfullscreen
+                 style="border: none;">
+             </iframe>
+        </div>
+        <div class="absolute inset-x-0 bottom-0 pb-[env(safe-area-inset-bottom)] flex flex-col items-center gap-2 px-4 text-center">
+            <button id="preIntroSkipBtn" class="w-48 px-6 py-3 text-xs text-white/90 hover:text-white bg-slate-900/80 hover:bg-slate-800 rounded-full border border-white/20 transition-all mb-4 font-bold tracking-widest shadow-lg">SALTAR ▶</button>
+        </div>
+    </div>
+
     <!-- INTRO VIDEO + PRELOAD OVERLAY (centrado SIN recuadro blanco) -->
     <div id="introOverlay" class="fixed inset-0 z-[500] bg-black hidden">
         <div class="absolute inset-0 flex items-center justify-center bg-black">
              <!-- Video a pantalla completa real del contenedor -->
-             <video id="introVideo" class="w-full h-full object-contain bg-black" src="https://drive.google.com/uc?export=download&id=1Xu36HNGsuhfRkqKOeH_gBlM2jitmuPNw" playsinline preload="auto"></video>
+             <video id="introVideo" class="w-full h-full object-contain bg-black" src="intro.mp4" playsinline preload="auto"></video>
         </div>
         <div class="absolute inset-x-0 bottom-0 pb-[env(safe-area-inset-bottom)] flex flex-col items-center gap-2 px-4 text-center">
             
@@ -909,8 +972,7 @@ function startNeonIntro() {
                     <div class="relative z-10 text-center">
                         <!-- Video de espera en la parte superior -->
                         <div class="relative w-full max-w-xs mx-auto rounded-xl overflow-hidden border-2 border-yellow-400/50 shadow-xl mb-4" style="box-shadow: 0 0 20px rgba(250, 204, 21, 0.3);">
-                            <video id="waitVideoModal" class="w-full h-auto object-cover" loop muted playsinline preload="auto">
-                                <source src="ESPERA.mp4" type="video/mp4">
+                            <video id="waitVideoModal" class="w-full h-auto object-cover" src="ESPERA.mp4" loop muted playsinline preload="auto">
                             </video>
                             <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none"></div>
                         </div>
@@ -965,8 +1027,7 @@ function startNeonIntro() {
                 <div class="relative z-10 flex flex-col items-center justify-center w-full max-w-sm px-4">
                     <!-- Video de espera -->
                     <div class="relative w-full rounded-2xl overflow-hidden border-4 border-yellow-400/50 shadow-2xl mb-6" style="box-shadow: 0 0 40px rgba(250, 204, 21, 0.3);">
-                        <video id="waitVideo" class="w-full h-auto object-cover" loop muted playsinline preload="auto">
-                            <source src="ESPERA.mp4" type="video/mp4">
+                        <video id="waitVideo" class="w-full h-auto object-cover" src="ESPERA.mp4" loop muted playsinline preload="auto">
                         </video>
                         <!-- Overlay brillante en el video -->
                         <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none"></div>
@@ -1156,6 +1217,10 @@ function startNeonIntro() {
 
 <script>
 // ===== INTRO VIDEO + PRELOAD =====
+// Variable global para alternar videos de espera
+let currentWaitVideoIndex = 0;
+const WAIT_VIDEOS = ['ESPERA.mp4', 'ESPERA2.mp4'];
+
 function getCoreAssets() {
     const base = [
         'cesped.jpg',
@@ -1166,7 +1231,8 @@ function getCoreAssets() {
         'LOGO-RAPPI.png',
         'INDRIVER.png',
         'favicon.png',
-        'ESPERA.mp4'
+        'ESPERA.mp4',
+        'ESPERA2.mp4'
     ];
     // Unir con imágenes ya declaradas para precarga si existen
     try {
@@ -5610,11 +5676,24 @@ function showMissionModal() {
         if (modalText) modalText.innerHTML = 'Entrega tu pedido';
     }
     
-    // Iniciar el video de espera en el modal
+    // Alternar y cargar el video de espera correspondiente
+    const currentVideoSrc = WAIT_VIDEOS[currentWaitVideoIndex];
+    currentWaitVideoIndex = (currentWaitVideoIndex + 1) % WAIT_VIDEOS.length; // Alternar para la próxima vez
+    
+    // Actualizar ambos videos (modal y overlay de entrega)
     const waitVideoModal = $('waitVideoModal');
+    const waitVideoOverlay = $('waitVideo');
+    
     if (waitVideoModal) {
+        waitVideoModal.src = currentVideoSrc;
+        waitVideoModal.load();
         waitVideoModal.currentTime = 0;
         waitVideoModal.play().catch(() => {}); // Ignorar errores de autoplay
+    }
+    
+    if (waitVideoOverlay) {
+        waitVideoOverlay.src = currentVideoSrc;
+        waitVideoOverlay.load();
     }
     
     // Mostrar modal
