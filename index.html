@@ -717,53 +717,8 @@ function startNeonIntro() {
     const splash = document.getElementById('splashScreen');
     if (splash) splash.classList.add('hidden');
 
-    // 2. Mostrar Pre-Intro primero, luego el Intro principal
-    startPreIntro();
-}
-
-function startPreIntro() {
-    const overlay = document.getElementById('preIntroOverlay');
-    const iframe = document.getElementById('preIntroVideo');
-    const skip = document.getElementById('preIntroSkipBtn');
-    
-    if (!overlay || !iframe) {
-        // Si no existe el pre-intro, ir directo al intro
-        startIntro();
-        return;
-    }
-    
-    // Mostrar overlay
-    overlay.classList.remove('hidden');
-    
-    // Cargar el video de Kapwing con autoplay
-    // URL embed de Kapwing: https://www.kapwing.com/e/ID?autoplay=true
-    iframe.src = 'https://www.kapwing.com/e/jJrKxWbSGM?autoplay=true';
-    
-    let videoFinished = false;
-    const finishPreIntro = () => {
-        if (videoFinished) return;
-        videoFinished = true;
-        
-        // Detener iframe
-        iframe.src = '';
-        
-        // Ocultar pre-intro
-        overlay.classList.add('hidden');
-        
-        // Continuar con el intro principal
-        startIntro();
-    };
-    
-    // El video de Kapwing dura 8 segundos, agregamos 1 segundo extra de margen
-    const videoDuration = 9000; // 9 segundos
-    setTimeout(() => {
-        if (!videoFinished) {
-            finishPreIntro();
-        }
-    }, videoDuration);
-    
-    // Botón saltar
-    if (skip) skip.onclick = finishPreIntro;
+    // 2. Mostrar Overlay de Intro y Lanzar Video
+    startIntro();
 }
 </script>
 
@@ -790,24 +745,6 @@ function startPreIntro() {
 
         <div class="absolute bottom-8 text-slate-500 text-xs text-center px-4 max-w-sm">
             <span class="text-slate-600">Recomendado usar audífonos 🎧</span>
-        </div>
-    </div>
-
-    <!-- PRE-INTRO VIDEO (Video antes del intro principal) -->
-    <div id="preIntroOverlay" class="fixed inset-0 z-[550] bg-black hidden">
-        <div class="absolute inset-0 flex items-center justify-center bg-black">
-             <!-- Iframe de Kapwing con autoplay -->
-             <iframe id="preIntroVideo" 
-                 class="w-full h-full" 
-                 src="" 
-                 frameborder="0" 
-                 allow="autoplay; fullscreen" 
-                 allowfullscreen
-                 style="border: none;">
-             </iframe>
-        </div>
-        <div class="absolute inset-x-0 bottom-0 pb-[env(safe-area-inset-bottom)] flex flex-col items-center gap-2 px-4 text-center">
-            <button id="preIntroSkipBtn" class="w-48 px-6 py-3 text-xs text-white/90 hover:text-white bg-slate-900/80 hover:bg-slate-800 rounded-full border border-white/20 transition-all mb-4 font-bold tracking-widest shadow-lg">SALTAR ▶</button>
         </div>
     </div>
 
@@ -1212,6 +1149,49 @@ function startPreIntro() {
                  <button id="tutorialNextBtn" class="bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-1 px-3 rounded-full text-[11px] transition-transform active:scale-95">Siguiente</button>
             </div>
             <button id="tutorialSkipBtn" class="text-slate-300 text-[10px] mt-2 underline hover:text-white">Saltar Tutorial</button>
+        </div>
+    </div>
+
+    <!-- RULETA DE PREMIOS (6 diamantes) -->
+    <div id="prizeWheelModal" class="hidden fixed inset-0 z-[300] bg-black/95 flex items-center justify-center">
+        <div class="relative w-full max-w-sm mx-4 bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 rounded-3xl p-6 border-4 border-yellow-400 shadow-2xl">
+            <!-- Título -->
+            <div class="text-center mb-4">
+                <h2 class="text-2xl font-black text-yellow-400 drop-shadow-lg">🎰 ¡RULETA DE PREMIOS! 🎰</h2>
+                <p class="text-white/80 text-sm mt-1">¡Conseguiste 6 diamantes! 💎</p>
+            </div>
+            
+            <!-- Contenedor de la ruleta -->
+            <div class="relative w-64 h-64 mx-auto mb-6">
+                <!-- Indicador/Flecha -->
+                <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 z-20 text-4xl drop-shadow-lg">▼</div>
+                
+                <!-- Ruleta SVG -->
+                <svg id="prizeWheel" class="w-full h-full" viewBox="0 0 200 200">
+                    <defs>
+                        <filter id="wheelShadow" x="-20%" y="-20%" width="140%" height="140%">
+                            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.5"/>
+                        </filter>
+                    </defs>
+                    <g id="wheelGroup" transform="rotate(0, 100, 100)" filter="url(#wheelShadow)">
+                        <!-- Los segmentos se generan dinámicamente -->
+                    </g>
+                    <!-- Centro de la ruleta -->
+                    <circle cx="100" cy="100" r="20" fill="#1e1b4b" stroke="#fbbf24" stroke-width="3"/>
+                    <text x="100" y="105" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="bold">🎁</text>
+                </svg>
+            </div>
+            
+            <!-- Botón girar -->
+            <button id="spinWheelBtn" class="w-full py-4 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white font-black text-xl rounded-full shadow-lg transform hover:scale-105 transition-all active:scale-95">
+                🎲 ¡GIRAR RULETA!
+            </button>
+            
+            <!-- Resultado (oculto inicialmente) -->
+            <div id="prizeResult" class="hidden mt-4 p-4 bg-black/50 rounded-xl text-center">
+                <p id="prizeResultText" class="text-xl font-bold text-white"></p>
+                <button id="claimPrizeBtn" class="mt-3 px-6 py-2 bg-emerald-500 hover:bg-emerald-400 text-white font-bold rounded-full">✅ RECLAMAR</button>
+            </div>
         </div>
     </div>
 
@@ -3202,7 +3182,6 @@ const tutorialSteps = [
         text: "¡Bienvenido a <b>Delivery Rush</b>! Tu objetivo es conectar la carretera para que el repartidor llegue a la casa.",
         element: '#gameCanvas',
         onShow: () => {
-             speak("Bienvenido a Delivery Rush. Tu objetivo es conectar la carretera para que el repartidor llegue a la casa.");
              checkConnections();
              draw();
         }
@@ -3214,7 +3193,6 @@ const tutorialSteps = [
              return { col: 2, row: 2 }; 
         },
         onShow: (el) => {
-            speak("Toca las piezas de calle para girarlas y conectar el camino correctamente.");
             if (el) {
                 // Animación de demostración en la pieza REAL (2,2)
                 const targetIdx = 2 * COLS + 2;
@@ -3243,7 +3221,6 @@ const tutorialSteps = [
         element: '#gameCanvas',
         onShow: () => {
             if (tutorialInterval) clearInterval(tutorialInterval);
-            speak("Perfecto. La línea amarilla confirma que la ruta llega a la casa de entrega.");
             
             // Forzar solución correcta: Pieza (2,2) Horizontal (1)
             const t = grid[2 * COLS + 2];
@@ -3268,7 +3245,6 @@ const tutorialSteps = [
              if(mc) mc.classList.remove('hidden');
         },
         onShow: () => {
-            speak("Cada nivel tiene una misión especial. Cúmplela para ganar extras.");
             const mc = $('missionContainer');
             if (mc) {
                 mc.style.zIndex = '205'; 
@@ -3286,8 +3262,6 @@ const tutorialSteps = [
              return { col: 3, row: 2 }; 
         },
         onShow: () => {
-            speak("Recolecta 20 estrellas para desbloquear el Cofre Legendario con diez mil monedas.");
-            
             // Mostrar contador UI
             const sc = $('starDisplayContainer');
             if (sc) {
@@ -3309,14 +3283,13 @@ const tutorialSteps = [
         text: "Abajo tienes herramientas útiles: <b>⚡ VELOCIDAD</b>, <b>⏱️ TIEMPO</b> y <b>🌉 PUENTES</b>. ¡Y usa la <b>RADIO</b> 🎵 para poner tu propia música (Selecciona varias canciones)!",
         element: '#bottomControls',
         onShow: () => {
-             speak("Abajo tienes herramientas útiles: velocidad, tiempo y puentes. Y usa la radio para poner tu propia música.");
+             // Solo mostrar texto, sin voz
         }
     },
     {
         text: "Cuando estés listo, presiona <b>ENTREGAR</b> para enviar el vehículo.",
         element: '#btnStart',
         onShow: () => {
-            speak("Cuando estés listo, presiona Entregar para enviar el vehículo.");
             // Resaltar botón de entrega
             const btn = document.getElementById('btnStart');
             if(btn) {
@@ -3557,6 +3530,212 @@ let puzzleActive = false;
 let puzzlePieces = [];
 let draggedPiece = null;
 let mouseOffset = { x: 0, y: 0 };
+
+// --- SISTEMA DE RULETA DE PREMIOS ---
+const PRIZE_WHEEL_OPTIONS = [
+    { text: '🍔 Hamburguesa Gratis', color: '#ef4444', isFood: true },
+    { text: '🔄 Sigue Participando', color: '#6b7280', isFood: false },
+    { text: '🍕 Pizza Gratis', color: '#f97316', isFood: true },
+    { text: '🔄 Sigue Participando', color: '#4b5563', isFood: false },
+    { text: '🌮 Tacos Gratis', color: '#eab308', isFood: true },
+    { text: '🔄 Sigue Participando', color: '#6b7280', isFood: false },
+    { text: '🍣 Sushi Gratis', color: '#ec4899', isFood: true },
+    { text: '🔄 Sigue Participando', color: '#4b5563', isFood: false }
+];
+
+let isWheelSpinning = false;
+
+function showPrizeWheelModal() {
+    const modal = $('prizeWheelModal');
+    if (!modal) return;
+    
+    // Pausar el juego
+    if (gameState === 'RUNNING') {
+        gameState = 'PAUSED';
+    }
+    
+    // Dibujar la ruleta
+    drawPrizeWheel();
+    
+    // Mostrar modal
+    modal.classList.remove('hidden');
+    
+    // Ocultar resultado anterior
+    const result = $('prizeResult');
+    if (result) result.classList.add('hidden');
+    
+    // Habilitar botón de girar
+    const spinBtn = $('spinWheelBtn');
+    if (spinBtn) {
+        spinBtn.disabled = false;
+        spinBtn.onclick = spinPrizeWheel;
+    }
+    
+    isWheelSpinning = false;
+}
+
+function drawPrizeWheel() {
+    const wheelGroup = document.getElementById('wheelGroup');
+    if (!wheelGroup) return;
+    
+    // Limpiar segmentos anteriores
+    wheelGroup.innerHTML = '';
+    
+    const numSegments = PRIZE_WHEEL_OPTIONS.length;
+    const anglePerSegment = 360 / numSegments;
+    const radius = 90;
+    const centerX = 100;
+    const centerY = 100;
+    
+    PRIZE_WHEEL_OPTIONS.forEach((option, index) => {
+        const startAngle = (index * anglePerSegment - 90) * (Math.PI / 180);
+        const endAngle = ((index + 1) * anglePerSegment - 90) * (Math.PI / 180);
+        
+        const x1 = centerX + radius * Math.cos(startAngle);
+        const y1 = centerY + radius * Math.sin(startAngle);
+        const x2 = centerX + radius * Math.cos(endAngle);
+        const y2 = centerY + radius * Math.sin(endAngle);
+        
+        const largeArcFlag = anglePerSegment > 180 ? 1 : 0;
+        
+        // Crear segmento
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', `M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`);
+        path.setAttribute('fill', option.color);
+        path.setAttribute('stroke', '#fbbf24');
+        path.setAttribute('stroke-width', '2');
+        
+        wheelGroup.appendChild(path);
+        
+        // Agregar texto
+        const textAngle = (index * anglePerSegment + anglePerSegment / 2 - 90) * (Math.PI / 180);
+        const textRadius = radius * 0.6;
+        const textX = centerX + textRadius * Math.cos(textAngle);
+        const textY = centerY + textRadius * Math.sin(textAngle);
+        
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', textX);
+        text.setAttribute('y', textY);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('dominant-baseline', 'middle');
+        text.setAttribute('fill', 'white');
+        text.setAttribute('font-size', '8');
+        text.setAttribute('font-weight', 'bold');
+        text.setAttribute('transform', `rotate(${index * anglePerSegment + anglePerSegment / 2}, ${textX}, ${textY})`);
+        
+        // Solo mostrar emoji para que quepa
+        const emoji = option.text.split(' ')[0];
+        text.textContent = emoji;
+        
+        wheelGroup.appendChild(text);
+    });
+}
+
+function spinPrizeWheel() {
+    if (isWheelSpinning) return;
+    isWheelSpinning = true;
+    
+    const spinBtn = $('spinWheelBtn');
+    if (spinBtn) spinBtn.disabled = true;
+    
+    const wheelGroup = document.getElementById('wheelGroup');
+    if (!wheelGroup) return;
+    
+    playSound('click');
+    
+    // Calcular resultado aleatorio
+    const numSegments = PRIZE_WHEEL_OPTIONS.length;
+    const anglePerSegment = 360 / numSegments;
+    
+    // Elegir un segmento aleatorio (más probabilidad de "Sigue participando")
+    const random = Math.random();
+    let selectedIndex;
+    if (random < 0.6) {
+        // 60% de probabilidad de "Sigue participando"
+        const sigueOptions = [1, 3, 5, 7];
+        selectedIndex = sigueOptions[Math.floor(Math.random() * sigueOptions.length)];
+    } else {
+        // 40% de probabilidad de comida
+        const foodOptions = [0, 2, 4, 6];
+        selectedIndex = foodOptions[Math.floor(Math.random() * foodOptions.length)];
+    }
+    
+    // Calcular ángulo final (5 vueltas completas + posición del premio)
+    const spins = 5;
+    const targetAngle = spins * 360 + (360 - (selectedIndex * anglePerSegment + anglePerSegment / 2));
+    
+    // Animación de giro
+    let currentAngle = 0;
+    const duration = 4000; // 4 segundos
+    const startTime = Date.now();
+    
+    function animateWheel() {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Easing: desacelerar al final
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        currentAngle = easeOut * targetAngle;
+        
+        wheelGroup.setAttribute('transform', `rotate(${currentAngle}, 100, 100)`);
+        
+        if (progress < 1) {
+            requestAnimationFrame(animateWheel);
+        } else {
+            // Animación terminada - mostrar resultado
+            showPrizeResult(selectedIndex);
+        }
+    }
+    
+    animateWheel();
+}
+
+function showPrizeResult(selectedIndex) {
+    const prize = PRIZE_WHEEL_OPTIONS[selectedIndex];
+    const result = $('prizeResult');
+    const resultText = $('prizeResultText');
+    const claimBtn = $('claimPrizeBtn');
+    
+    if (result && resultText) {
+        result.classList.remove('hidden');
+        
+        if (prize.isFood) {
+            resultText.innerHTML = `<span class="text-yellow-400">🎉 ¡GANASTE!</span><br>${prize.text}`;
+            resultText.className = 'text-xl font-bold text-white';
+            playSound('delivery');
+        } else {
+            resultText.innerHTML = `${prize.text}<br><span class="text-sm text-white/70">¡Suerte la próxima!</span>`;
+            resultText.className = 'text-lg font-bold text-gray-300';
+        }
+    }
+    
+    if (claimBtn) {
+        claimBtn.onclick = () => closePrizeWheelModal(prize);
+    }
+    
+    isWheelSpinning = false;
+}
+
+function closePrizeWheelModal(prize) {
+    const modal = $('prizeWheelModal');
+    if (modal) modal.classList.add('hidden');
+    
+    // Mostrar mensaje si ganó comida
+    if (prize && prize.isFood) {
+        showGameModal({
+            icon: '🎁',
+            title: '¡Premio Reclamado!',
+            message: `Has ganado: ${prize.text}. ¡Muestra este mensaje en tu próximo pedido!`,
+            type: 'success',
+            buttons: [{ text: '¡Genial!', primary: true }]
+        });
+    }
+    
+    // Continuar el juego
+    if (gameState === 'PAUSED') {
+        gameState = 'RUNNING';
+    }
+}
 
 // Función centralizada para actualizar progreso de misiones
 function updateMissionProgress(event, data = {}) {
