@@ -55,6 +55,19 @@
         @keyframes timerPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
         .mission-blink { animation: missionBlink 1s infinite; }
         @keyframes missionBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .deliver-hint {
+            position: absolute;
+            top: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: #facc15;
+            font-weight: 800;
+            text-shadow: 0 0 8px rgba(250, 204, 21, 0.6);
+            animation: pulse 0.8s infinite;
+            pointer-events: none;
+            white-space: nowrap;
+        }
         
         /* Animación para borde neón simplificada */
         @keyframes neonBorderMove {
@@ -1018,7 +1031,8 @@ function startNeonIntro() {
                 </div>
 
                 <!-- Botón Principal ENTREGAR (Ahora al centro y más ancho) -->
-                <button onclick="startCar()" id="btnStart" class="no-click-sound btn-game bg-emerald-600 hover:bg-emerald-500 text-white font-bold h-[45px] rounded-xl text-sm shadow-lg border-b-4 border-emerald-800 flex-1 transition-transform active:scale-95 flex items-center justify-center gap-2">
+                <button onclick="startCar()" id="btnStart" class="no-click-sound btn-game bg-emerald-600 hover:bg-emerald-500 text-white font-bold h-[45px] rounded-xl text-sm shadow-lg border-b-4 border-emerald-800 flex-1 transition-transform active:scale-95 flex items-center justify-center gap-2 relative">
+                    <span id="deliverHint" class="deliver-hint hidden">⬆️ Presiona Entregar</span>
                     📦 ENTREGAR
                 </button>
 
@@ -2425,6 +2439,8 @@ let shieldActive = false; // Escudo activo para explosiones
 let rotateHintDismissed = false; // Ocultar hint tras el primer giro
 let lastRotateHintTime = 0; // Timestamp del ultimo giro
 const ROTATE_HINT_IDLE_MS = 9000;
+let rotateTileHintDismissed = false; // Ocultar hint tras girar una ficha
+let rotateTileHintCooldownUntil = 0; // Pausa breve tras girar ficha
 let tutorialCompleted = false;
 let totalStars = 0; // Estrellas acumuladas para el cofre
 let savedEndPosition = null; // Posición guardada de la casa para reintentos
@@ -4059,6 +4075,8 @@ function generateLevel(showLoading = true) {
     shieldActive = false;
     rotateHintDismissed = false;
     lastRotateHintTime = Date.now();
+    rotateTileHintDismissed = false;
+    rotateTileHintCooldownUntil = 0;
     
     // --- INICIALIZAR CONTADORES DE MISIONES ---
     if (currentMission) {
@@ -4591,6 +4609,8 @@ function handleClick(e) {
         } else if (!bridgeModeActive && tile && !tile.locked && tile.type !== TILE_TYPES.BLOCKED) {
             // Modo normal: rotar pieza
             tile.rotation = (tile.rotation + 1) % 4;
+            rotateTileHintDismissed = true;
+            rotateTileHintCooldownUntil = Date.now() + 700;
             playSound('rotate');
             checkConnections();
             draw();
@@ -5492,6 +5512,26 @@ function addSpecials(features) {
             else if (f === 'shield') tile.special = 'shield';
         }
     });
+}
+
+function getNearestRotatableTileCenter() {
+    if (!car) return null;
+    let best = null;
+    let bestDist = Infinity;
+    for (let i = 0; i < grid.length; i++) {
+        const tile = grid[i];
+        if (!tile || tile.locked || tile.type === TILE_TYPES.BLOCKED) continue;
+        const dist = Math.abs(tile.col - car.col) + Math.abs(tile.row - car.row);
+        if (dist < bestDist) {
+            bestDist = dist;
+            best = tile;
+        }
+    }
+    if (!best) return null;
+    return {
+        x: best.col * TILE_SIZE + TILE_SIZE / 2,
+        y: best.row * TILE_SIZE + TILE_SIZE / 2
+    };
 }
 
 function getPlannedRouteTileCount() {
@@ -7928,6 +7968,24 @@ function draw() {
         //     drawGiantSemaphore(carTile); // FUNCIÓN ELIMINADA
         // }
     }
+
+    if (gameState === 'EDITING' && level === 1) {
+        const deliverHint = $('deliverHint');
+        const lastPoint = previewPath.length > 0 ? previewPath[previewPath.length - 1] : null;
+        const routeComplete = !!(lastPoint && lastPoint.isEnd);
+
+        if (deliverHint) {
+            if (routeComplete) deliverHint.classList.remove('hidden');
+            else deliverHint.classList.add('hidden');
+        }
+
+        if (!routeComplete && Date.now() > rotateTileHintCooldownUntil) {
+            const target = (previewPath.length > 1) ? lastPoint : getNearestRotatableTileCenter();
+            if (target) {
+                drawTileRotateHint(target.x + TILE_SIZE * 0.4, target.y);
+            }
+        }
+    }
     
     // DIBUJAR TEXTOS FLOTANTES
     if (window.floatingTexts && window.floatingTexts.length > 0) {
@@ -8620,8 +8678,7 @@ function drawRotateHints() {
 
     ctx.save();
     ctx.translate(car.x, car.y);
-    const idleTooLong = (Date.now() - lastRotateHintTime) > ROTATE_HINT_IDLE_MS;
-    if (level <= 2 && (!rotateHintDismissed || idleTooLong)) {
+    if (level <= 2 && !rotateHintDismissed) {
         const arrowX = radius + 16;
         ctx.strokeStyle = `rgba(250, 204, 21, ${0.8 + 0.15 * pulse})`;
         ctx.fillStyle = `rgba(250, 204, 21, ${0.8 + 0.15 * pulse})`;
@@ -8647,6 +8704,39 @@ function drawRotateHints() {
         ctx.textBaseline = 'top';
         ctx.fillText('Presiona aqui', arrowX, 10);
     }
+
+    ctx.restore();
+}
+
+function drawTileRotateHint(x, y) {
+    const pulse = 0.5 + Math.abs(Math.sin(Date.now() / 260));
+    const arrowLen = Math.max(18, Math.floor(TILE_SIZE * 0.45));
+    const textOffset = Math.max(12, Math.floor(TILE_SIZE * 0.28));
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.strokeStyle = `rgba(250, 204, 21, ${0.8 + 0.15 * pulse})`;
+    ctx.fillStyle = `rgba(250, 204, 21, ${0.8 + 0.15 * pulse})`;
+    ctx.lineWidth = Math.max(3, Math.floor(TILE_SIZE * 0.06));
+    ctx.lineCap = 'round';
+
+    ctx.beginPath();
+    ctx.moveTo(arrowLen, 0);
+    ctx.lineTo(0, 0);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(10, -7);
+    ctx.lineTo(10, 7);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = `rgba(250, 204, 21, ${0.7 + 0.2 * pulse})`;
+    ctx.font = `bold ${Math.max(11, Math.floor(TILE_SIZE * 0.22))}px sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Presiona una ficha para girarla', arrowLen + 6, 0);
 
     ctx.restore();
 }
