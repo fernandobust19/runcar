@@ -53,6 +53,8 @@
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         .timer-warning { animation: timerPulse 0.5s infinite; color: #ef4444 !important; }
         @keyframes timerPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .mission-blink { animation: missionBlink 1s infinite; }
+        @keyframes missionBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
         
         /* Animación para borde neón simplificada */
         @keyframes neonBorderMove {
@@ -2421,6 +2423,8 @@ let engineAudio = null; // Variable para audio continuo de motor
 let totalMoney = 0; // Dinero acumulado por propinas
 let shieldActive = false; // Escudo activo para explosiones
 let rotateHintDismissed = false; // Ocultar hint tras el primer giro
+let lastRotateHintTime = 0; // Timestamp del ultimo giro
+const ROTATE_HINT_IDLE_MS = 9000;
 let tutorialCompleted = false;
 let totalStars = 0; // Estrellas acumuladas para el cofre
 let savedEndPosition = null; // Posición guardada de la casa para reintentos
@@ -3808,13 +3812,10 @@ function updateMissionProgress(event, data = {}) {
 
         case 'perfect_route':
             if (event === 'tile_placed') {
-                if (data.isNewRotation) currentMission.tilesUsed++;
-                if (currentMission.tilesUsed > currentMission.maxTiles) {
-                    // Marcar como fallida pero no llamar crash
-                    return;
-                }
+                currentMission.tilesUsed = getPlannedRouteTileCount();
             }
             if (event === 'level_completed') {
+                currentMission.tilesUsed = getPlannedRouteTileCount();
                 completed = currentMission.tilesUsed <= currentMission.maxTiles;
             }
             break;
@@ -3846,14 +3847,11 @@ function updateMissionProgress(event, data = {}) {
 
         case 'minimal_tiles':
             if (event === 'tile_placed') {
-                if (data.isNewRotation) currentMission.tilesUsed++;
-                if (currentMission.tilesUsed > currentMission.maxTiles) {
-                    // Marcar como fallida pero no llamar crash
-                    return;
-                }
+                currentMission.tilesUsed = getPlannedRouteTileCount();
             }
             if (event === 'level_completed') {
-                completed = currentMission.tilesUsed <= currentMission.maxTiles;
+                currentMission.tilesUsed = getPlannedRouteTileCount();
+                completed = currentMission.tilesUsed === currentMission.maxTiles;
             }
             break;
 
@@ -4059,6 +4057,8 @@ function generateLevel(showLoading = true) {
     missionTilesTouched = new Set();
     missionGuaranteedPath = [];
     shieldActive = false;
+    rotateHintDismissed = false;
+    lastRotateHintTime = Date.now();
     
     // --- INICIALIZAR CONTADORES DE MISIONES ---
     if (currentMission) {
@@ -4380,14 +4380,14 @@ function generateLevel(showLoading = true) {
         const missionTextEl = $('missionText');
 
         if (currentMission.type === 'minimal_tiles') {
-            const target = Math.min(rotatableTilesCount, Math.max(6, pathSegments + 1));
+            const target = Math.min(rotatableTilesCount, Math.max(7, pathSegments + 1));
             currentMission.maxTiles = target;
             currentMission.text = `🧩 Usa exactamente ${target} piezas`;
             if (missionTextEl) missionTextEl.innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> ${currentMission.text}`;
         }
 
         if (currentMission.type === 'perfect_route') {
-            const maxTiles = Math.min(rotatableTilesCount, Math.max(8, pathSegments + 3));
+            const maxTiles = Math.min(rotatableTilesCount, Math.max(7, pathSegments + 3));
             currentMission.maxTiles = maxTiles;
             currentMission.text = `🎯 Llega usando máximo ${maxTiles} piezas`;
             if (missionTextEl) missionTextEl.innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> ${currentMission.text}`;
@@ -4630,6 +4630,7 @@ function rotateCar() {
     car.dir = dirs[(idx + 1) % dirs.length];
     car.angle = car.dir === DIR.N ? -Math.PI/2 : car.dir === DIR.E ? 0 : car.dir === DIR.S ? Math.PI/2 : Math.PI;
     rotateHintDismissed = true;
+    lastRotateHintTime = Date.now();
     playSound('rotate');
     calculatePreviewPath();
     draw();
@@ -4888,20 +4889,25 @@ function placeEnd() {
     const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
     
     let pos;
+    const minDistance = Math.random() < 0.1 ? 3 : 6;
     
     // Si hay una posición guardada para este nivel, usarla
     if (savedEndPosition) {
         pos = savedEndPosition;
     } else {
         // Generar nueva posición y guardarla
-        const positions = [
-            { col: COLS - 1, row: ROWS - 1 },
-            { col: COLS - 1, row: 0 },
-            { col: 0, row: ROWS - 1 },
-            { col: COLS - 1, row: Math.floor(ROWS / 2) }
-        ].filter(p => Math.abs(p.col - startTile.col) + Math.abs(p.row - startTile.row) >= 3);
-        
-        pos = positions[Math.floor(Math.random() * positions.length)] || { col: COLS - 1, row: ROWS - 1 };
+        const positions = [];
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                const dist = Math.abs(c - startTile.col) + Math.abs(r - startTile.row);
+                if (dist >= minDistance) positions.push({ col: c, row: r });
+            }
+        }
+
+        const allowStraight = Math.random() < 0.1;
+        const notStraight = positions.filter(p => p.col !== startTile.col && p.row !== startTile.row);
+        const pool = (!allowStraight && notStraight.length > 0) ? notStraight : positions;
+        pos = pool[Math.floor(Math.random() * pool.length)] || { col: COLS - 1, row: ROWS - 1 };
         savedEndPosition = { col: pos.col, row: pos.row }; // Guardar la posición
     }
     
@@ -5488,6 +5494,32 @@ function addSpecials(features) {
     });
 }
 
+function getPlannedRouteTileCount() {
+    if (!car) return 0;
+    const visited = new Set();
+    let col = car.col;
+    let row = car.row;
+    visited.add(`${col},${row}`);
+
+    if (!plannedRoute || plannedRoute.length === 0) return visited.size;
+
+    for (let i = 0; i < plannedRoute.length; i++) {
+        const step = plannedRoute[i];
+        if (step.col !== col || step.row !== row) {
+            col = step.col;
+            row = step.row;
+            visited.add(`${col},${row}`);
+        }
+        const d = DIR_DELTA[step.dir];
+        col += d.dc;
+        row += d.dr;
+        if (col < 0 || col >= COLS || row < 0 || row >= ROWS) break;
+        visited.add(`${col},${row}`);
+    }
+
+    return visited.size;
+}
+
 function checkConnections() {
     grid.forEach(t => { if (t) t.powered = false; });
     const start = grid.find(t => t && t.type === TILE_TYPES.START);
@@ -6034,12 +6066,18 @@ function showMissionModal() {
         // Nivel con misión especial
         if (modalTitle) modalTitle.textContent = 'Nueva Misión';
         if (modalIcon) modalIcon.textContent = '🎯';
-        if (modalText) modalText.innerHTML = `<span class="text-cyan-300">🎯</span> ${currentMission.text}`;
+        if (modalText) {
+            modalText.innerHTML = `<span class="text-cyan-300">🎯</span> ${currentMission.text}`;
+            modalText.classList.add('mission-blink');
+        }
     } else {
         // Nivel normal sin misión
         if (modalTitle) modalTitle.textContent = 'Nuevo Pedido';
         if (modalIcon) modalIcon.textContent = '📦';
-        if (modalText) modalText.innerHTML = 'Entrega tu pedido';
+        if (modalText) {
+            modalText.innerHTML = 'Entrega tu pedido';
+            modalText.classList.remove('mission-blink');
+        }
     }
     
     // Alternar y cargar el video de espera correspondiente
@@ -6123,11 +6161,11 @@ function showCurrentMission() {
             break;
         case 'perfect_route':
             missionIcon = '🎯';
-            statusText = `Rotaciones usadas: ${currentMission.tilesUsed || 0}/${currentMission.maxTiles}`;
+            statusText = `Piezas de ruta: ${getPlannedRouteTileCount()}/${currentMission.maxTiles}`;
             break;
         case 'minimal_tiles':
             missionIcon = '🧩';
-            statusText = `Piezas usadas: ${currentMission.tilesUsed || 0}/${currentMission.maxTiles}`;
+            statusText = `Piezas de ruta: ${getPlannedRouteTileCount()}/${currentMission.maxTiles}`;
             break;
         case 'chain_boosts':
             missionIcon = '⚡';
@@ -8604,10 +8642,13 @@ function drawRotateHints() {
         ctx.restore();
     };
 
-    arrow(-Math.PI / 4);
-    arrow((3 * Math.PI) / 4);
+    arrow(0);
+    arrow(Math.PI / 2);
+    arrow(Math.PI);
+    arrow(-Math.PI / 2);
 
-    if (level <= 5 && !rotateHintDismissed) {
+    const idleTooLong = (Date.now() - lastRotateHintTime) > ROTATE_HINT_IDLE_MS;
+    if (level <= 5 && (!rotateHintDismissed || idleTooLong)) {
         ctx.fillStyle = `rgba(250, 204, 21, ${0.7 + 0.2 * pulse})`;
         ctx.font = `bold ${Math.max(9, Math.floor(TILE_SIZE * 0.18))}px sans-serif`;
         ctx.textAlign = 'center';
@@ -8827,7 +8868,7 @@ function drawCar() {
         // Pero queremos indicar "Hacia adelante" DEL COCHE.
         // Como ya hemos rotado el contexto para que X+ sea el frente, dibujamos la flecha en X+
         
-        ctx.translate(35 + bounce, 0); // Al frente del coche
+        ctx.translate(38 + bounce, 0); // Al frente del coche
         
         ctx.fillStyle = '#4ade80'; // Verde brillante
         ctx.shadowColor = '#4ade80'; ctx.shadowBlur = 10;
@@ -8835,8 +8876,8 @@ function drawCar() {
         // Flecha apuntando a la derecha (que es el frente logicamente)
         ctx.beginPath();
         ctx.moveTo(0, 0);   // Punta
-        ctx.lineTo(-8, -5); // Atrás arriba
-        ctx.lineTo(-8, 5);  // Atrás abajo
+        ctx.lineTo(-11, -7); // Atrás arriba
+        ctx.lineTo(-11, 7);  // Atrás abajo
         ctx.fill();
         
         ctx.restore();
