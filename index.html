@@ -60,8 +60,8 @@
             top: -18px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 10px;
-            color: #facc15;
+            font-size: 14px;
+            color: #fef08a;
             font-weight: 800;
             text-shadow: 0 0 8px rgba(250, 204, 21, 0.6);
             animation: pulse 0.8s infinite;
@@ -4609,7 +4609,6 @@ function handleClick(e) {
         } else if (!bridgeModeActive && tile && !tile.locked && tile.type !== TILE_TYPES.BLOCKED) {
             // Modo normal: rotar pieza
             tile.rotation = (tile.rotation + 1) % 4;
-            rotateTileHintDismissed = true;
             rotateTileHintCooldownUntil = Date.now() + 700;
             playSound('rotate');
             checkConnections();
@@ -7979,7 +7978,7 @@ function draw() {
             else deliverHint.classList.add('hidden');
         }
 
-        if (!routeComplete && Date.now() > rotateTileHintCooldownUntil) {
+        if (!routeComplete && rotateHintDismissed && Date.now() > rotateTileHintCooldownUntil) {
             const target = (previewPath.length > 1) ? lastPoint : getNearestRotatableTileCenter();
             if (target) {
                 drawTileRotateHint(target.x + TILE_SIZE * 0.4, target.y);
@@ -8674,35 +8673,38 @@ const vImgServi = new Image(); vImgServi.src = 'SERVIENTREGA.png';
 function drawRotateHints() {
     if (!car) return;
     const pulse = 0.5 + Math.abs(Math.sin(Date.now() / 300));
-    const radius = TILE_SIZE * (0.55 + 0.04 * pulse);
+    const radius = TILE_SIZE * (0.65 + 0.06 * pulse);
 
     ctx.save();
     ctx.translate(car.x, car.y);
     if (level <= 2 && !rotateHintDismissed) {
-        const arrowX = radius + 16;
-        ctx.strokeStyle = `rgba(250, 204, 21, ${0.8 + 0.15 * pulse})`;
-        ctx.fillStyle = `rgba(250, 204, 21, ${0.8 + 0.15 * pulse})`;
-        ctx.lineWidth = Math.max(3, Math.floor(TILE_SIZE * 0.06));
+        const arrowX = radius + 24;
+        ctx.strokeStyle = `rgba(16, 185, 129, ${0.9 + 0.08 * pulse})`;
+        ctx.fillStyle = `rgba(16, 185, 129, ${0.9 + 0.08 * pulse})`;
+        ctx.lineWidth = Math.max(5, Math.floor(TILE_SIZE * 0.08));
         ctx.lineCap = 'round';
 
         // Flecha apuntando al centro del vehiculo
         ctx.beginPath();
         ctx.moveTo(arrowX, 0);
-        ctx.lineTo(arrowX - 16, 0);
+        ctx.lineTo(arrowX - 24, 0);
         ctx.stroke();
 
         ctx.beginPath();
-        ctx.moveTo(arrowX - 16, 0);
-        ctx.lineTo(arrowX - 6, -7);
-        ctx.lineTo(arrowX - 6, 7);
+        ctx.moveTo(arrowX - 24, 0);
+        ctx.lineTo(arrowX - 6, -11);
+        ctx.lineTo(arrowX - 6, 11);
         ctx.closePath();
         ctx.fill();
 
-        ctx.fillStyle = `rgba(250, 204, 21, ${0.7 + 0.2 * pulse})`;
-        ctx.font = `bold ${Math.max(9, Math.floor(TILE_SIZE * 0.2))}px sans-serif`;
+        ctx.fillStyle = `rgba(16, 185, 129, ${0.9 + 0.08 * pulse})`;
+        ctx.font = `bold ${Math.max(14, Math.floor(TILE_SIZE * 0.3))}px sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.fillText('Presiona aqui', arrowX, 10);
+        ctx.strokeStyle = 'rgba(15, 23, 42, 0.7)';
+        ctx.lineWidth = 3;
+        ctx.strokeText('Presiona aqui', arrowX, 12);
+        ctx.fillText('Presiona aqui', arrowX, 12);
     }
 
     ctx.restore();
@@ -8710,14 +8712,13 @@ function drawRotateHints() {
 
 function drawTileRotateHint(x, y) {
     const pulse = 0.5 + Math.abs(Math.sin(Date.now() / 260));
-    const arrowLen = Math.max(18, Math.floor(TILE_SIZE * 0.45));
-    const textOffset = Math.max(12, Math.floor(TILE_SIZE * 0.28));
+    const arrowLen = Math.max(26, Math.floor(TILE_SIZE * 0.7));
 
     ctx.save();
     ctx.translate(x, y);
-    ctx.strokeStyle = `rgba(250, 204, 21, ${0.8 + 0.15 * pulse})`;
-    ctx.fillStyle = `rgba(250, 204, 21, ${0.8 + 0.15 * pulse})`;
-    ctx.lineWidth = Math.max(3, Math.floor(TILE_SIZE * 0.06));
+    ctx.strokeStyle = `rgba(14, 165, 233, ${0.9 + 0.08 * pulse})`;
+    ctx.fillStyle = `rgba(14, 165, 233, ${0.9 + 0.08 * pulse})`;
+    ctx.lineWidth = Math.max(5, Math.floor(TILE_SIZE * 0.08));
     ctx.lineCap = 'round';
 
     ctx.beginPath();
@@ -8727,15 +8728,18 @@ function drawTileRotateHint(x, y) {
 
     ctx.beginPath();
     ctx.moveTo(0, 0);
-    ctx.lineTo(10, -7);
-    ctx.lineTo(10, 7);
+    ctx.lineTo(14, -11);
+    ctx.lineTo(14, 11);
     ctx.closePath();
     ctx.fill();
 
-    ctx.fillStyle = `rgba(250, 204, 21, ${0.7 + 0.2 * pulse})`;
-    ctx.font = `bold ${Math.max(11, Math.floor(TILE_SIZE * 0.22))}px sans-serif`;
+    ctx.fillStyle = `rgba(14, 165, 233, ${0.9 + 0.08 * pulse})`;
+    ctx.font = `bold ${Math.max(15, Math.floor(TILE_SIZE * 0.32))}px sans-serif`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
+    ctx.strokeStyle = 'rgba(15, 23, 42, 0.7)';
+    ctx.lineWidth = 3;
+    ctx.strokeText('Presiona una ficha para girarla', arrowLen + 6, 0);
     ctx.fillText('Presiona una ficha para girarla', arrowLen + 6, 0);
 
     ctx.restore();
