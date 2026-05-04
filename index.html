@@ -8622,17 +8622,30 @@ function drawRotateHints() {
     ctx.translate(car.x, car.y);
     const idleTooLong = (Date.now() - lastRotateHintTime) > ROTATE_HINT_IDLE_MS;
     if (level <= 2 && (!rotateHintDismissed || idleTooLong)) {
+        const arrowX = radius + 16;
+        ctx.strokeStyle = `rgba(250, 204, 21, ${0.8 + 0.15 * pulse})`;
         ctx.fillStyle = `rgba(250, 204, 21, ${0.8 + 0.15 * pulse})`;
-        ctx.font = `bold ${Math.max(18, Math.floor(TILE_SIZE * 0.6))}px sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('👉', radius + 6, 0);
+        ctx.lineWidth = Math.max(3, Math.floor(TILE_SIZE * 0.06));
+        ctx.lineCap = 'round';
+
+        // Flecha apuntando al centro del vehiculo
+        ctx.beginPath();
+        ctx.moveTo(arrowX, 0);
+        ctx.lineTo(arrowX - 16, 0);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(arrowX - 16, 0);
+        ctx.lineTo(arrowX - 6, -7);
+        ctx.lineTo(arrowX - 6, 7);
+        ctx.closePath();
+        ctx.fill();
 
         ctx.fillStyle = `rgba(250, 204, 21, ${0.7 + 0.2 * pulse})`;
         ctx.font = `bold ${Math.max(9, Math.floor(TILE_SIZE * 0.2))}px sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.fillText('Presiona aqui', radius + 6, 10);
+        ctx.fillText('Presiona aqui', arrowX, 10);
     }
 
     ctx.restore();
