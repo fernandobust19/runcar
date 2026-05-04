@@ -4950,8 +4950,8 @@ function placeObstacles(count) {
         
         // Tipos de obstáculos
         const obstacleTypes = level >= 5 
-            ? ['broken', 'tree', 'construction', 'bridge_broken']
-            : ['broken', 'tree', 'construction'];
+            ? ['broken', 'tree', 'construction', 'bridge_broken', 'pothole']
+            : ['broken', 'tree', 'construction', 'pothole'];
         grid[row * COLS + col].special = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
         placed++;
     }
@@ -8054,6 +8054,10 @@ function drawTile(tile) {
                 icon = '⚠️';
                 color = '#4b5563'; // gray
                 break;
+            case 'pothole':
+                icon = '🕳️';
+                color = '#1f2937'; // dark slate
+                break;
             case 'bridge_broken':
                 icon = '🌉';
                 color = '#78350f'; // brown
@@ -8648,7 +8652,7 @@ function drawRotateHints() {
     arrow(-Math.PI / 2);
 
     const idleTooLong = (Date.now() - lastRotateHintTime) > ROTATE_HINT_IDLE_MS;
-    if (level <= 5 && (!rotateHintDismissed || idleTooLong)) {
+    if (level <= 2 && (!rotateHintDismissed || idleTooLong)) {
         ctx.fillStyle = `rgba(250, 204, 21, ${0.7 + 0.2 * pulse})`;
         ctx.font = `bold ${Math.max(9, Math.floor(TILE_SIZE * 0.18))}px sans-serif`;
         ctx.textAlign = 'center';
