@@ -873,6 +873,7 @@ function startNeonIntro() {
                     <div class="flex items-center gap-1">
                         <p class="text-yellow-400 font-bold text-[10px]">💰$<span id="moneyDisplay">0</span></p>
                         <p class="text-blue-400 font-bold text-[10px]">💎<span id="diamondDisplay">0</span></p>
+                        <p id="missionCreditsDisplay" class="text-emerald-300 font-bold text-[9px] hidden">🌉<span id="missionBridgeCredits">0</span> ⚡<span id="missionPowerupCredits">0</span></p>
                         <p id="starDisplayContainer" class="text-orange-400 font-bold text-[10px] hidden pl-1 border-l border-slate-600">⭐<span id="starDisplayCount">0</span></p>
                     </div>
                 </div>
@@ -2360,6 +2361,10 @@ for (let i = 1; i <= 100; i++) {
         : []
     };
 
+    if (i >= 18) levelData.features.push('mystery');
+    if (i >= 22) levelData.features.push('bomb');
+    if (i >= 26) levelData.features.push('shield');
+
     // Añadir bloqueadores temáticos progresivamente
     levelData.themedBlockers = [];
     if (i >= 30) {
@@ -2414,6 +2419,8 @@ let gameState = 'START', animationId, countdownTimer, timeLeft, maxTime;
 let engineSoundInterval, deliveryTimer; // Consolidar variables de timer
 let engineAudio = null; // Variable para audio continuo de motor
 let totalMoney = 0; // Dinero acumulado por propinas
+let shieldActive = false; // Escudo activo para explosiones
+let rotateHintDismissed = false; // Ocultar hint tras el primer giro
 let tutorialCompleted = false;
 let totalStars = 0; // Estrellas acumuladas para el cofre
 let savedEndPosition = null; // Posición guardada de la casa para reintentos
@@ -2443,6 +2450,10 @@ const BRIDGE_PRICE = 75; // Precio de cada puente (ajustado)
 let currentMission = null;
 let completedMissionsPerLevel = []; // Misiones completadas por nivel para evitar repetición
 let missionSuccessAnimation = null; // Animación de éxito
+let missionBridgeCredits = 0; // Puentes gratis por misión para evitar bloqueos
+let missionPowerupCredits = 0; // Powerups gratis por misión para evitar bloqueos
+let missionTilesTouched = new Set(); // Tiles únicos rotados en el nivel
+let missionGuaranteedPath = []; // Camino garantizado para misiones
 
 // 10 NUEVAS MISIONES ADICIONALES
 const ALL_MISSIONS = {
@@ -2994,6 +3005,22 @@ function updateBridgeDisplay() {
     if ($('shopBridgeOwned')) $('shopBridgeOwned').textContent = `Tienes: ${bridgesOwned}`;
 }
 
+function updateMissionCreditsUI() {
+    const display = $('missionCreditsDisplay');
+    const bridgeEl = $('missionBridgeCredits');
+    const powerEl = $('missionPowerupCredits');
+    if (!display || !bridgeEl || !powerEl) return;
+
+    bridgeEl.textContent = missionBridgeCredits;
+    powerEl.textContent = missionPowerupCredits;
+
+    if (missionBridgeCredits > 0 || missionPowerupCredits > 0) {
+        display.classList.remove('hidden');
+    } else {
+        display.classList.add('hidden');
+    }
+}
+
 function clearGameData() {
     if (confirm('¿Borrar todos tus datos guardados? (Dinero, vehículos desbloqueados, etc.)')) {
         localStorage.removeItem('deliveryRushSave');
@@ -3486,6 +3513,7 @@ function init() {
     loadGameData(); // Cargar datos guardados al iniciar
     updatePremiumMotoUI(); // Actualizar estado de moto premium al iniciar
     updateBridgeDisplay();
+    updateMissionCreditsUI();
     
     // --- NUEVO: Sonidos universales para todos los botones ---
     document.querySelectorAll('button').forEach(btn => {
@@ -3780,7 +3808,7 @@ function updateMissionProgress(event, data = {}) {
 
         case 'perfect_route':
             if (event === 'tile_placed') {
-                currentMission.tilesUsed++;
+                if (data.isNewRotation) currentMission.tilesUsed++;
                 if (currentMission.tilesUsed > currentMission.maxTiles) {
                     // Marcar como fallida pero no llamar crash
                     return;
@@ -3818,7 +3846,7 @@ function updateMissionProgress(event, data = {}) {
 
         case 'minimal_tiles':
             if (event === 'tile_placed') {
-                currentMission.tilesUsed++;
+                if (data.isNewRotation) currentMission.tilesUsed++;
                 if (currentMission.tilesUsed > currentMission.maxTiles) {
                     // Marcar como fallida pero no llamar crash
                     return;
@@ -4026,6 +4054,11 @@ function generateLevel(showLoading = true) {
     // Estado del juego y limpieza de overlay
     gameState = 'EDITING';
     bridgeModeActive = false;
+    missionBridgeCredits = 0;
+    missionPowerupCredits = 0;
+    missionTilesTouched = new Set();
+    missionGuaranteedPath = [];
+    shieldActive = false;
     
     // --- INICIALIZAR CONTADORES DE MISIONES ---
     if (currentMission) {
@@ -4273,12 +4306,14 @@ function generateLevel(showLoading = true) {
                 completed: false,
                 text: '🌉 Construye al menos 1 Puente'
             };
+            missionBridgeCredits = 1;
         } else if (missionType === 'use_powerup') {
             currentMission = {
                 type: 'use_powerup',
                 completed: false,
                 text: '⚡ Usa una Ayuda del Tablero'
             };
+            missionPowerupCredits = 1;
         } else if (missionType === 'pickup') {
             const item = MISSION_ITEMS[Math.floor(Math.random() * MISSION_ITEMS.length)];
             currentMission = {
@@ -4295,6 +4330,10 @@ function generateLevel(showLoading = true) {
                 targetTime: targetTime,
                 text: `⚡ Entrega en < ${targetTime}s`
             };
+        }
+
+        if (currentMission?.type === 'bridge_master') {
+            missionBridgeCredits = currentMission.target;
         }
 
         // --- MOSTRAR MISIÓN EN UI CON SISTEMA MEJORADO ---
@@ -4319,7 +4358,11 @@ function generateLevel(showLoading = true) {
             // Agregar indicador de misión obligatoria
             mText.innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> ${currentMission.text}`;
         }
+
+        updateMissionCreditsUI();
     }
+
+    updateMissionCreditsUI();
 
     // Construcción del nivel
     placeStart();
@@ -4329,6 +4372,34 @@ function generateLevel(showLoading = true) {
     placeThemedBlockers(config);
     ensureSolvablePath();
     fillEmpty(config.deadEnds);
+    missionGuaranteedPath = generateGuaranteedPath();
+
+    if (currentMission) {
+        const rotatableTilesCount = grid.filter(t => t && !t.locked && t.type !== TILE_TYPES.BLOCKED).length;
+        const pathSegments = Math.max(0, missionGuaranteedPath.length - 1);
+        const missionTextEl = $('missionText');
+
+        if (currentMission.type === 'minimal_tiles') {
+            const target = Math.min(rotatableTilesCount, Math.max(6, pathSegments + 1));
+            currentMission.maxTiles = target;
+            currentMission.text = `🧩 Usa exactamente ${target} piezas`;
+            if (missionTextEl) missionTextEl.innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> ${currentMission.text}`;
+        }
+
+        if (currentMission.type === 'perfect_route') {
+            const maxTiles = Math.min(rotatableTilesCount, Math.max(8, pathSegments + 3));
+            currentMission.maxTiles = maxTiles;
+            currentMission.text = `🎯 Llega usando máximo ${maxTiles} piezas`;
+            if (missionTextEl) missionTextEl.innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> ${currentMission.text}`;
+        }
+
+        if (currentMission.type === 'chain_boosts') {
+            const maxPossible = Math.max(1, pathSegments - 1);
+            currentMission.target = Math.min(currentMission.target, maxPossible);
+            currentMission.text = `⚡ Pisa ${currentMission.target} aceleradores seguidos`;
+            if (missionTextEl) missionTextEl.innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> ${currentMission.text}`;
+        }
+    }
     randomizeRotations();
     addSpecials(config.features);
     placeCoins();
@@ -4465,7 +4536,7 @@ function handleClick(e) {
     
     if (car) {
         const carDist = Math.sqrt((clickX - car.x) ** 2 + (clickY - car.y) ** 2);
-        if (carDist < TILE_SIZE * 0.5) { rotateCar(); return; }
+        if (carDist < TILE_SIZE * 0.5 || isRotateHintHit(clickX, clickY)) { rotateCar(); return; }
     }
     
     const col = Math.floor(clickX / TILE_SIZE), row = Math.floor(clickY / TILE_SIZE);
@@ -4476,16 +4547,19 @@ function handleClick(e) {
         if (bridgeModeActive && tile && !tile.locked && tile.type !== TILE_TYPES.BLOCKED) {
             if (tile.type === TILE_TYPES.BRIDGE) { return; }
 
-            const canAfford = (bridgesOwned > 0) || (totalMoney >= BRIDGE_PRICE);
+            const canAfford = (missionBridgeCredits > 0) || (bridgesOwned > 0) || (totalMoney >= BRIDGE_PRICE);
             if (!canAfford) { return; }
 
-            if (bridgesOwned > 0) {
+            if (missionBridgeCredits > 0) {
+                missionBridgeCredits--;
+            } else if (bridgesOwned > 0) {
                 bridgesOwned--;
             } else {
                 totalMoney -= BRIDGE_PRICE;
                 $('moneyDisplay').textContent = totalMoney;
             }
             if ($('bridgeCount')) $('bridgeCount').textContent = bridgesOwned;
+            updateMissionCreditsUI();
 
             tile.type = TILE_TYPES.BRIDGE;
             tile.isBridge = true;
@@ -4522,9 +4596,27 @@ function handleClick(e) {
             draw();
             
             // --- ACTUALIZAR MISIONES DE COLOCACIÓN DE TILES ---
-            updateMissionProgress('tile_placed', { tile });
+            let isNewRotation = false;
+            if (currentMission && (currentMission.type === 'perfect_route' || currentMission.type === 'minimal_tiles')) {
+                const key = `${tile.col},${tile.row}`;
+                if (!missionTilesTouched.has(key)) {
+                    missionTilesTouched.add(key);
+                    isNewRotation = true;
+                }
+            }
+            updateMissionProgress('tile_placed', { tile, isNewRotation });
         }
     }
+}
+
+function isRotateHintHit(x, y) {
+    if (!car) return false;
+    const dx = x - car.x;
+    const dy = y - car.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const inner = TILE_SIZE * 0.55;
+    const outer = TILE_SIZE * 0.85;
+    return dist >= inner && dist <= outer;
 }
 
 function rotateCar() {
@@ -4537,6 +4629,7 @@ function rotateCar() {
     const idx = dirs.indexOf(car.dir);
     car.dir = dirs[(idx + 1) % dirs.length];
     car.angle = car.dir === DIR.N ? -Math.PI/2 : car.dir === DIR.E ? 0 : car.dir === DIR.S ? Math.PI/2 : Math.PI;
+    rotateHintDismissed = true;
     playSound('rotate');
     calculatePreviewPath();
     draw();
@@ -4587,13 +4680,20 @@ function addExtraTime() {
     const TIME_COST = 5;
     const EXTRA_SECONDS = 5;
     if (gameState !== 'EDITING' && gameState !== 'RUNNING') { return; }
-    if (totalMoney < TIME_COST) { return; }
-
-    totalMoney -= TIME_COST;
+    let usedCredit = false;
+    if (missionPowerupCredits > 0) {
+        missionPowerupCredits--;
+        usedCredit = true;
+    } else if (totalMoney < TIME_COST) {
+        return;
+    } else {
+        totalMoney -= TIME_COST;
+    }
     timeLeft += EXTRA_SECONDS;
     maxTime += EXTRA_SECONDS; // También aumentar el máximo para el porcentaje
 
-    $('moneyDisplay').textContent = totalMoney;
+    if (!usedCredit) $('moneyDisplay').textContent = totalMoney;
+    updateMissionCreditsUI();
     $('timerDisplay').textContent = `⏱️ ${timeLeft}`;
     if ($('progressBar')) {
         $('progressBar').style.width = `${(timeLeft / maxTime) * 100}%`;
@@ -4631,7 +4731,7 @@ function instantDeliver() {
         return;
     }
     
-    if (totalMoney < INSTANT_DELIVER_COST) {
+    if (missionPowerupCredits <= 0 && totalMoney < INSTANT_DELIVER_COST) {
         showGameModal({
             icon: '💸',
             title: 'Dinero Insuficiente',
@@ -4650,8 +4750,13 @@ function instantDeliver() {
         cancelText: '❌ Cancelar'
     }).then(confirmed => {
         if (confirmed) {
-            totalMoney -= INSTANT_DELIVER_COST;
-            $('moneyDisplay').textContent = totalMoney;
+            if (missionPowerupCredits > 0) {
+                missionPowerupCredits--;
+            } else {
+                totalMoney -= INSTANT_DELIVER_COST;
+                $('moneyDisplay').textContent = totalMoney;
+            }
+            updateMissionCreditsUI();
             playSound('money');
             saveGameData();
 
@@ -4988,6 +5093,25 @@ function placeCoins() {
             starsToPlace--;
         }
     }
+
+    if (currentMission && currentMission.type === 'collect_all_stars') {
+        const totalStarsPlaced = grid.filter(t => t && t.hasStar).length;
+        if (totalStarsPlaced > 0) {
+            currentMission.target = totalStarsPlaced;
+            currentMission.text = `⭐ Recolecta ${totalStarsPlaced} estrellas`;
+            if ($('missionText')) {
+                $('missionText').innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> ${currentMission.text}`;
+            }
+        } else {
+            currentMission.type = 'coins';
+            currentMission.target = 3;
+            currentMission.current = 0;
+            currentMission.text = '💰 Recoger 3 Monedas';
+            if ($('missionText')) {
+                $('missionText').innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> ${currentMission.text}`;
+            }
+        }
+    }
 }
 
 
@@ -5297,29 +5421,69 @@ function addSpecials(features) {
     
     // --- LÓGICA ESPECIAL PARA MISIÓN CHAIN_BOOSTS ---
     if (currentMission && currentMission.type === 'chain_boosts') {
-        const requiredBoosts = currentMission.target + 1; // +1 para tener margen
-        
-        // Colocar aceleradores garantizados para la misión
+        const requiredBoosts = Math.max(1, currentMission.target + 1); // +1 para margen
+
+        // Colocar aceleradores en el camino garantizado para asegurar la cadena
         let boostsPlaced = 0;
+        if (missionGuaranteedPath && missionGuaranteedPath.length > 2) {
+            const pathIndices = missionGuaranteedPath
+                .slice(1, -1)
+                .map(p => p.row * COLS + p.col)
+                .filter(idxPath => {
+                    const t = grid[idxPath];
+                    return t && !t.locked && !t.special && t.type !== TILE_TYPES.BLOCKED;
+                });
+
+            for (let i = 0; i < pathIndices.length && boostsPlaced < requiredBoosts; i++) {
+                const tile = grid[pathIndices[i]];
+                if (!tile.special) {
+                    tile.special = 'boost';
+                    boostsPlaced++;
+                }
+            }
+        }
+
+        // Completar con elegibles si faltan boosts
         for (let i = 0; i < eligible.length && boostsPlaced < requiredBoosts; i++) {
             const tile = grid[eligible[i]];
-            tile.special = 'boost';
-            boostsPlaced++;
-            idx++; // Marcar índice como usado
+            if (!tile.special) {
+                tile.special = 'boost';
+                boostsPlaced++;
+                idx++;
+            }
         }
-        
+
         console.log(`Misión chain_boosts: Colocados ${boostsPlaced} aceleradores para target ${currentMission.target}`);
     }
     
     // Colocar features normales
     features.forEach(f => {
-        const count = (f === 'boost' && currentMission && currentMission.type === 'chain_boosts') ? 0 : 2; // Ya colocamos boosts arriba
+        let count = (f === 'boost' && currentMission && currentMission.type === 'chain_boosts') ? 0 :
+            (f === 'bomb' || f === 'mystery' || f === 'shield') ? 1 : 2;
+
+        if (f === 'bomb' && missionGuaranteedPath && missionGuaranteedPath.length > 2) {
+            const pathIndices = missionGuaranteedPath
+                .slice(1, -1)
+                .map(p => p.row * COLS + p.col)
+                .filter(idxPath => {
+                    const t = grid[idxPath];
+                    return t && !t.locked && !t.special && t.type !== TILE_TYPES.BLOCKED;
+                });
+            if (pathIndices.length > 0) {
+                const tile = grid[pathIndices[0]];
+                tile.special = 'bomb';
+                count = Math.max(0, count - 1);
+            }
+        }
         
         for (let i = 0; i < count && idx < eligible.length; i++, idx++) {
             const tile = grid[eligible[idx]];
             if (f === 'semaphore') { tile.special = 'semaphore'; tile.semaphoreState = 'red'; specialTiles.push(tile); }
             else if (f === 'puddle') tile.special = 'puddle';
             else if (f === 'boost') tile.special = 'boost';
+            else if (f === 'bomb') tile.special = 'bomb';
+            else if (f === 'mystery') tile.special = 'mystery';
+            else if (f === 'shield') tile.special = 'shield';
         }
     });
 }
@@ -6311,6 +6475,77 @@ function gameLoop() {
             if (currentMission && currentMission.type === 'chain_boosts') {
                 updateMissionProgress('boost_missed');
             }
+        }
+
+        if (tile?.special === 'bomb') {
+            tile.special = null;
+            if (shieldActive) {
+                shieldActive = false;
+                floatingTexts.push({
+                    x: car.x,
+                    y: car.y - 30,
+                    text: '🛡️ BLOQUEADO',
+                    color: '#38bdf8',
+                    life: 80,
+                    vy: -1.2
+                });
+                playSound('pop');
+            } else {
+                timeLeft = Math.max(0, timeLeft - 6);
+                totalMoney = Math.max(0, totalMoney - 25);
+                if ($('timerDisplay')) $('timerDisplay').textContent = `⏱️ ${timeLeft}`;
+                if ($('moneyDisplay')) $('moneyDisplay').textContent = totalMoney;
+                if (timeLeft <= 0) { timeExpired(); return; }
+                updateMissionProgress('damage_taken');
+                playSound('crash');
+                canvas.classList.add('shake');
+                setTimeout(() => canvas.classList.remove('shake'), 400);
+                floatingTexts.push({
+                    x: car.x,
+                    y: car.y - 30,
+                    text: '💥 BOMBA!',
+                    color: '#f87171',
+                    life: 90,
+                    vy: -1.5
+                });
+            }
+        }
+
+        if (tile?.special === 'shield') {
+            tile.special = null;
+            shieldActive = true;
+            floatingTexts.push({
+                x: car.x,
+                y: car.y - 30,
+                text: '🛡️ ESCUDO',
+                color: '#38bdf8',
+                life: 80,
+                vy: -1.2
+            });
+            playSound('money');
+        }
+
+        if (tile?.special === 'mystery') {
+            tile.special = null;
+            const roll = Math.random();
+            if (roll < 0.4) {
+                totalMoney += 60;
+                if ($('moneyDisplay')) $('moneyDisplay').textContent = totalMoney;
+                floatingTexts.push({ x: car.x, y: car.y - 30, text: '+$60', color: '#fbbf24', life: 80, vy: -1.2 });
+            } else if (roll < 0.7) {
+                timeLeft += 6;
+                maxTime += 6;
+                if ($('timerDisplay')) $('timerDisplay').textContent = `⏱️ ${timeLeft}`;
+                floatingTexts.push({ x: car.x, y: car.y - 30, text: '+6s', color: '#22c55e', life: 80, vy: -1.2 });
+            } else if (roll < 0.85) {
+                missionBridgeCredits += 1;
+                updateMissionCreditsUI();
+                floatingTexts.push({ x: car.x, y: car.y - 30, text: '🌉 +1', color: '#a78bfa', life: 80, vy: -1.2 });
+            } else {
+                shieldActive = true;
+                floatingTexts.push({ x: car.x, y: car.y - 30, text: '🛡️ EXTRA', color: '#38bdf8', life: 80, vy: -1.2 });
+            }
+            playSound('delivery');
         }
         
         // RECOLECTAR MONEDA
@@ -7597,6 +7832,9 @@ function draw() {
     }
     
     if (car) {
+        if (gameState === 'EDITING') {
+            drawRotateHints();
+        }
         // --- DIBUJAR ESTELA DE NEÓN (TRAIL) ---
         if (car.trail && car.trail.length > 1) {
             ctx.save();
@@ -8301,6 +8539,24 @@ function drawTile(tile) {
         ctx.font = `${TILE_SIZE * 0.22}px sans-serif`;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText('⚡', cx, cy);
+    } else if (tile.special === 'bomb') {
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.35)';
+        ctx.beginPath(); ctx.arc(cx, cy, TILE_SIZE * 0.22, 0, Math.PI * 2); ctx.fill();
+        ctx.font = `${TILE_SIZE * 0.24}px sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('💣', cx, cy);
+    } else if (tile.special === 'mystery') {
+        ctx.fillStyle = 'rgba(168, 85, 247, 0.35)';
+        ctx.beginPath(); ctx.arc(cx, cy, TILE_SIZE * 0.2, 0, Math.PI * 2); ctx.fill();
+        ctx.font = `${TILE_SIZE * 0.22}px sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('🎁', cx, cy);
+    } else if (tile.special === 'shield') {
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.3)';
+        ctx.beginPath(); ctx.arc(cx, cy, TILE_SIZE * 0.2, 0, Math.PI * 2); ctx.fill();
+        ctx.font = `${TILE_SIZE * 0.22}px sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('🛡️', cx, cy);
     }
 }
 
@@ -8314,6 +8570,53 @@ const vImgMoto1 = new Image(); vImgMoto1.src = 'moto1.png';
 const vImgUber = new Image(); vImgUber.src = 'UBER.png';
 const vImgIndriver = new Image(); vImgIndriver.src = 'INDRIVER.png';
 const vImgServi = new Image(); vImgServi.src = 'SERVIENTREGA.png';
+
+function drawRotateHints() {
+    if (!car) return;
+    const pulse = 0.5 + Math.abs(Math.sin(Date.now() / 300));
+    const radius = TILE_SIZE * (0.65 + 0.06 * pulse);
+
+    ctx.save();
+    ctx.translate(car.x, car.y);
+    ctx.strokeStyle = `rgba(250, 204, 21, ${0.35 + 0.35 * pulse})`;
+    ctx.lineWidth = 3;
+    ctx.setLineDash([6, 6]);
+
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+    ctx.fillStyle = `rgba(250, 204, 21, ${0.7 + 0.2 * pulse})`;
+
+    const arrow = (angle) => {
+        const x = Math.cos(angle) * radius;
+        const y = Math.sin(angle) * radius;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle + Math.PI / 2);
+        ctx.beginPath();
+        ctx.moveTo(0, -8);
+        ctx.lineTo(6, 6);
+        ctx.lineTo(-6, 6);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+    };
+
+    arrow(-Math.PI / 4);
+    arrow((3 * Math.PI) / 4);
+
+    if (level <= 5 && !rotateHintDismissed) {
+        ctx.fillStyle = `rgba(250, 204, 21, ${0.7 + 0.2 * pulse})`;
+        ctx.font = `bold ${Math.max(9, Math.floor(TILE_SIZE * 0.18))}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText('Toca aqui para girar', 0, -radius - 6);
+    }
+
+    ctx.restore();
+}
 
 function drawCar() {
     ctx.save();
