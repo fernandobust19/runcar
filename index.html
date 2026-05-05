@@ -901,6 +901,7 @@ function startNeonIntro() {
                     <span id="missionIcon">🎯</span> MISIÓN
                 </button>
                 <div id="missionText" class="text-[9px] text-slate-300 ml-1 max-w-24 hidden"></div>
+                <span id="missionCheck" class="hidden ml-1 text-emerald-400 text-[10px]">✅</span>
             </div>
             
             <!-- (Contenedor de estado eliminado por solicitud) -->
@@ -916,6 +917,17 @@ function startNeonIntro() {
             <!-- Mensaje de salida del pedido -->
             <div id="orderReady" class="order-ready hidden">
                 <img src="sale.jpg" alt="¡SALE EL PEDIDO!">
+            </div>
+
+            <!-- Banner de misión en pantalla principal -->
+            <div id="missionBanner" class="hidden fixed inset-0 z-[70] bg-black/40 flex items-center justify-center p-4" onclick="closeMissionModal()">
+                <div class="bg-black/60 border border-cyan-400/60 rounded-2xl px-6 py-5 text-center max-w-md w-full shadow-2xl">
+                    <div id="missionBannerIcon" class="text-5xl mb-3">🎯</div>
+                    <div id="missionBannerTitle" class="text-cyan-300 text-sm font-bold uppercase tracking-[0.2em] mb-2">Misión</div>
+                    <div id="missionBannerText" class="text-white text-2xl font-black leading-tight"></div>
+                    <div id="missionBannerTime" class="text-yellow-300 text-sm mt-3"></div>
+                    <div class="text-slate-300 text-xs mt-2">Toca para continuar</div>
+                </div>
             </div>
             
             <!-- Modal de Misión -->
@@ -5666,15 +5678,24 @@ function addSpecials(features) {
         if (missionGuaranteedPath && missionGuaranteedPath.length > 2) {
             const pathIndices = missionGuaranteedPath
                 .slice(1, -1)
-                .map(p => p.row * COLS + p.col)
-                .filter(idxPath => {
-                    const t = grid[idxPath];
-                    return t && !t.locked && !t.special && t.type !== TILE_TYPES.BLOCKED;
-                });
+                .map(p => p.row * COLS + p.col);
 
-            for (let i = 0; i < pathIndices.length && boostsPlaced < requiredBoosts; i++) {
-                const tile = grid[pathIndices[i]];
-                if (!tile.special) {
+            let startIndex = -1;
+            for (let s = 0; s <= pathIndices.length - requiredBoosts; s++) {
+                let ok = true;
+                for (let k = 0; k < requiredBoosts; k++) {
+                    const t = grid[pathIndices[s + k]];
+                    if (!t || t.locked || t.special || t.type === TILE_TYPES.BLOCKED) {
+                        ok = false;
+                        break;
+                    }
+                }
+                if (ok) { startIndex = s; break; }
+            }
+
+            if (startIndex >= 0) {
+                for (let k = 0; k < requiredBoosts; k++) {
+                    const tile = grid[pathIndices[startIndex + k]];
                     tile.special = 'boost';
                     boostsPlaced++;
                 }
@@ -6328,6 +6349,37 @@ function resetCar() {
 
 // === FUNCIONES DEL MODAL DE MISIÓN ===
 function showMissionModal() {
+    const banner = $('missionBanner');
+    if (banner) {
+        const bannerIcon = $('missionBannerIcon');
+        const bannerTitle = $('missionBannerTitle');
+        const bannerText = $('missionBannerText');
+        const bannerTime = $('missionBannerTime');
+
+        if (currentMission) {
+            if (bannerIcon) bannerIcon.textContent = '🎯';
+            if (bannerTitle) bannerTitle.textContent = 'MISION';
+            if (bannerText) {
+                let extra = '';
+                if (currentMission.type === 'chain_boosts') {
+                    extra = '<div class="text-yellow-300 text-base mt-2">Acelerador: ⚡ (rayo en la calle)</div>';
+                }
+                bannerText.innerHTML = `<div>${currentMission.text}</div>${extra}`;
+            }
+        } else {
+            if (bannerIcon) bannerIcon.textContent = '📦';
+            if (bannerTitle) bannerTitle.textContent = 'NUEVO PEDIDO';
+            if (bannerText) bannerText.textContent = 'Entrega tu pedido';
+        }
+
+        if (bannerTime) bannerTime.textContent = `Tiempo: ${maxTime}s`;
+        banner.classList.remove('hidden');
+
+        const modal = $('missionModal');
+        if (modal) modal.classList.add('hidden');
+        return;
+    }
+
     const modal = $('missionModal');
     if (!modal) return;
     
@@ -6390,7 +6442,16 @@ function showMissionModal() {
 
 function closeMissionModal() {
     const modal = $('missionModal');
-    if (!modal) return;
+    const banner = $('missionBanner');
+    if (banner) {
+        banner.classList.add('hidden');
+    }
+
+    if (!modal) {
+        startCountdown();
+        playSound('start');
+        return;
+    }
     
     // Detener el video de espera
     const waitVideoModal = $('waitVideoModal');
@@ -9085,9 +9146,41 @@ function drawTile(tile) {
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText('💵', cx, cy);
     } else if (tile.special === 'boost') {
-        ctx.font = `${TILE_SIZE * 0.22}px sans-serif`;
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('⚡', cx, cy);
+        const now = performance.now() / 1000;
+        const pulse = 0.4 + Math.abs(Math.sin(now * 4)) * 0.4;
+
+        ctx.save();
+        ctx.translate(cx, cy);
+
+        ctx.fillStyle = `rgba(250, 204, 21, ${0.25 + pulse * 0.35})`;
+        ctx.beginPath();
+        ctx.arc(0, 0, TILE_SIZE * 0.32, 0, Math.PI * 2);
+        ctx.fill();
+
+        const padW = TILE_SIZE * 0.6;
+        const padH = TILE_SIZE * 0.28;
+        ctx.fillStyle = '#f59e0b';
+        ctx.roundRect(-padW / 2, -padH / 2, padW, padH, padH * 0.35);
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.fillStyle = '#fff7ed';
+        ctx.font = `${TILE_SIZE * 0.5}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = 'rgba(251, 191, 36, 0.7)';
+        ctx.shadowBlur = 8;
+        ctx.fillText('⚡', 0, -1);
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = '#fde68a';
+        ctx.font = `bold ${TILE_SIZE * 0.16}px sans-serif`;
+        ctx.fillText('ACEL', 0, padH * 0.85);
+
+        ctx.restore();
     } else if (tile.special === 'bomb') {
         ctx.fillStyle = 'rgba(239, 68, 68, 0.35)';
         ctx.beginPath(); ctx.arc(cx, cy, TILE_SIZE * 0.22, 0, Math.PI * 2); ctx.fill();
