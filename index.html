@@ -2380,6 +2380,8 @@ for (let i = 1; i <= 100; i++) {
     if (i >= 18) levelData.features.push('mystery');
     if (i >= 22) levelData.features.push('bomb');
     if (i >= 26) levelData.features.push('shield');
+    if (i >= 6) levelData.features.push('cash');
+    if (i >= 12) levelData.features.push('dog');
 
     // Añadir bloqueadores temáticos progresivamente
     levelData.themedBlockers = [];
@@ -2493,7 +2495,9 @@ const ALL_MISSIONS = {
     'zigzag_master': { name: 'Zigzag Master', icon: '🔄', unlockLevel: 8 },
     'bridge_master': { name: 'Ingeniero', icon: '🔨', unlockLevel: 9 },
     'speed_demon': { name: 'Demonio Veloz', icon: '🚀', unlockLevel: 11 },
-    'treasure_seeker': { name: 'Buscatesoros', icon: '🗺️', unlockLevel: 13 }
+    'treasure_seeker': { name: 'Buscatesoros', icon: '🗺️', unlockLevel: 13 },
+    'visit_house': { name: 'Vecindario', icon: '🏡', unlockLevel: 3 },
+    'red_diamond': { name: 'Diamante Rojo', icon: '💎', unlockLevel: 4 }
 };
 
 const MISSION_ITEMS = [
@@ -2514,7 +2518,9 @@ class Tile {
         this.hasCoin = false; // Propiedad para monedas
         this.hasStar = false; // Propiedad para estrellas (Nivel 30+)
         this.hasDiamond = false; // Propiedad para diamantes (cada 4 niveles)
-        this.hasDiamond = false; // Propiedad para diamantes (cada 4 niveles)
+        this.hasRedDiamond = false; // Diamante rojo con credito alto
+        this.hasHouse = false; // Casa decorativa en el tablero
+        this.houseVisited = false; // Para misiones de visitar casa
         this.missionItem = null; // { type: 'pizza', icon: '🍕', name: 'Pizza' }
     }
     getConnections() {
@@ -2633,7 +2639,7 @@ function generateTutorialLevel() {
     // Colocar Inicio
     grid[startIdx] = new Tile(1, 2, TILE_TYPES.START, 0);
     grid[startIdx].locked = true;
-    car = { x: 0, y: 0, col: 1, row: 2, angle: 0, speed: 0, waiting: false }; // Init car logic
+    car = { x: 0, y: 0, col: 1, row: 2, angle: 0, speed: 0, waiting: false, skidTimer: 0, skidTimerMax: 0, skidAngleOffset: 0, dogFollowTimer: 0, dogSlowTimer: 0 }; // Init car logic
     
     // Colocar Fin
     grid[endIdx] = new Tile(4, 2, TILE_TYPES.END, 0);
@@ -2663,6 +2669,7 @@ function generateTutorialLevel() {
     car.x = car.col * TILE_SIZE + TILE_SIZE / 2;
     car.y = car.row * TILE_SIZE + TILE_SIZE / 2;
     car.angle = 0;
+
 
     checkConnections();
     draw();
@@ -3041,6 +3048,10 @@ function updateMissionCreditsUI() {
     }
 }
 
+function getLevelHintText() {
+    return `📦 Pedido #${level} | 👆 Prepara la ruta`;
+}
+
 function clearGameData() {
     if (confirm('¿Borrar todos tus datos guardados? (Dinero, vehículos desbloqueados, etc.)')) {
         localStorage.removeItem('deliveryRushSave');
@@ -3142,7 +3153,7 @@ function toggleBridgeMode() {
     } else {
         btn.classList.remove('ring-4', 'ring-yellow-400');
         btn.style.boxShadow = "";
-        $('levelHint').textContent = `📦 Pedido #${level} | 👆 Prepara la ruta de entrega`;
+        $('levelHint').textContent = getLevelHintText();
     }
 }
 
@@ -3874,11 +3885,17 @@ function updateMissionProgress(event, data = {}) {
         case 'chain_boosts':
             if (event === 'boost_hit') {
                 currentMission.consecutive++;
+                if (mText) {
+                    mText.innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> ⚡ Aceleradores ${currentMission.consecutive}/${currentMission.target}`;
+                }
                 if (currentMission.consecutive >= currentMission.target) {
                     completed = true;
                 }
             } else if (event === 'boost_missed') {
                 currentMission.consecutive = 0;
+                if (mText) {
+                    mText.innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> ⚡ Aceleradores 0/${currentMission.target}`;
+                }
             }
             break;
 
@@ -3959,6 +3976,26 @@ function updateMissionProgress(event, data = {}) {
 
         case 'pickup':
             if (event === 'item_collected' && data.item?.id === currentMission.item.id) {
+                completed = true;
+            }
+            break;
+
+        case 'visit_house':
+            if (event === 'house_passed') {
+                currentMission.visited = true;
+                if (mText) {
+                    mText.innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> 🏡 Casa visitada`;
+                }
+                completed = true;
+            }
+            break;
+
+        case 'red_diamond':
+            if (event === 'red_diamond_collected') {
+                currentMission.collected = true;
+                if (mText) {
+                    mText.innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> 💎 Diamante rojo conseguido`;
+                }
                 completed = true;
             }
             break;
@@ -4120,7 +4157,7 @@ function generateLevel(showLoading = true) {
         $('statusText').className = 'text-yellow-400 font-bold text-xs';
     }
     if ($('levelHint')) {
-        $('levelHint').textContent = `📦 Pedido #${level} | 👆 Prepara la ruta de entrega`;
+        $('levelHint').textContent = getLevelHintText();
     }
 
     // Animación de preparación y estrellas
@@ -4129,7 +4166,7 @@ function generateLevel(showLoading = true) {
 
     // --- GENERAR MISIÓN DEL NIVEL (Nuevos Tipos Agregados) ---
     // Misiones SOLO aparecen cada 4 niveles (4, 8, 12, 16, etc.)
-    const isLevelWithMission = (level % 4 === 0) && level >= 4;
+    const isLevelWithMission = level >= 2 && levelRand(level, 77) < 0.85;
     
     // Si estamos reintentando el nivel y hay misión guardada Y es nivel de misión, usarla
     if (savedMissionForRetry && savedLevelForRetry === level && isLevelWithMission) {
@@ -4147,19 +4184,23 @@ function generateLevel(showLoading = true) {
          if (currentMission.coinsCollected !== undefined) currentMission.coinsCollected = 0;
          if (currentMission.itemsCollected !== undefined) currentMission.itemsCollected = 0;
          if (currentMission.lastDirection !== undefined) currentMission.lastDirection = null;
+         if (currentMission.visited !== undefined) currentMission.visited = false;
+         if (currentMission.collected !== undefined) currentMission.collected = false;
          
          // Asegurar texto correcto en UI
          if (currentMission.type === 'coins') currentMission.text = `Recoger ${currentMission.target} Monedas`;
          else if (currentMission.type === 'speed_run') currentMission.text = `⚡ Entrega en < ${currentMission.targetTime}s`;
-         else if (currentMission.type === 'perfect_route') currentMission.text = `🎯 Usa máximo ${currentMission.maxTiles} rotaciones`;
+         else if (currentMission.type === 'perfect_route') currentMission.text = `🎯 Usa máximo ${currentMission.maxTiles} piezas del camino`;
          else if (currentMission.type === 'collect_all_stars') currentMission.text = `⭐ Recolecta ${currentMission.target} estrellas`;
          else if (currentMission.type === 'no_damage') currentMission.text = `😇 Sin tocar obstáculos`;
          else if (currentMission.type === 'minimal_tiles') currentMission.text = `🧩 Usa exactamente ${currentMission.maxTiles} piezas`;
-         else if (currentMission.type === 'chain_boosts') currentMission.text = `🔥 ${currentMission.target} velocidades seguidas`;
+         else if (currentMission.type === 'chain_boosts') currentMission.text = `⚡ Pisa ${currentMission.target} aceleradores seguidos`;
          else if (currentMission.type === 'zigzag_master') currentMission.text = `🔄 ${currentMission.target} cambios de dirección`;
          else if (currentMission.type === 'bridge_master') currentMission.text = `🔨 Construye ${currentMission.target} puentes`;
          else if (currentMission.type === 'speed_demon') currentMission.text = `🚀 Completa en < ${currentMission.timeLimit}s`;
          else if (currentMission.type === 'treasure_seeker') currentMission.text = `🗺️ ${currentMission.coinsRequired} monedas + ${currentMission.itemsRequired} objeto`;
+         else if (currentMission.type === 'visit_house') currentMission.text = `🏡 Pasa por una casa`;
+         else if (currentMission.type === 'red_diamond') currentMission.text = `💎 Consigue el diamante rojo`;
          
          console.log('Restaurada misión: ', currentMission);
     } 
@@ -4348,6 +4389,18 @@ function generateLevel(showLoading = true) {
                 targetTime: targetTime,
                 text: `⚡ Entrega en < ${targetTime}s`
             };
+        } else if (missionType === 'visit_house') {
+            currentMission = {
+                type: 'visit_house',
+                visited: false,
+                text: '🏡 Pasa por una casa'
+            };
+        } else if (missionType === 'red_diamond') {
+            currentMission = {
+                type: 'red_diamond',
+                collected: false,
+                text: '💎 Consigue el diamante rojo'
+            };
         }
 
         if (currentMission?.type === 'bridge_master') {
@@ -4391,6 +4444,7 @@ function generateLevel(showLoading = true) {
     ensureSolvablePath();
     fillEmpty(config.deadEnds);
     missionGuaranteedPath = generateGuaranteedPath();
+    placeHouseSpots();
 
     if (currentMission) {
         const rotatableTilesCount = grid.filter(t => t && !t.locked && t.type !== TILE_TYPES.BLOCKED).length;
@@ -4426,11 +4480,9 @@ function generateLevel(showLoading = true) {
     if (level % 4 === 0) {
         placeDiamonds();
     }
-    
-    // Colocar diamantes cada 4 niveles
-    if (level % 4 === 0) {
-        placeDiamonds();
-    }
+
+    // Colocar diamante rojo en cada nivel (lejos del inicio)
+    placeRedDiamond();
     
     // --- POST-PROCESAMIENTO MISIONES ---
     // Si es 'all_coins', contamos cuantas monedas se generaron realmente
@@ -4560,6 +4612,7 @@ function handleClick(e) {
     const col = Math.floor(clickX / TILE_SIZE), row = Math.floor(clickY / TILE_SIZE);
     if (col >= 0 && col < COLS && row >= 0 && row < ROWS) {
         const tile = grid[row * COLS + col];
+
         
         // Modo puente: convertir pieza en puente (transacción directa sin ventanas)
         if (bridgeModeActive && tile && !tile.locked && tile.type !== TILE_TYPES.BLOCKED) {
@@ -4602,7 +4655,7 @@ function handleClick(e) {
             bridgeModeActive = false;
             const btn = $('btnBridge');
             if(btn) { btn.classList.remove('ring-4', 'ring-yellow-400'); btn.style.boxShadow = ""; }
-            if($('levelHint')) $('levelHint').textContent = `📦 Pedido #${level} | 👆 Prepara la ruta de entrega`;
+            if($('levelHint')) $('levelHint').textContent = getLevelHintText();
 
             checkConnections();
             draw();
@@ -4627,6 +4680,31 @@ function handleClick(e) {
         }
     }
 }
+
+function tileRand(col, row, seed) {
+    let n = (col * 73856093) ^ (row * 19349663) ^ seed;
+    n = (n << 13) ^ n;
+    const nn = (n * (n * n * 15731 + 789221) + 1376312589) & 0x7fffffff;
+    return (nn / 1073741824) * 0.5 + 0.5;
+}
+
+function levelRand(lvl, seed) {
+    let n = (lvl * 1103515245 + seed * 12345) & 0x7fffffff;
+    n = (n << 13) ^ n;
+    const nn = (n * (n * n * 15731 + 789221) + 1376312589) & 0x7fffffff;
+    return (nn / 1073741824) * 0.5 + 0.5;
+}
+
+function getCornerPosition(x, y, corner) {
+    const offset = TILE_SIZE * 0.28;
+    switch (corner) {
+        case 'nw': return { x: x + offset, y: y + offset };
+        case 'ne': return { x: x + TILE_SIZE - offset, y: y + offset };
+        case 'se': return { x: x + TILE_SIZE - offset, y: y + TILE_SIZE - offset };
+        default: return { x: x + offset, y: y + TILE_SIZE - offset };
+    }
+}
+
 
 function isRotateHintHit(x, y) {
     if (!car) return false;
@@ -4886,21 +4964,75 @@ function placeDiamonds() {
         // Colocar 1 diamante por nivel
         const diamondTile = candidates[Math.floor(Math.random() * candidates.length)];
         diamondTile.hasDiamond = true;
-        console.log('Diamante colocado en nivel', level);
+        console.log('💎 Diamante colocado en nivel', level);
     }
 }
 
-function placeDiamonds() {
-    const candidates = grid.filter(t => 
-        t && !t.locked && !t.hasCoin && !t.hasStar && !t.hasDiamond && !t.special &&
-        t.type !== TILE_TYPES.START && t.type !== TILE_TYPES.END && t.type !== TILE_TYPES.BLOCKED
-    );
-    
-    if (candidates.length > 0) {
-        // Colocar 1 diamante por nivel
-        const diamondTile = candidates[Math.floor(Math.random() * candidates.length)];
-        diamondTile.hasDiamond = true;
-        console.log('💎 Diamante colocado en nivel', level);
+function placeRedDiamond() {
+    const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
+    if (!startTile) return;
+
+    const reachable = getReachableTiles(startTile.col, startTile.row);
+    const candidates = reachable
+        .map(idx => grid[idx])
+        .filter(t =>
+            t && !t.locked && t.type !== TILE_TYPES.BLOCKED && !t.special && !t.hasCoin &&
+            !t.hasStar && !t.hasDiamond && !t.hasRedDiamond && !t.missionItem &&
+            t.type !== TILE_TYPES.START && t.type !== TILE_TYPES.END
+        );
+
+    if (candidates.length === 0) return;
+
+    let maxDist = 0;
+    candidates.forEach(t => {
+        const dist = Math.abs(t.col - startTile.col) + Math.abs(t.row - startTile.row);
+        if (dist > maxDist) maxDist = dist;
+    });
+
+    const farCandidates = candidates.filter(t => {
+        const dist = Math.abs(t.col - startTile.col) + Math.abs(t.row - startTile.row);
+        return dist >= Math.max(3, maxDist - 1);
+    });
+
+    const pickFrom = farCandidates.length > 0 ? farCandidates : candidates;
+    const redTile = pickFrom[Math.floor(Math.random() * pickFrom.length)];
+    redTile.hasRedDiamond = true;
+}
+
+function placeHouseSpots() {
+    const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
+    if (!startTile) return;
+
+    const reachable = getReachableTiles(startTile.col, startTile.row);
+    const interior = reachable
+        .map(idx => grid[idx])
+        .filter(t =>
+            t && !t.locked && t.type !== TILE_TYPES.BLOCKED && !t.special && !t.hasHouse &&
+            !t.hasCoin && !t.hasStar && !t.hasDiamond && !t.hasRedDiamond && !t.missionItem &&
+            t.type !== TILE_TYPES.START && t.type !== TILE_TYPES.END &&
+            t.col > 0 && t.col < COLS - 1 && t.row > 0 && t.row < ROWS - 1
+        );
+
+    if (interior.length === 0) return;
+
+    let maxDist = 0;
+    interior.forEach(t => {
+        const dist = Math.abs(t.col - startTile.col) + Math.abs(t.row - startTile.row);
+        if (dist > maxDist) maxDist = dist;
+    });
+
+    const farInterior = interior.filter(t => {
+        const dist = Math.abs(t.col - startTile.col) + Math.abs(t.row - startTile.row);
+        return dist >= Math.max(4, maxDist - 1);
+    });
+
+    const count = Math.min(3, Math.max(1, Math.floor((COLS * ROWS) * 0.06)));
+    const pool = farInterior.length > 0 ? farInterior : interior;
+    pool.sort(() => Math.random() - 0.5);
+
+    for (let i = 0; i < count && i < pool.length; i++) {
+        pool[i].hasHouse = true;
+        pool[i].houseVisited = false;
     }
 }
 
@@ -5059,7 +5191,7 @@ function placeCoins() {
     const possibleTiles = getReachableTiles(startTile.col, startTile.row);
     
     // --- MONEDAS INTELIGENTES SEGÚN MISIÓN ---
-    let coinsToPlace = 15; // Aumentado de 10 a 15 para más monedas
+    let coinsToPlace = 20; // Más monedas para premios frecuentes
     
     // Ajustar cantidad según la misión actual
     if (currentMission) {
@@ -5073,7 +5205,7 @@ function placeCoins() {
     }
     
     // Limite máximo aumentado para más monedas
-    const maxCoins = Math.min(possibleTiles.length * 0.7, 35); // Aumentado de 25 a 35
+    const maxCoins = Math.min(possibleTiles.length * 0.75, 42);
     coinsToPlace = Math.min(coinsToPlace, maxCoins);
     
     // Filtrar candidatos para monedas
@@ -5484,7 +5616,7 @@ function addSpecials(features) {
     // Colocar features normales
     features.forEach(f => {
         let count = (f === 'boost' && currentMission && currentMission.type === 'chain_boosts') ? 0 :
-            (f === 'bomb' || f === 'mystery' || f === 'shield') ? 1 : 2;
+            (f === 'bomb' || f === 'mystery' || f === 'shield' || f === 'dog') ? 1 : 2;
 
         if (f === 'bomb' && missionGuaranteedPath && missionGuaranteedPath.length > 2) {
             const pathIndices = missionGuaranteedPath
@@ -5509,6 +5641,8 @@ function addSpecials(features) {
             else if (f === 'bomb') tile.special = 'bomb';
             else if (f === 'mystery') tile.special = 'mystery';
             else if (f === 'shield') tile.special = 'shield';
+            else if (f === 'cash') tile.special = 'cash';
+            else if (f === 'dog') tile.special = 'dog';
         }
     });
 }
@@ -5979,7 +6113,6 @@ function startCountdown() {
             clearInterval(countdownTimer);
             updatePrepBar(100);
             stopPrepAnimation();
-            // Tiempo agotado - descontar $100 de las propinas
             timeExpired();
         }
     }, 1000);
@@ -6010,8 +6143,22 @@ function stopPrepAnimation() {
 
 // Función para manejar tiempo expirado - Unificada con crash
 function timeExpired() {
-    // Caso 1: Tiempo Agotado -> Pedido Cancelado
-    crash('¡El cliente canceló por demora!', '¡TIEMPO AGOTADO!');
+    if (gameState !== 'EDITING') {
+        timeLeft = 0;
+        if ($('timerDisplay')) $('timerDisplay').textContent = '⏱️ 0';
+        return;
+    }
+
+    timeLeft = 0;
+    if ($('timerDisplay')) {
+        $('timerDisplay').textContent = '⏱️ 0';
+        $('timerDisplay').classList.add('timer-warning');
+    }
+
+    clearInterval(countdownTimer);
+    countdownTimer = null;
+    stopPrepAnimation();
+    startCar();
 }
 
 // === FUNCIONES DEL OVERLAY DE ESPERA ===
@@ -6082,7 +6229,12 @@ function resetCar() {
         dir: dir,
         angle: dir === DIR.N ? -Math.PI/2 : dir === DIR.E ? 0 : dir === DIR.S ? Math.PI/2 : Math.PI,
         speed: config.speed, baseSpeed: config.speed, waiting: false,
-        trail: [] // Inicializar estela
+        trail: [], // Inicializar estela
+        skidTimer: 0,
+        skidTimerMax: 0,
+        skidAngleOffset: 0,
+        dogFollowTimer: 0,
+        dogSlowTimer: 0
     };
     gameState = 'EDITING';
 }
@@ -6248,6 +6400,16 @@ function showCurrentMission() {
             statusText = currentMission.completed ? 'COMPLETADA' : `Recoger: ${currentMission.item?.name || 'objeto'}`;
             statusColor = currentMission.completed ? '#22c55e' : '#fbbf24';
             break;
+        case 'visit_house':
+            missionIcon = '🏡';
+            statusText = currentMission.visited ? 'COMPLETADA' : 'Pasa por una casa';
+            statusColor = currentMission.visited ? '#22c55e' : '#fbbf24';
+            break;
+        case 'red_diamond':
+            missionIcon = '💎';
+            statusText = currentMission.collected ? 'COMPLETADA' : 'Consigue el diamante rojo';
+            statusColor = currentMission.collected ? '#22c55e' : '#fbbf24';
+            break;
         default:
             statusText = 'Completa la misión para avanzar';
     }
@@ -6259,7 +6421,9 @@ function showCurrentMission() {
                        (currentMission.type === 'chain_boosts' && currentMission.consecutive >= currentMission.target) ||
                        (currentMission.type === 'zigzag_master' && currentMission.current >= currentMission.target) ||
                        (currentMission.type === 'bridge_master' && currentMission.current >= currentMission.target) ||
-                       (currentMission.type === 'treasure_seeker' && currentMission.coinsCollected >= currentMission.coinsRequired && currentMission.itemsCollected >= currentMission.itemsRequired);
+                       (currentMission.type === 'treasure_seeker' && currentMission.coinsCollected >= currentMission.coinsRequired && currentMission.itemsCollected >= currentMission.itemsRequired) ||
+                       (currentMission.type === 'visit_house' && currentMission.visited) ||
+                       (currentMission.type === 'red_diamond' && currentMission.collected);
     
     if (isCompleted) {
         statusText = '✅ COMPLETADA';
@@ -6304,7 +6468,9 @@ function startCar() {
     }
     */
     
-    // NO detenemos el countdown - el tiempo sigue corriendo
+    // Detener el countdown: el tiempo era solo para preparar la ruta
+    clearInterval(countdownTimer);
+    countdownTimer = null;
     stopPrepAnimation();
     
     // Guardar el tiempo cuando comienza la entrega
@@ -6496,6 +6662,11 @@ function gameLoop() {
     if (dist < hitRadius) {
         car.x = cx; car.y = cy;
         const tile = grid[car.row * COLS + car.col];
+
+        if (tile?.hasHouse && !tile.houseVisited) {
+            tile.houseVisited = true;
+            updateMissionProgress('house_passed', { tile });
+        }
         
         // LÓGICA DE SEMÁFOROS RESTAURADA CON MEJORAS
         if (tile?.special === 'semaphore' && tile.semaphoreState !== 'green') {
@@ -6540,6 +6711,9 @@ function gameLoop() {
         
         if (tile?.special === 'puddle') {
             car.speed = car.baseSpeed * 0.5;
+            car.skidTimer = 20;
+            car.skidTimerMax = 20;
+            car.skidAngleOffset = (Math.random() < 0.5 ? -0.6 : 0.6);
             updateMissionProgress('boost_missed');
         }
         else if (tile?.special === 'boost') {
@@ -6552,6 +6726,10 @@ function gameLoop() {
             if (currentMission && currentMission.type === 'chain_boosts') {
                 updateMissionProgress('boost_missed');
             }
+        }
+
+        if (car.dogSlowTimer > 0) {
+            car.speed = Math.min(car.speed, car.baseSpeed * 0.85);
         }
 
         if (tile?.special === 'bomb') {
@@ -6624,6 +6802,22 @@ function gameLoop() {
             }
             playSound('delivery');
         }
+
+        if (tile?.special === 'cash') {
+            tile.special = null;
+            totalMoney += 40;
+            if ($('moneyDisplay')) $('moneyDisplay').textContent = totalMoney;
+            saveGameData();
+            floatingTexts.push({ x: car.x, y: car.y - 30, text: '+$40', color: '#fbbf24', life: 80, vy: -1.2 });
+            playSound('money');
+        }
+
+        if (tile?.special === 'dog') {
+            tile.special = null;
+            car.dogFollowTimer = 180;
+            car.dogSlowTimer = 120;
+            playSound('pop');
+        }
         
         // RECOLECTAR MONEDA
         if (tile?.hasCoin) {
@@ -6660,6 +6854,24 @@ function gameLoop() {
             if (diamondsCollected > 0 && diamondsCollected % 6 === 0) {
                 shouldShowPrizeWheel = true;
             }
+        }
+
+        // RECOLECTAR DIAMANTE ROJO
+        if (tile?.hasRedDiamond) {
+            tile.hasRedDiamond = false;
+            totalMoney += 200;
+            if ($('moneyDisplay')) $('moneyDisplay').textContent = totalMoney;
+            saveGameData();
+            playSound('delivery');
+            floatingTexts.push({
+                x: car.x,
+                y: car.y - 30,
+                text: '+$200',
+                color: '#f87171',
+                life: 90,
+                vy: -1.6
+            });
+            updateMissionProgress('red_diamond_collected', { tile });
         }
         
         // --- LOGICA ITEM DE MISION (PICKUP) ---
@@ -6749,8 +6961,8 @@ function gameLoop() {
 
                     case 'perfect_route':
                         if (currentMission.tilesUsed > currentMission.maxTiles) {
-                            failMessage = `Máximo: ${currentMission.maxTiles} rotaciones<br>Usaste: ${currentMission.tilesUsed}`;
-                            failTitle = '¡DEMASIADAS ROTACIONES!';
+                            failMessage = `Máximo: ${currentMission.maxTiles} piezas<br>Usaste: ${currentMission.tilesUsed}`;
+                            failTitle = '¡DEMASIADAS PIEZAS!';
                             missionFailed = true;
                         }
                         break;
@@ -6936,6 +7148,11 @@ function gameLoop() {
     
     const d = DIR_DELTA[car.dir];
     car.x += d.dc * car.speed; car.y += d.dr * car.speed;
+
+    if (car.skidTimer > 0) car.skidTimer--;
+    if (car.skidTimer === 0) car.skidAngleOffset = 0;
+    if (car.dogFollowTimer > 0) car.dogFollowTimer--;
+    if (car.dogSlowTimer > 0) car.dogSlowTimer--;
     
     // Actualizar Estela (Trail)
     if (car.trail) {
@@ -7598,6 +7815,10 @@ function showWinScreen() {
     if (currentMission && !isMissionComplete()) {
         // Misión no completada - mostrar mensaje de fallo
         gameState = 'EDITING';
+
+        totalMoney = Math.max(0, totalMoney - 50);
+        if ($('moneyDisplay')) $('moneyDisplay').textContent = totalMoney;
+        saveGameData();
         
         const overlay = $('overlay');
         overlay.classList.remove('hidden');
@@ -7607,6 +7828,7 @@ function showWinScreen() {
                 <h2 class="text-3xl font-bold text-red-400 mb-4 text-center">¡MISIÓN NO COMPLETADA!</h2>
                 <p class="text-lg text-white mb-2 text-center">Llegaste a la meta pero no cumpliste la misión:</p>
                 <p class="text-xl text-yellow-400 mb-6 text-center font-bold">${currentMission.text}</p>
+                <div class="text-sm text-red-300 mb-6">💥 Penalización: <b>-$50</b> · Total: <b>$${totalMoney}</b></div>
                 <button onclick="retryLevel()" class="bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-xl font-bold text-xl transition-all">
                     🔄 Reintentar Nivel
                 </button>
@@ -7896,8 +8118,21 @@ function draw() {
             window.grassPattern = '#166534';
         }
     }
+    if (!window.bgCache || window.bgCache.w !== canvas.width || window.bgCache.h !== canvas.height) {
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, '#12311a');
+        gradient.addColorStop(0.5, '#0f2a1a');
+        gradient.addColorStop(1, '#0b1f16');
+        window.bgCache = { gradient, w: canvas.width, h: canvas.height };
+    }
+
+    ctx.fillStyle = window.bgCache.gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.globalAlpha = 0.45;
     ctx.fillStyle = window.grassPattern;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
     
     // Dibujar solo tiles visibles
     for (let i = 0; i < grid.length; i++) {
@@ -8094,6 +8329,7 @@ function drawTile(tile) {
     const cy = y + TILE_SIZE / 2;
     const rw = TILE_SIZE * 0.45;
     const h = rw / 2;
+    const conn = tile.getConnections ? tile.getConnections() : tile.type.base;
     
     ctx.save();
     ctx.fillStyle = '#1a3a1a'; // Verde oscuro como césped/terreno
@@ -8208,16 +8444,29 @@ function drawTile(tile) {
         
         // --- LÓGICA DE DIBUJO DE CALLE MODIFICADA ---
 
-        // 1. Dibuja la forma base de la carretera con la textura de pavimento.
+        // 1. Vereda/cordón más ancho detrás de la calle para que se vea el borde y césped cercano.
+        const curb = Math.max(2, Math.round(TILE_SIZE * 0.06));
+        const sidewalkPath = new Path2D();
+        const sw = rw + curb * 2;
+        const sh = h + curb;
+        if (conn & DIR.N) sidewalkPath.rect(-sw / 2, -s/2, sw, s/2 + sh);
+        if (conn & DIR.S) sidewalkPath.rect(-sw / 2, -sh, sw, s/2 + sh);
+        if (conn & DIR.E) sidewalkPath.rect(-sh, -sh, s/2 + sh, sw);
+        if (conn & DIR.W) sidewalkPath.rect(-s/2, -sh, s/2 + sh, sw);
+        ctx.fillStyle = 'rgba(203, 213, 225, 0.4)';
+        ctx.fill(sidewalkPath);
+
+        // 2. Dibuja la forma base de la carretera con la textura de pavimento.
         // Se usan solo rectángulos para formar una cruz nítida en las intersecciones, sin círculos.
         const roadPath = new Path2D();
         if (conn & DIR.N) roadPath.rect(-h, -s/2, rw, s/2 + h);
         if (conn & DIR.S) roadPath.rect(-h, -h, rw, s/2 + h);
         if (conn & DIR.E) roadPath.rect(-h, -h, s/2 + h, rw);
         if (conn & DIR.W) roadPath.rect(-s/2, -h, s/2 + h, rw);
+        ctx.fillStyle = fillStyle;
         ctx.fill(roadPath);
 
-        // 2. Oscurece la textura de la calle como solicitó el usuario.
+        // 3. Oscurece la textura de la calle como solicitó el usuario.
         ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; // Negro al 25% de opacidad.
         ctx.fill(roadPath);
 
@@ -8278,6 +8527,9 @@ function drawTile(tile) {
         
         ctx.restore();
     } // FIN IF NOT BRIDGE
+
+    drawSidewalkGrass(tile, x, y, conn);
+    drawEdgeHouses(tile, x, y, conn);
 
     // DIBUJAR MONEDA (Si existe y no ha sido recolectada)
     if (tile.hasCoin) {
@@ -8396,6 +8648,64 @@ function drawTile(tile) {
         ctx.arc(-size * 0.3, -size * 0.4, 1.5, 0, Math.PI * 2);
         ctx.fill();
         
+        ctx.restore();
+    }
+
+    // DIBUJAR DIAMANTE ROJO (Si existe y no ha sido recolectado)
+    if (tile.hasRedDiamond) {
+        const now = performance.now() / 1000;
+        const floatY = Math.sin(now * 3.4) * 5;
+        const pulseScale = 1 + Math.sin(now * 5.2) * 0.12;
+        const glowIntensity = 0.5 + Math.sin(now * 4.6) * 0.3;
+
+        ctx.save();
+        ctx.translate(cx, cy + floatY);
+
+        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 20 * pulseScale);
+        gradient.addColorStop(0, `rgba(248, 113, 113, ${glowIntensity})`);
+        gradient.addColorStop(0.6, `rgba(239, 68, 68, ${glowIntensity * 0.5})`);
+        gradient.addColorStop(1, 'rgba(248, 113, 113, 0)');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(0, 0, 20 * pulseScale, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.beginPath();
+        ctx.ellipse(0, 12 - floatY, 10, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.scale(pulseScale, pulseScale);
+        const size = 11;
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.moveTo(0, -size);
+        ctx.lineTo(size * 0.7, -size * 0.3);
+        ctx.lineTo(size * 0.7, size * 0.3);
+        ctx.lineTo(0, size);
+        ctx.lineTo(-size * 0.7, size * 0.3);
+        ctx.lineTo(-size * 0.7, -size * 0.3);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = '#fecaca';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.fillStyle = '#fee2e2';
+        ctx.beginPath();
+        ctx.moveTo(0, -size * 0.7);
+        ctx.lineTo(size * 0.4, -size * 0.2);
+        ctx.lineTo(0, size * 0.2);
+        ctx.lineTo(-size * 0.4, -size * 0.2);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.beginPath();
+        ctx.arc(-size * 0.3, -size * 0.4, 1.6, 0, Math.PI * 2);
+        ctx.fill();
+
         ctx.restore();
     }
     
@@ -8634,6 +8944,14 @@ function drawTile(tile) {
         ctx.fillStyle = 'rgba(59, 130, 246, 0.5)';
         ctx.beginPath(); ctx.ellipse(cx, cy, TILE_SIZE * 0.12, TILE_SIZE * 0.08, 0, 0, Math.PI * 2);
         ctx.fill();
+    } else if (tile.special === 'dog') {
+        ctx.font = `${TILE_SIZE * 0.28}px sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('🐶', cx, cy);
+    } else if (tile.special === 'cash') {
+        ctx.font = `${TILE_SIZE * 0.26}px sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('💵', cx, cy);
     } else if (tile.special === 'boost') {
         ctx.font = `${TILE_SIZE * 0.22}px sans-serif`;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -8657,6 +8975,196 @@ function drawTile(tile) {
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText('🛡️', cx, cy);
     }
+}
+
+function drawSidewalkGrass(tile, x, y, conn) {
+    const hasN = (conn & DIR.N);
+    const hasE = (conn & DIR.E);
+    const hasS = (conn & DIR.S);
+    const hasW = (conn & DIR.W);
+    const inset = Math.max(3, Math.round(TILE_SIZE * 0.08));
+    const lineCount = 3;
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(34, 139, 34, 0.6)';
+    ctx.lineWidth = 1;
+    ctx.lineCap = 'round';
+
+    const drawEdge = (x1, y1, x2, y2, seed) => {
+        for (let i = 0; i < lineCount; i++) {
+            const t = (i + 1) / (lineCount + 1);
+            const jitter = (tileRand(tile.col, tile.row, seed + i) - 0.5) * 4;
+            const sx = x1 + (x2 - x1) * t;
+            const sy = y1 + (y2 - y1) * t;
+            const ex = sx + (x2 - x1) * 0.25 + jitter;
+            const ey = sy + (y2 - y1) * 0.25 + jitter;
+            ctx.beginPath();
+            ctx.moveTo(sx, sy);
+            ctx.lineTo(ex, ey);
+            ctx.stroke();
+        }
+    };
+
+    if (!hasN) drawEdge(x + inset, y + inset, x + TILE_SIZE - inset, y + inset, 11);
+    if (!hasS) drawEdge(x + inset, y + TILE_SIZE - inset, x + TILE_SIZE - inset, y + TILE_SIZE - inset, 21);
+    if (!hasW) drawEdge(x + inset, y + inset, x + inset, y + TILE_SIZE - inset, 31);
+    if (!hasE) drawEdge(x + TILE_SIZE - inset, y + inset, x + TILE_SIZE - inset, y + TILE_SIZE - inset, 41);
+
+    drawPocketParks(tile, x, y, hasN, hasE, hasS, hasW);
+    ctx.restore();
+}
+
+function drawPocketParks(tile, x, y, hasN, hasE, hasS, hasW) {
+    const corners = [
+        { key: 'nw', open: !hasN && !hasW },
+        { key: 'ne', open: !hasN && !hasE },
+        { key: 'se', open: !hasS && !hasE },
+        { key: 'sw', open: !hasS && !hasW }
+    ];
+    corners.forEach((corner, idx) => {
+        if (!corner.open) return;
+        const chance = tileRand(tile.col, tile.row, 80 + idx);
+        if (chance < 0.55) return;
+
+        const pos = getCornerPosition(x, y, corner.key);
+        const size = TILE_SIZE * 0.22;
+        ctx.fillStyle = 'rgba(16, 122, 64, 0.9)';
+        ctx.beginPath();
+        ctx.roundRect(pos.x - size, pos.y - size, size * 2, size * 2, size * 0.35);
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(226, 232, 240, 0.45)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        const treeCount = chance > 0.82 ? 2 : 1;
+        for (let i = 0; i < treeCount; i++) {
+            const tJitterX = (tileRand(tile.col, tile.row, 100 + idx * 3 + i) - 0.5) * size * 0.6;
+            const tJitterY = (tileRand(tile.col, tile.row, 110 + idx * 3 + i) - 0.5) * size * 0.6;
+            const tx = pos.x + tJitterX;
+            const ty = pos.y + tJitterY;
+            ctx.fillStyle = '#14532d';
+            ctx.beginPath();
+            ctx.arc(tx, ty, size * 0.28, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#166534';
+            ctx.beginPath();
+            ctx.arc(tx + size * 0.12, ty - size * 0.12, size * 0.18, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    });
+}
+
+function drawEdgeHouses(tile, x, y, conn) {
+    if (tile.type === TILE_TYPES.BLOCKED || tile.type === TILE_TYPES.START || tile.type === TILE_TYPES.END) return;
+    const hasN = (conn & DIR.N);
+    const hasE = (conn & DIR.E);
+    const hasS = (conn & DIR.S);
+    const hasW = (conn & DIR.W);
+
+    const isTop = tile.row === 0 && !hasN;
+    const isBottom = tile.row === ROWS - 1 && !hasS;
+    const isLeft = tile.col === 0 && !hasW;
+    const isRight = tile.col === COLS - 1 && !hasE;
+    const isEdge = isTop || isBottom || isLeft || isRight;
+    if (!isEdge && !tile.hasHouse) return;
+
+    const houseChance = tileRand(tile.col, tile.row, 160);
+    if (houseChance < 0.35) return;
+
+    const scale = TILE_SIZE * 0.55;
+    const palettePick = tileRand(tile.col, tile.row, 170);
+    const palettes = [
+        { wall: '#f7c948', roof: '#e2574c', door: '#4caf6a', trim: '#a3a3a3', window: '#bfe3f8' },
+        { wall: '#f9d777', roof: '#d65c5c', door: '#6ea8ff', trim: '#93a1b1', window: '#cfe8ff' },
+        { wall: '#f2c6b4', roof: '#c44b4b', door: '#7cc77b', trim: '#9aa3ad', window: '#d7f0ff' }
+    ];
+    const palette = palettes[Math.floor(palettePick * palettes.length)];
+
+    if (tile.hasHouse && !isEdge) {
+        drawVectorHouse(x + TILE_SIZE * 0.12, y + TILE_SIZE * 0.1, scale * 0.9, palette, 'center');
+    } else if (isLeft) {
+        drawVectorHouse(x - scale * 0.5, y + TILE_SIZE * 0.15, scale, palette, 'left');
+    } else if (isRight) {
+        drawVectorHouse(x + TILE_SIZE - scale * 0.5, y + TILE_SIZE * 0.15, scale, palette, 'right');
+    } else if (isTop) {
+        drawVectorHouse(x + TILE_SIZE * 0.2, y - scale * 0.55, scale, palette, 'top');
+    } else if (isBottom) {
+        drawVectorHouse(x + TILE_SIZE * 0.2, y + TILE_SIZE - scale * 0.2, scale, palette, 'bottom');
+    }
+}
+
+function drawVectorHouse(x, y, size, palette, side) {
+    const wallW = size;
+    const wallH = size * 0.7;
+    const roofH = size * 0.35;
+    const trim = palette.trim;
+
+    ctx.save();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = trim;
+
+    // Base shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    ctx.fillRect(x + size * 0.08, y + wallH + roofH - 2, size * 0.7, size * 0.12);
+
+    // Walls
+    ctx.fillStyle = palette.wall;
+    ctx.beginPath();
+    ctx.roundRect(x, y + roofH, wallW, wallH, size * 0.08);
+    ctx.fill();
+    ctx.stroke();
+
+    // Roof
+    ctx.fillStyle = palette.roof;
+    ctx.beginPath();
+    ctx.moveTo(x - size * 0.05, y + roofH + 2);
+    ctx.lineTo(x + wallW * 0.5, y - size * 0.05);
+    ctx.lineTo(x + wallW + size * 0.05, y + roofH + 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Chimney
+    ctx.fillStyle = '#d16c6c';
+    ctx.fillRect(x + wallW * 0.12, y + roofH * 0.1, size * 0.12, size * 0.25);
+    ctx.strokeRect(x + wallW * 0.12, y + roofH * 0.1, size * 0.12, size * 0.25);
+
+    // Door
+    ctx.fillStyle = palette.door;
+    ctx.beginPath();
+    ctx.roundRect(x + wallW * 0.42, y + roofH + wallH * 0.38, wallW * 0.18, wallH * 0.5, size * 0.06);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.arc(x + wallW * 0.56, y + roofH + wallH * 0.62, size * 0.03, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Windows
+    ctx.fillStyle = palette.window;
+    const winW = wallW * 0.18;
+    const winH = wallH * 0.18;
+    ctx.fillRect(x + wallW * 0.15, y + roofH + wallH * 0.35, winW, winH);
+    ctx.fillRect(x + wallW * 0.68, y + roofH + wallH * 0.35, winW, winH);
+    ctx.strokeRect(x + wallW * 0.15, y + roofH + wallH * 0.35, winW, winH);
+    ctx.strokeRect(x + wallW * 0.68, y + roofH + wallH * 0.35, winW, winH);
+
+    // Round window
+    ctx.beginPath();
+    ctx.arc(x + wallW * 0.5, y + roofH + wallH * 0.16, size * 0.07, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(71, 85, 105, 0.7)';
+    ctx.beginPath();
+    ctx.moveTo(x + wallW * 0.5, y + roofH + wallH * 0.09);
+    ctx.lineTo(x + wallW * 0.5, y + roofH + wallH * 0.23);
+    ctx.moveTo(x + wallW * 0.45, y + roofH + wallH * 0.16);
+    ctx.lineTo(x + wallW * 0.55, y + roofH + wallH * 0.16);
+    ctx.stroke();
+
+    ctx.restore();
 }
 
 const vImgMoto = new Image(); vImgMoto.src = 'motoa.gif';
@@ -8782,11 +9290,27 @@ function drawCar() {
         ctx.rotate(Math.PI / 2); // Rotar verticalmente
     }
     // Si es derecha (0), por defecto.
+
+    if (car.skidTimer && car.skidTimerMax) {
+        const t = car.skidTimer / car.skidTimerMax;
+        const skidAngle = (car.skidAngleOffset || 0) * t;
+        ctx.rotate(skidAngle);
+    }
     
     // NOTA: La línea amarilla de "preview" sale del frente del vehículo (eje X positivo después de transformar)
     // Al usar estas transformaciones, (x>0) siempre es "al frente" del vehículo.
     
     ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 4; ctx.shadowOffsetY = 4;
+
+    if (car.dogFollowTimer > 0) {
+        ctx.save();
+        ctx.shadowBlur = 0;
+        ctx.font = '14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🐶', -18, 10);
+        ctx.restore();
+    }
     
     const mainColor = selectedColor;
     const waiting = car.waiting;
