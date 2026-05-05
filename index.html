@@ -7003,7 +7003,7 @@ function gameLoop() {
                 playSound('pop');
             } else {
                 timeLeft = Math.max(0, timeLeft - 6);
-                totalMoney = Math.max(0, totalMoney - 25);
+                totalMoney = Math.max(0, totalMoney - 100);
                 if ($('timerDisplay')) $('timerDisplay').textContent = `⏱️ ${timeLeft}`;
                 if ($('moneyDisplay')) $('moneyDisplay').textContent = totalMoney;
                 if (timeLeft <= 0) { timeExpired(); return; }
@@ -8815,7 +8815,7 @@ function drawTile(tile) {
         // Efecto de rotación en su eje (como moneda parada girando)
         if (!window.coinSpinTime) window.coinSpinTime = 0;
         window.coinSpinTime += 0.002; // Giro aún más lento
-        const spinScale = Math.abs(Math.cos(window.coinSpinTime)); // Escala para simular perspectiva
+        const spinScale = Math.max(0.15, Math.abs(Math.cos(window.coinSpinTime))); // Evitar escala casi cero
         
         ctx.save();
         ctx.translate(cx, cy);
@@ -9286,6 +9286,8 @@ function drawTile(tile) {
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText('🛡️', cx, cy);
     }
+
+    ctx.restore();
 }
 
 function drawSidewalkGrass(tile, x, y, conn) {
