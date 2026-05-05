@@ -2450,6 +2450,8 @@ let currentLevelForEnd = 0; // Nivel actual para saber cuándo cambiar la casa
 let premiumMotoUnlocked = false; // Moto premium desbloqueada
 let previewPath = []; // Ruta calculada
 let plannedRoute = []; // Ruta planificada con direcciones para que el carro la siga
+let plannedRouteMap = new Map(); // Acceso rapido a la ruta planificada
+let forceFreeDrive = false; // Permite avanzar sin ruta al agotarse el tiempo
 const PREMIUM_MOTO_PRICE = 3000; // Precio de la moto premium
 let premiumTruckUnlocked = false; // Camioneta premium desbloqueada
 const PREMIUM_TRUCK_PRICE = 4000; // Precio de la camioneta premium
@@ -2485,6 +2487,8 @@ const ALL_MISSIONS = {
     'speed_run': { name: 'Velocista', icon: '⚡', unlockLevel: 10 },
     'place_bridge': { name: 'Constructor', icon: '🌉', unlockLevel: 3 },
     'use_powerup': { name: 'Estratégico', icon: '⚙️', unlockLevel: 2 },
+    'coin_hoarder': { name: 'Caza Monedas', icon: '🪙', unlockLevel: 4 },
+    'pass_semaphore': { name: 'Semaforo Seguro', icon: '🚦', unlockLevel: 6 },
     
     // 10 MISIONES NUEVAS CREATIVAS
     'perfect_route': { name: 'Ruta Perfecta', icon: '🎯', unlockLevel: 5 },
@@ -2499,6 +2503,26 @@ const ALL_MISSIONS = {
     'visit_house': { name: 'Vecindario', icon: '🏡', unlockLevel: 3 },
     'red_diamond': { name: 'Diamante Rojo', icon: '💎', unlockLevel: 4 }
 };
+
+const MISSION_WEIGHTS = {
+    perfect_route: 0.5,
+    minimal_tiles: 0.5,
+    coins: 1.1,
+    coin_hoarder: 1.2,
+    pass_semaphore: 1.0
+};
+
+function pickWeightedMission(types) {
+    if (!types || types.length === 0) return null;
+    let total = 0;
+    types.forEach(type => { total += (MISSION_WEIGHTS[type] || 1); });
+    let roll = Math.random() * total;
+    for (const type of types) {
+        roll -= (MISSION_WEIGHTS[type] || 1);
+        if (roll <= 0) return type;
+    }
+    return types[types.length - 1];
+}
 
 const MISSION_ITEMS = [
     { id: 'pizza', icon: '🍕', name: 'Pizza Olvidada' },
@@ -2522,6 +2546,7 @@ class Tile {
         this.hasHouse = false; // Casa decorativa en el tablero
         this.houseVisited = false; // Para misiones de visitar casa
         this.missionItem = null; // { type: 'pizza', icon: '🍕', name: 'Pizza' }
+        this.semaphoreVisited = false; // Para misiones de semaforo
     }
     getConnections() {
         if (this.type === TILE_TYPES.BLOCKED) return 0;
@@ -2589,6 +2614,7 @@ function generateTutorialLevel() {
     COLS = config.cols; ROWS = config.rows;
 
     gameState = 'EDITING';
+    forceFreeDrive = false;
     bridgeModeActive = false;
     const ov = $('overlay');
     if (ov) {
@@ -3837,6 +3863,16 @@ function updateMissionProgress(event, data = {}) {
             }
             break;
 
+        case 'coin_hoarder':
+            if (event === 'coin_collected') {
+                currentMission.current++;
+                if (mText) {
+                    mText.innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> 🪙 Recoger ${currentMission.current}/${currentMission.target} Monedas`;
+                }
+                if (currentMission.current >= currentMission.target) completed = true;
+            }
+            break;
+
         case 'perfect_route':
             if (event === 'tile_placed') {
                 currentMission.tilesUsed = getPlannedRouteTileCount();
@@ -3990,6 +4026,16 @@ function updateMissionProgress(event, data = {}) {
             }
             break;
 
+        case 'pass_semaphore':
+            if (event === 'semaphore_passed') {
+                currentMission.visited = true;
+                if (mText) {
+                    mText.innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> 🚦 Semaforo cruzado`;
+                }
+                completed = true;
+            }
+            break;
+
         case 'red_diamond':
             if (event === 'red_diamond_collected') {
                 currentMission.collected = true;
@@ -4104,6 +4150,7 @@ function generateLevel(showLoading = true) {
 
     // Estado del juego y limpieza de overlay
     gameState = 'EDITING';
+    forceFreeDrive = false;
     bridgeModeActive = false;
     missionBridgeCredits = 0;
     missionPowerupCredits = 0;
@@ -4189,6 +4236,7 @@ function generateLevel(showLoading = true) {
          
          // Asegurar texto correcto en UI
          if (currentMission.type === 'coins') currentMission.text = `Recoger ${currentMission.target} Monedas`;
+         else if (currentMission.type === 'coin_hoarder') currentMission.text = `🪙 Recoger ${currentMission.target} Monedas`;
          else if (currentMission.type === 'speed_run') currentMission.text = `⚡ Entrega en < ${currentMission.targetTime}s`;
          else if (currentMission.type === 'perfect_route') currentMission.text = `🎯 Usa máximo ${currentMission.maxTiles} piezas del camino`;
          else if (currentMission.type === 'collect_all_stars') currentMission.text = `⭐ Recolecta ${currentMission.target} estrellas`;
@@ -4201,6 +4249,7 @@ function generateLevel(showLoading = true) {
          else if (currentMission.type === 'treasure_seeker') currentMission.text = `🗺️ ${currentMission.coinsRequired} monedas + ${currentMission.itemsRequired} objeto`;
          else if (currentMission.type === 'visit_house') currentMission.text = `🏡 Pasa por una casa`;
          else if (currentMission.type === 'red_diamond') currentMission.text = `💎 Consigue el diamante rojo`;
+         else if (currentMission.type === 'pass_semaphore') currentMission.text = `🚦 Pasa por un semaforo`;
          
          console.log('Restaurada misión: ', currentMission);
     } 
@@ -4251,7 +4300,7 @@ function generateLevel(showLoading = true) {
         }
         
         // Seleccionar misión aleatoria de las disponibles
-        const missionType = availableMissions[Math.floor(Math.random() * availableMissions.length)];
+        const missionType = pickWeightedMission(availableMissions);
         
         // Marcar misión como usada en este nivel
         completedMissionsPerLevel[level].push(missionType);
@@ -4268,6 +4317,15 @@ function generateLevel(showLoading = true) {
                 target: target,
                 current: 0,
                 text: `💰 Recoger ${target} Monedas`
+            };
+        } else if (missionType === 'coin_hoarder') {
+            const maxPossibleCoins = Math.floor((COLS * ROWS) * 0.35);
+            const target = Math.min(8, Math.max(4, maxPossibleCoins));
+            currentMission = {
+                type: 'coin_hoarder',
+                target: target,
+                current: 0,
+                text: `🪙 Recoger ${target} Monedas`
             };
         } else if (missionType === 'perfect_route') {
             const maxTiles = Math.min(COLS * ROWS * 0.7, 25); // Máximo 70% del tablero
@@ -4401,6 +4459,12 @@ function generateLevel(showLoading = true) {
                 collected: false,
                 text: '💎 Consigue el diamante rojo'
             };
+        } else if (missionType === 'pass_semaphore') {
+            currentMission = {
+                type: 'pass_semaphore',
+                visited: false,
+                text: '🚦 Pasa por un semaforo'
+            };
         }
 
         if (currentMission?.type === 'bridge_master') {
@@ -4474,6 +4538,23 @@ function generateLevel(showLoading = true) {
     }
     randomizeRotations();
     addSpecials(config.features);
+
+    if (currentMission && currentMission.type === 'pass_semaphore') {
+        const hasSemaphore = specialTiles.some(t => t && t.special === 'semaphore');
+        if (!hasSemaphore) {
+            const fallbackTarget = Math.min(6, Math.max(3, Math.floor((COLS * ROWS) * 0.2)));
+            currentMission = {
+                type: 'coins',
+                target: fallbackTarget,
+                current: 0,
+                text: `💰 Recoger ${fallbackTarget} Monedas`
+            };
+            const mText = $('missionText');
+            if (mText) {
+                mText.innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> ${currentMission.text}`;
+            }
+        }
+    }
     placeCoins();
     
     // Colocar diamantes cada 4 niveles
@@ -5739,6 +5820,7 @@ function checkConnections() {
 function calculatePreviewPath() {
     previewPath = [];
     plannedRoute = [];
+    plannedRouteMap = new Map();
     if (!car) return;
     
     // --- NUEVO: VALIDACIÓN ESTRICTA DE DIRECCIÓN INICIAL ---
@@ -5960,6 +6042,10 @@ function calculatePreviewPath() {
 
         plannedRoute = newRoute;
         prevPlannedRoute = newRoute.slice();
+        plannedRouteMap = new Map();
+        newRoute.forEach(step => {
+            plannedRouteMap.set(`${step.col},${step.row}`, step.dir);
+        });
 
         // Ajustar el índice animado: no menor al prefijo estable, ni mayor al total de segmentos
         // Mantener el progreso alcanzado: no retroceder el índice animado
@@ -6158,7 +6244,7 @@ function timeExpired() {
     clearInterval(countdownTimer);
     countdownTimer = null;
     stopPrepAnimation();
-    startCar();
+    startCar(true);
 }
 
 // === FUNCIONES DEL OVERLAY DE ESPERA ===
@@ -6237,6 +6323,7 @@ function resetCar() {
         dogSlowTimer: 0
     };
     gameState = 'EDITING';
+    forceFreeDrive = false;
 }
 
 // === FUNCIONES DEL MODAL DE MISIÓN ===
@@ -6346,6 +6433,10 @@ function showCurrentMission() {
             missionIcon = '💰';
             statusText = `Progreso: ${currentMission.current || 0}/${currentMission.target}`;
             break;
+        case 'coin_hoarder':
+            missionIcon = '🪙';
+            statusText = `Progreso: ${currentMission.current || 0}/${currentMission.target}`;
+            break;
         case 'collect_all_stars':
             missionIcon = '⭐';
             statusText = `Progreso: ${currentMission.current || 0}/${currentMission.target}`;
@@ -6405,6 +6496,11 @@ function showCurrentMission() {
             statusText = currentMission.visited ? 'COMPLETADA' : 'Pasa por una casa';
             statusColor = currentMission.visited ? '#22c55e' : '#fbbf24';
             break;
+        case 'pass_semaphore':
+            missionIcon = '🚦';
+            statusText = currentMission.visited ? 'COMPLETADA' : 'Pasa por un semaforo';
+            statusColor = currentMission.visited ? '#22c55e' : '#fbbf24';
+            break;
         case 'red_diamond':
             missionIcon = '💎';
             statusText = currentMission.collected ? 'COMPLETADA' : 'Consigue el diamante rojo';
@@ -6417,13 +6513,15 @@ function showCurrentMission() {
     // Verificar si la misión está completada
     const isCompleted = currentMission.completed || 
                        (currentMission.type === 'coins' && currentMission.current >= currentMission.target) ||
+                       (currentMission.type === 'coin_hoarder' && currentMission.current >= currentMission.target) ||
                        (currentMission.type === 'collect_all_stars' && currentMission.current >= currentMission.target) ||
                        (currentMission.type === 'chain_boosts' && currentMission.consecutive >= currentMission.target) ||
                        (currentMission.type === 'zigzag_master' && currentMission.current >= currentMission.target) ||
                        (currentMission.type === 'bridge_master' && currentMission.current >= currentMission.target) ||
                        (currentMission.type === 'treasure_seeker' && currentMission.coinsCollected >= currentMission.coinsRequired && currentMission.itemsCollected >= currentMission.itemsRequired) ||
                        (currentMission.type === 'visit_house' && currentMission.visited) ||
-                       (currentMission.type === 'red_diamond' && currentMission.collected);
+                       (currentMission.type === 'red_diamond' && currentMission.collected) ||
+                       (currentMission.type === 'pass_semaphore' && currentMission.visited);
     
     if (isCompleted) {
         statusText = '✅ COMPLETADA';
@@ -6453,9 +6551,10 @@ function showCurrentMission() {
     });
 }
 
-function startCar() {
+function startCar(forceStart = false) {
     initAudio();
     if (gameState !== 'EDITING') return;
+    forceFreeDrive = !!forceStart;
     
     // VALIDACIÓN RELAJADA: Permitir intentar entregar aunque la ruta esté incompleta
     // El coche avanzará y si no hay camino, chocará (parte de la diversión/feedback)
@@ -6635,6 +6734,15 @@ function actuallyStartCar() {
     gameLoop();
 }
 
+function pickFallbackExit(exits, preferredDir) {
+    if (preferredDir && (exits & preferredDir)) return preferredDir;
+    const order = [DIR.N, DIR.E, DIR.S, DIR.W];
+    for (const dir of order) {
+        if (exits & dir) return dir;
+    }
+    return 0;
+}
+
 function gameLoop() {
     if (gameState !== 'RUNNING') return;
     
@@ -6666,6 +6774,11 @@ function gameLoop() {
         if (tile?.hasHouse && !tile.houseVisited) {
             tile.houseVisited = true;
             updateMissionProgress('house_passed', { tile });
+        }
+
+        if (tile?.special === 'semaphore' && !tile.semaphoreVisited) {
+            tile.semaphoreVisited = true;
+            updateMissionProgress('semaphore_passed', { tile });
         }
         
         // LÓGICA DE SEMÁFOROS RESTAURADA CON MEJORAS
@@ -6933,6 +7046,13 @@ function gameLoop() {
                             missionFailed = true;
                         }
                         break;
+                    case 'coin_hoarder':
+                        if (currentMission.current < currentMission.target) {
+                            failMessage = `Requeridas: ${currentMission.target} monedas<br>Recogiste: ${currentMission.current}`;
+                            failTitle = '¡FALTAN MONEDAS!';
+                            missionFailed = true;
+                        }
+                        break;
 
                     case 'pickup':
                         if (!currentMission.completed) {
@@ -7048,6 +7168,13 @@ function gameLoop() {
                             missionFailed = true;
                         }
                         break;
+                    case 'pass_semaphore':
+                        if (!currentMission.visited) {
+                            failMessage = 'Debes pasar por un semaforo';
+                            failTitle = '¡FALTA SEMAFORO!';
+                            missionFailed = true;
+                        }
+                        break;
                 }
 
                 // Si la misión falló, hacer crash y reiniciar el nivel
@@ -7083,25 +7210,27 @@ function gameLoop() {
         const exits = isMultiWay ? (DIR.N | DIR.E | DIR.S | DIR.W) : (conn & ~entry);
         let exitDir = 0;
         
-        // OBLIGATORIO: SEGUIR SOLO LA RUTA PLANIFICADA (línea amarilla)
-        // El vehículo NO puede desviarse por otras salidas aunque existan
-        const plannedMove = plannedRoute.find(r => r.col === car.col && r.row === car.row);
-        
-        if (plannedMove) {
-            // Si hay ruta planificada, DEBE usarla obligatoriamente
-            if (exits & plannedMove.dir) {
-                // La dirección planificada está disponible - seguirla
-                exitDir = plannedMove.dir;
+        const plannedDir = plannedRouteMap.get(`${car.col},${car.row}`);
+        if (!forceFreeDrive) {
+            // OBLIGATORIO: SEGUIR SOLO LA RUTA PLANIFICADA (línea amarilla)
+            if (plannedDir) {
+                if (exits & plannedDir) {
+                    exitDir = plannedDir;
+                } else {
+                    crash('¡Ruta incorrecta! Pieza mal armada');
+                    return;
+                }
             } else {
-                // La dirección planificada NO está disponible = pieza mal orientada
-                crash('¡Ruta incorrecta! Pieza mal armada');
+                crash('¡Sin ruta planificada! Debes armar el camino antes');
                 return;
             }
         } else {
-            // Si NO hay ruta planificada para esta posición
-            // El jugador no armó bien la ruta - ERROR
-            crash('¡Sin ruta planificada! Debes armar el camino antes');
-            return;
+            // Modo libre: preferir ruta planificada si existe, si no seguir salida valida
+            if (plannedDir && (exits & plannedDir)) {
+                exitDir = plannedDir;
+            } else {
+                exitDir = pickFallbackExit(exits, car.dir);
+            }
         }
         
         if (!exitDir) {
@@ -7121,7 +7250,7 @@ function gameLoop() {
         // y detenerse solo al estar sobre ella si está en rojo/amarillo
         
         // VALIDAR que la siguiente pieza esté CONECTADA (powered) - el carro no puede ir por calles no armadas
-        if (!next.powered && !next.locked) { 
+        if (!forceFreeDrive && !next.powered && !next.locked) { 
             crash('¡Calle no conectada!'); 
             return; 
         }
@@ -8334,6 +8463,9 @@ function drawTile(tile) {
     ctx.save();
     ctx.fillStyle = '#1a3a1a'; // Verde oscuro como césped/terreno
     ctx.fillRect(x + 1, y + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 0.5, y + 0.5, TILE_SIZE - 1, TILE_SIZE - 1);
     
     if (tile.type === TILE_TYPES.BLOCKED) {
         let icon = '🚧';
