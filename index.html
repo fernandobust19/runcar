@@ -49,6 +49,31 @@
             30%, 50%, 70% { transform: translate3d(-5px, 0, 0); }
             40%, 60% { transform: translate3d(5px, 0, 0); }
         }
+        #bombBlast { background: rgba(0, 0, 0, 0.35); }
+        #bombBlast.bomb-blast { animation: bombFade 0.7s ease-out; }
+        #bombBlast .bomb-blast-bg {
+            position: absolute;
+            inset: -10%;
+            background: radial-gradient(circle, rgba(255, 120, 0, 0.9) 0%, rgba(255, 0, 0, 0.55) 35%, rgba(0, 0, 0, 0) 70%);
+            animation: bombFlash 0.55s ease-out;
+        }
+        #bombBlast .bomb-blast-core {
+            font-size: 110px;
+            text-shadow: 0 0 25px rgba(255, 90, 0, 0.8);
+            animation: bombPop 0.55s ease-out;
+        }
+        #bombBlast .bomb-blast-text {
+            margin-top: 8px;
+            font-size: 28px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            color: #fee2e2;
+            text-shadow: 0 0 18px rgba(255, 60, 0, 0.8);
+            animation: bombPop 0.55s ease-out;
+        }
+        @keyframes bombFlash { 0% { opacity: 0; } 30% { opacity: 1; } 100% { opacity: 0; } }
+        @keyframes bombPop { 0% { transform: scale(0.6); opacity: 0; } 50% { transform: scale(1.05); opacity: 1; } 100% { transform: scale(1); opacity: 0.9; } }
+        @keyframes bombFade { 0% { opacity: 0; } 15% { opacity: 1; } 100% { opacity: 0; } }
         .pulse { animation: pulse 0.5s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         .timer-warning { animation: timerPulse 0.5s infinite; color: #ef4444 !important; }
@@ -979,6 +1004,13 @@ function startNeonIntro() {
                 <p class="text-yellow-400 text-[10px] mb-3" id="overlayBonus"></p>
                 <button id="overlayBtn" class="bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-2 px-6 rounded-full shadow-lg btn-game text-sm">Siguiente</button>
                 <p class="text-white text-xs mt-3 opacity-90" id="overlayFooter"></p>
+            </div>
+            <div id="bombBlast" class="hidden fixed inset-0 z-[90] flex items-center justify-center pointer-events-none">
+                <div class="bomb-blast-bg"></div>
+                <div class="relative z-10 flex flex-col items-center">
+                    <div class="bomb-blast-core">💥</div>
+                    <div class="bomb-blast-text">¡BOMBA!</div>
+                </div>
             </div>
             <!-- Overlay de carga corto para evitar flicker al generar niveles -->
             <div id="levelLoading" class="hidden fixed inset-0 z-[80] bg-black/95"></div>
@@ -2278,8 +2310,46 @@ function playSound(type) {
         }
 
         else if (type === 'crash') { osc.type = 'square'; osc.frequency.setValueAtTime(150, t); osc.frequency.exponentialRampToValueAtTime(40, t + 0.3); gain.gain.setValueAtTime(0.3, t); osc.start(t); osc.stop(t + 0.3); }
+        else if (type === 'bomb') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(90, t);
+            osc.frequency.exponentialRampToValueAtTime(30, t + 0.4);
+            gain.gain.setValueAtTime(0.35, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+            osc.start(t); osc.stop(t + 0.4);
+
+            const bufferSize = audioCtx.sampleRate * 0.2;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+            const noiseFilter = audioCtx.createBiquadFilter();
+            noiseFilter.type = 'lowpass';
+            noiseFilter.frequency.setValueAtTime(500, t);
+            noiseFilter.frequency.exponentialRampToValueAtTime(120, t + 0.2);
+
+            const noiseGain = audioCtx.createGain();
+            noiseGain.gain.setValueAtTime(0.2, t);
+            noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+
+            noise.connect(noiseFilter);
+            noiseFilter.connect(noiseGain);
+            noiseGain.connect(audioCtx.destination);
+            noise.start(t); noise.stop(t + 0.2);
+        }
         else if (type === 'win') { [523,659,784,1047].forEach((f,i) => { const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); o.frequency.setValueAtTime(f, t+i*0.15); g.gain.setValueAtTime(0.15, t+i*0.15); o.start(t+i*0.15); o.stop(t+i*0.15+0.2); }); }
         else if (type === 'warning') { osc.frequency.setValueAtTime(400, t); gain.gain.setValueAtTime(0.25, t); osc.start(t); osc.stop(t + 0.1); }
+        else if (type === 'semaphore') {
+            // Beep corto tipo salida de carreras
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(980, t);
+            osc.frequency.exponentialRampToValueAtTime(720, t + 0.08);
+            gain.gain.setValueAtTime(0.22, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+            osc.start(t); osc.stop(t + 0.08);
+        }
         else if (type === 'moto_pass') {
              // SONIDO DE MOTO PASANDO (Doppler)
              const o = audioCtx.createOscillator();
@@ -2464,6 +2534,20 @@ let previewPath = []; // Ruta calculada
 let plannedRoute = []; // Ruta planificada con direcciones para que el carro la siga
 let plannedRouteMap = new Map(); // Acceso rapido a la ruta planificada
 let forceFreeDrive = false; // Permite avanzar sin ruta al agotarse el tiempo
+
+function showBombBlast() {
+    const blast = $('bombBlast');
+    if (!blast) return;
+    blast.classList.remove('hidden');
+    blast.classList.remove('bomb-blast');
+    void blast.offsetWidth;
+    blast.classList.add('bomb-blast');
+    if (navigator.vibrate) navigator.vibrate([90, 60, 90]);
+    setTimeout(() => {
+        blast.classList.add('hidden');
+        blast.classList.remove('bomb-blast');
+    }, 650);
+}
 const PREMIUM_MOTO_PRICE = 3000; // Precio de la moto premium
 let premiumTruckUnlocked = false; // Camioneta premium desbloqueada
 const PREMIUM_TRUCK_PRICE = 4000; // Precio de la camioneta premium
@@ -3932,17 +4016,12 @@ function updateMissionProgress(event, data = {}) {
 
         case 'chain_boosts':
             if (event === 'boost_hit') {
-                currentMission.consecutive++;
+                currentMission.current = Math.min(currentMission.target, (currentMission.current || 0) + 1);
                 if (mText) {
-                    mText.innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> ⚡ Aceleradores ${currentMission.consecutive}/${currentMission.target}`;
+                    mText.innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> ⚡ Aceleradores ${currentMission.current}/${currentMission.target}`;
                 }
-                if (currentMission.consecutive >= currentMission.target) {
+                if (currentMission.current >= currentMission.target) {
                     completed = true;
-                }
-            } else if (event === 'boost_missed') {
-                currentMission.consecutive = 0;
-                if (mText) {
-                    mText.innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> ⚡ Aceleradores 0/${currentMission.target}`;
                 }
             }
             break;
@@ -4254,7 +4333,7 @@ function generateLevel(showLoading = true) {
          else if (currentMission.type === 'collect_all_stars') currentMission.text = `⭐ Recolecta ${currentMission.target} estrellas`;
          else if (currentMission.type === 'no_damage') currentMission.text = `😇 Sin tocar obstáculos`;
          else if (currentMission.type === 'minimal_tiles') currentMission.text = `🧩 Usa exactamente ${currentMission.maxTiles} piezas`;
-         else if (currentMission.type === 'chain_boosts') currentMission.text = `⚡ Pisa ${currentMission.target} aceleradores seguidos`;
+         else if (currentMission.type === 'chain_boosts') currentMission.text = `⚡ Pisa ${currentMission.target} aceleradores`;
          else if (currentMission.type === 'zigzag_master') currentMission.text = `🔄 ${currentMission.target} cambios de dirección`;
          else if (currentMission.type === 'bridge_master') currentMission.text = `🔨 Construye ${currentMission.target} puentes`;
          else if (currentMission.type === 'speed_demon') currentMission.text = `🚀 Completa en < ${currentMission.timeLimit}s`;
@@ -4389,7 +4468,7 @@ function generateLevel(showLoading = true) {
                 target: Math.min(3, Math.floor(level / 4) + 1),
                 current: 0,
                 consecutive: 0,
-                text: `⚡ Pisa ${Math.min(3, Math.floor(level / 4) + 1)} aceleradores seguidos`
+                text: `⚡ Pisa ${Math.min(3, Math.floor(level / 4) + 1)} aceleradores`
             };
         } else if (missionType === 'zigzag_master') {
             currentMission = {
@@ -4544,7 +4623,7 @@ function generateLevel(showLoading = true) {
         if (currentMission.type === 'chain_boosts') {
             const maxPossible = Math.max(1, pathSegments - 1);
             currentMission.target = Math.min(currentMission.target, maxPossible);
-            currentMission.text = `⚡ Pisa ${currentMission.target} aceleradores seguidos`;
+            currentMission.text = `⚡ Pisa ${currentMission.target} aceleradores`;
             if (missionTextEl) missionTextEl.innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> ${currentMission.text}`;
         }
     }
@@ -6512,7 +6591,7 @@ function showCurrentMission() {
             break;
         case 'chain_boosts':
             missionIcon = '⚡';
-            statusText = `Consecutivos: ${currentMission.consecutive || 0}/${currentMission.target}`;
+            statusText = `Aceleradores: ${currentMission.current || 0}/${currentMission.target}`;
             break;
         case 'zigzag_master':
             missionIcon = '🔄';
@@ -6576,7 +6655,7 @@ function showCurrentMission() {
                        (currentMission.type === 'coins' && currentMission.current >= currentMission.target) ||
                        (currentMission.type === 'coin_hoarder' && currentMission.current >= currentMission.target) ||
                        (currentMission.type === 'collect_all_stars' && currentMission.current >= currentMission.target) ||
-                       (currentMission.type === 'chain_boosts' && currentMission.consecutive >= currentMission.target) ||
+                       (currentMission.type === 'chain_boosts' && currentMission.current >= currentMission.target) ||
                        (currentMission.type === 'zigzag_master' && currentMission.current >= currentMission.target) ||
                        (currentMission.type === 'bridge_master' && currentMission.current >= currentMission.target) ||
                        (currentMission.type === 'treasure_seeker' && currentMission.coinsCollected >= currentMission.coinsRequired && currentMission.itemsCollected >= currentMission.itemsRequired) ||
@@ -6852,12 +6931,14 @@ function gameLoop() {
                 // PASO 1: FORZAR ROJO AL LLEGAR
                 tile.semaphoreState = 'red';
                 draw(); // Mostrar rojo con semáforo grande
+                playSound('semaphore');
                 
                 // PASO 2: Después de ver el rojo, cambiar a amarillo
                 const t1 = setTimeout(() => {
                     if (tile.isSequenceActive) {
                         tile.semaphoreState = 'yellow';
                         draw(); // Mostrar amarillo con semáforo grande
+                        playSound('semaphore');
                     }
                     
                     // PASO 3: Después de ver el amarillo, cambiar a verde  
@@ -6866,6 +6947,7 @@ function gameLoop() {
                             tile.semaphoreState = 'green';
                                 car.waiting = false; // Salir INMEDIATAMENTE cuando cambie a verde
                                 draw(); // Mostrar verde con semáforo grande
+                                playSound('semaphore');
                             }
                             
                             // PASO 4: Mantener el semáforo en verde por un tiempo antes de limpiar
@@ -6926,16 +7008,19 @@ function gameLoop() {
                 if ($('moneyDisplay')) $('moneyDisplay').textContent = totalMoney;
                 if (timeLeft <= 0) { timeExpired(); return; }
                 updateMissionProgress('damage_taken');
-                playSound('crash');
+                playSound('bomb');
                 canvas.classList.add('shake');
                 setTimeout(() => canvas.classList.remove('shake'), 400);
+                showBombBlast();
                 floatingTexts.push({
                     x: car.x,
                     y: car.y - 30,
                     text: '💥 BOMBA!',
                     color: '#f87171',
                     life: 90,
-                    vy: -1.5
+                    vy: -1.5,
+                    size: 28,
+                    shadowBlur: 10
                 });
             }
         }
@@ -7173,9 +7258,9 @@ function gameLoop() {
                         break;
 
                     case 'chain_boosts':
-                        if (currentMission.consecutive < currentMission.target) {
-                            failMessage = `Necesitas: ${currentMission.target} velocidades consecutivas<br>Lograste: ${currentMission.consecutive}`;
-                            failTitle = '¡CADENA INCOMPLETA!';
+                        if (currentMission.current < currentMission.target) {
+                            failMessage = `Necesitas: ${currentMission.target} aceleradores<br>Lograste: ${currentMission.current}`;
+                            failTitle = '¡ACELERADORES INCOMPLETOS!';
                             missionFailed = true;
                         }
                         break;
@@ -8414,14 +8499,15 @@ function draw() {
     // DIBUJAR TEXTOS FLOTANTES
     if (window.floatingTexts && window.floatingTexts.length > 0) {
         ctx.save();
-        ctx.font = 'bold 16px monospace';
         ctx.textAlign = 'center';
         ctx.shadowColor = 'black';
-        ctx.shadowBlur = 4;
         
         // Iterar al revés para poder borrar
         for (let i = floatingTexts.length - 1; i >= 0; i--) {
             const ft = floatingTexts[i];
+            const fontSize = ft.size || 16;
+            ctx.font = `bold ${fontSize}px monospace`;
+            ctx.shadowBlur = ft.shadowBlur || 4;
             ctx.fillStyle = ft.color;
             ctx.fillText(ft.text, ft.x, ft.y);
             
@@ -9152,13 +9238,13 @@ function drawTile(tile) {
         ctx.save();
         ctx.translate(cx, cy);
 
-        ctx.fillStyle = `rgba(250, 204, 21, ${0.25 + pulse * 0.35})`;
+        ctx.fillStyle = `rgba(250, 204, 21, ${0.22 + pulse * 0.25})`;
         ctx.beginPath();
-        ctx.arc(0, 0, TILE_SIZE * 0.32, 0, Math.PI * 2);
+        ctx.arc(0, 0, TILE_SIZE * 0.22, 0, Math.PI * 2);
         ctx.fill();
 
-        const padW = TILE_SIZE * 0.6;
-        const padH = TILE_SIZE * 0.28;
+        const padW = TILE_SIZE * 0.46;
+        const padH = TILE_SIZE * 0.2;
         ctx.fillStyle = '#f59e0b';
         ctx.roundRect(-padW / 2, -padH / 2, padW, padH, padH * 0.35);
         ctx.fill();
@@ -9168,16 +9254,16 @@ function drawTile(tile) {
         ctx.stroke();
 
         ctx.fillStyle = '#fff7ed';
-        ctx.font = `${TILE_SIZE * 0.5}px sans-serif`;
+        ctx.font = `${TILE_SIZE * 0.38}px sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.shadowColor = 'rgba(251, 191, 36, 0.7)';
-        ctx.shadowBlur = 8;
+        ctx.shadowBlur = 6;
         ctx.fillText('⚡', 0, -1);
         ctx.shadowBlur = 0;
 
         ctx.fillStyle = '#fde68a';
-        ctx.font = `bold ${TILE_SIZE * 0.16}px sans-serif`;
+        ctx.font = `bold ${TILE_SIZE * 0.12}px sans-serif`;
         ctx.fillText('ACEL', 0, padH * 0.85);
 
         ctx.restore();
