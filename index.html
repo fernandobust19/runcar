@@ -2735,6 +2735,55 @@ COLLECTIBLE_ALBUM.forEach(item => {
     collectibleImages.set(item.id, img);
 });
 
+const HOUSE_SPRITE_FILES = [
+    'casas/20250826-102250.png',
+    'casas/20250826-110318.png',
+    'casas/20250827-030930.png',
+    'casas/20250827-052454.png',
+    'casas/20250827-071843.png',
+    'casas/20250831-110133.png',
+    'casas/astro-club.png',
+    'casas/banco.png',
+    'casas/bomberos.png',
+    'casas/cafeteria.png',
+    'casas/cine-club.png',
+    'casas/electrica.png',
+    'casas/gamer.png',
+    'casas/jugueteria.png',
+    'casas/pizzer-a.png',
+    'casas/policia.png',
+    'casas/yoga-estudio.png'
+];
+
+const houseSprites = HOUSE_SPRITE_FILES.map(src => {
+    const img = new Image();
+    img.src = src;
+    return img;
+});
+
+let houseSpritePool = [];
+let houseSpriteCursor = 0;
+
+function resetHouseSpritePool() {
+    const indices = [];
+    for (let i = 0; i < houseSprites.length; i++) indices.push(i);
+    for (let i = indices.length - 1; i > 0; i--) {
+        const j = Math.floor(levelRand(level, 901 + i) * (i + 1));
+        const tmp = indices[i];
+        indices[i] = indices[j];
+        indices[j] = tmp;
+    }
+    houseSpritePool = indices.slice(0, Math.min(10, indices.length));
+    houseSpriteCursor = 0;
+}
+
+function takeHouseSpriteIndex() {
+    if (houseSpriteCursor >= houseSpritePool.length) return null;
+    const idx = houseSpritePool[houseSpriteCursor];
+    houseSpriteCursor++;
+    return idx;
+}
+
 class Tile {
     constructor(col, row, type, rotation = 0) {
         this.col = col; this.row = row; this.type = type;
@@ -2748,6 +2797,8 @@ class Tile {
         this.hasRedDiamond = false; // Diamante rojo con credito alto
         this.hasHouse = false; // Casa decorativa en el tablero
         this.houseVisited = false; // Para misiones de visitar casa
+        this.houseSpriteIndex = null; // Sprite asignado a casa del tile
+        this.edgeHouse = null; // { side, spriteIndex } para casas en borde
         this.missionItem = null; // { type: 'pizza', icon: '🍕', name: 'Pizza' }
         this.collectibleItem = null; // { id, icon, name } extras
         this.semaphoreVisited = false; // Para misiones de semaforo
@@ -4374,6 +4425,7 @@ function generateLevel(showLoading = true) {
     lastRotateHintTime = Date.now();
     rotateTileHintDismissed = false;
     rotateTileHintCooldownUntil = 0;
+    resetHouseSpritePool();
     
     // --- INICIALIZAR CONTADORES DE MISIONES ---
     if (currentMission) {
@@ -5305,6 +5357,7 @@ function placeHouseSpots() {
     if (!startTile) return;
 
     const reachable = getReachableTiles(startTile.col, startTile.row);
+    const pathKeys = new Set((missionGuaranteedPath || []).map(p => `${p.col},${p.row}`));
     const interior = reachable
         .map(idx => grid[idx])
         .filter(t =>
@@ -5316,24 +5369,48 @@ function placeHouseSpots() {
 
     if (interior.length === 0) return;
 
-    let maxDist = 0;
-    interior.forEach(t => {
-        const dist = Math.abs(t.col - startTile.col) + Math.abs(t.row - startTile.row);
-        if (dist > maxDist) maxDist = dist;
+    const pool = interior.filter(t => !pathKeys.has(`${t.col},${t.row}`));
+    if (pool.length === 0) return;
+
+    const adjacentToPath = pool.filter(t => {
+        const neighbors = [
+            { c: t.col + 1, r: t.row },
+            { c: t.col - 1, r: t.row },
+            { c: t.col, r: t.row + 1 },
+            { c: t.col, r: t.row - 1 }
+        ];
+        return neighbors.some(n => pathKeys.has(`${n.c},${n.r}`));
     });
 
-    const farInterior = interior.filter(t => {
-        const dist = Math.abs(t.col - startTile.col) + Math.abs(t.row - startTile.row);
-        return dist >= Math.max(4, maxDist - 1);
+    const targetCount = Math.min(10, pool.length, houseSpritePool.length);
+    if (targetCount <= 0) return;
+
+    const ordered = pool.slice().sort((a, b) => {
+        const aVal = tileRand(a.col, a.row, 501);
+        const bVal = tileRand(b.col, b.row, 501);
+        return aVal - bVal;
     });
 
-    const count = Math.min(3, Math.max(1, Math.floor((COLS * ROWS) * 0.06)));
-    const pool = farInterior.length > 0 ? farInterior : interior;
-    pool.sort(() => Math.random() - 0.5);
+    const picks = [];
+    if (adjacentToPath.length > 0) {
+        adjacentToPath.sort((a, b) => tileRand(a.col, a.row, 777) - tileRand(b.col, b.row, 777));
+        picks.push(adjacentToPath[0]);
+    }
 
-    for (let i = 0; i < count && i < pool.length; i++) {
-        pool[i].hasHouse = true;
-        pool[i].houseVisited = false;
+    for (let i = 0; i < ordered.length && picks.length < targetCount; i++) {
+        if (!picks.includes(ordered[i])) picks.push(ordered[i]);
+    }
+
+    for (let i = 0; i < picks.length; i++) {
+        const t = picks[i];
+        const spriteIndex = takeHouseSpriteIndex();
+        if (spriteIndex === null) break;
+        t.hasHouse = true;
+        t.houseVisited = false;
+        t.houseSpriteIndex = spriteIndex;
+        t.special = 'house';
+        t.type = TILE_TYPES.BLOCKED;
+        t.locked = true;
     }
 }
 
@@ -7250,6 +7327,22 @@ function gameLoop() {
             updateMissionProgress('house_passed', { tile });
         }
 
+        const neighbors = [
+            { c: car.col + 1, r: car.row },
+            { c: car.col - 1, r: car.row },
+            { c: car.col, r: car.row + 1 },
+            { c: car.col, r: car.row - 1 }
+        ];
+        for (const n of neighbors) {
+            if (n.c < 0 || n.c >= COLS || n.r < 0 || n.r >= ROWS) continue;
+            const nTile = grid[n.r * COLS + n.c];
+            if (nTile?.special === 'house' && nTile.hasHouse && !nTile.houseVisited) {
+                nTile.houseVisited = true;
+                updateMissionProgress('house_passed', { tile: nTile });
+                break;
+            }
+        }
+
         if (tile?.special === 'semaphore' && !tile.semaphoreVisited) {
             tile.semaphoreVisited = true;
             updateMissionProgress('semaphore_passed', { tile });
@@ -7521,6 +7614,9 @@ function gameLoop() {
             
             // Animación directa a la UI (usando lógica similar a monedas)
             updateStarUI();
+
+            // --- ACTUALIZAR MISIONES DE ESTRELLAS ---
+            updateMissionProgress('star_collected', { tile });
 
             // CHEQUEAR SI LLEGÓ A 20
             if (totalStars >= 20) {
@@ -8971,6 +9067,26 @@ function drawTile(tile) {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
     ctx.lineWidth = 1;
     ctx.strokeRect(x + 0.5, y + 0.5, TILE_SIZE - 1, TILE_SIZE - 1);
+
+    if (tile.special === 'house') {
+        const img = typeof tile.houseSpriteIndex === 'number' ? houseSprites[tile.houseSpriteIndex] : null;
+        const size = TILE_SIZE * 0.95;
+        const drawX = cx - size * 0.5;
+        const drawY = cy - size * 0.55;
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + TILE_SIZE * 0.28, size * 0.32, size * 0.12, 0, 0, Math.PI * 2);
+        ctx.fill();
+        if (img && img.complete && img.naturalWidth > 0) {
+            ctx.drawImage(img, drawX, drawY, size, size * 0.85);
+        } else {
+            drawVectorHouse(drawX, drawY, size * 0.9, { wall: '#f7c948', roof: '#e2574c', door: '#4caf6a', trim: '#a3a3a3', window: '#bfe3f8' }, 'center');
+        }
+        ctx.restore();
+        ctx.restore();
+        return;
+    }
     
     if (tile.type === TILE_TYPES.BLOCKED) {
         let icon = '🚧';
@@ -9166,7 +9282,6 @@ function drawTile(tile) {
     } // FIN IF NOT BRIDGE
 
     drawSidewalkGrass(tile, x, y, conn);
-    drawEdgeHouses(tile, x, y, conn);
 
     // DIBUJAR MONEDA (Si existe y no ha sido recolectada)
     if (tile.hasCoin) {
@@ -9761,9 +9876,9 @@ function drawEdgeHouses(tile, x, y, conn) {
     if (!isEdge && !tile.hasHouse) return;
 
     const houseChance = tileRand(tile.col, tile.row, 160);
-    if (houseChance < 0.35) return;
+    if (houseChance < 0.2) return;
 
-    const scale = TILE_SIZE * 0.55;
+    const scale = TILE_SIZE * 0.7;
     const palettePick = tileRand(tile.col, tile.row, 170);
     const palettes = [
         { wall: '#f7c948', roof: '#e2574c', door: '#4caf6a', trim: '#a3a3a3', window: '#bfe3f8' },
@@ -9772,16 +9887,58 @@ function drawEdgeHouses(tile, x, y, conn) {
     ];
     const palette = palettes[Math.floor(palettePick * palettes.length)];
 
+    const drawHouseSprite = (drawX, drawY, size, side, spriteIndex) => {
+        const img = typeof spriteIndex === 'number' ? houseSprites[spriteIndex] : null;
+        const houseW = size;
+        const houseH = size * 0.82;
+        if (img && img.complete && img.naturalWidth > 0) {
+            ctx.save();
+            ctx.globalAlpha = 0.98;
+            ctx.drawImage(img, drawX, drawY, houseW, houseH);
+            ctx.restore();
+        } else {
+            drawVectorHouse(drawX, drawY, size, palette, side);
+        }
+    };
+
     if (tile.hasHouse && !isEdge) {
-        drawVectorHouse(x + TILE_SIZE * 0.12, y + TILE_SIZE * 0.1, scale * 0.9, palette, 'center');
+        if (tile.houseSpriteIndex === null || tile.houseSpriteIndex === undefined) {
+            tile.houseSpriteIndex = takeHouseSpriteIndex();
+        }
+        if (tile.houseSpriteIndex === null) return;
+        drawHouseSprite(x + TILE_SIZE * 0.1, y + TILE_SIZE * 0.08, scale * 0.95, 'center', tile.houseSpriteIndex);
     } else if (isLeft) {
-        drawVectorHouse(x - scale * 0.5, y + TILE_SIZE * 0.15, scale, palette, 'left');
+        if (!tile.edgeHouse) {
+            const spriteIndex = takeHouseSpriteIndex();
+            if (spriteIndex === null) return;
+            tile.edgeHouse = { side: 'left', spriteIndex };
+        }
+        if (!tile.edgeHouse) return;
+        drawHouseSprite(x - scale * 0.55, y + TILE_SIZE * 0.12, scale, 'left', tile.edgeHouse.spriteIndex);
     } else if (isRight) {
-        drawVectorHouse(x + TILE_SIZE - scale * 0.5, y + TILE_SIZE * 0.15, scale, palette, 'right');
+        if (!tile.edgeHouse) {
+            const spriteIndex = takeHouseSpriteIndex();
+            if (spriteIndex === null) return;
+            tile.edgeHouse = { side: 'right', spriteIndex };
+        }
+        if (!tile.edgeHouse) return;
+        drawHouseSprite(x + TILE_SIZE - scale * 0.45, y + TILE_SIZE * 0.12, scale, 'right', tile.edgeHouse.spriteIndex);
     } else if (isTop) {
-        drawVectorHouse(x + TILE_SIZE * 0.2, y - scale * 0.55, scale, palette, 'top');
+        if (!tile.edgeHouse) {
+            const spriteIndex = takeHouseSpriteIndex();
+            if (spriteIndex === null) return;
+            tile.edgeHouse = { side: 'top', spriteIndex };
+        }
+        if (!tile.edgeHouse) return;
+        drawHouseSprite(x + TILE_SIZE * 0.16, y - scale * 0.6, scale, 'top', tile.edgeHouse.spriteIndex);
     } else if (isBottom) {
-        drawVectorHouse(x + TILE_SIZE * 0.2, y + TILE_SIZE - scale * 0.2, scale, palette, 'bottom');
+        if (!tile.edgeHouse) {
+            const spriteIndex = takeHouseSpriteIndex();
+            if (spriteIndex === null) return;
+            tile.edgeHouse = { side: 'bottom', spriteIndex };
+        }
+        if (!tile.edgeHouse) return;
+        drawHouseSprite(x + TILE_SIZE * 0.16, y + TILE_SIZE - scale * 0.22, scale, 'bottom', tile.edgeHouse.spriteIndex);
     }
 }
 
