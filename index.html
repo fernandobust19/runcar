@@ -4777,7 +4777,9 @@ function generateLevel(showLoading = true) {
     }
 
     // Colocar diamante rojo de vez en cuando (lejos del inicio)
-    if (levelRand(level, 91) < 0.35) {
+    if (currentMission && currentMission.type === 'red_diamond') {
+        placeRedDiamond();
+    } else if (levelRand(level, 91) < 0.35) {
         placeRedDiamond();
     }
     
@@ -4835,6 +4837,8 @@ function generateLevel(showLoading = true) {
              }
          }
     }
+
+    ensureMissionMatchesBoard();
 
     // Carro y conexiones
     resetCar();
@@ -5614,6 +5618,157 @@ function placeExtraCollectibles() {
     for (let i = 0; i < spawnCount; i++) {
         const t = grid[candidates[i]];
         t.collectibleItem = items[i % items.length];
+    }
+}
+
+function updateMissionUI() {
+    const mText = $('missionText');
+    const mIcon = $('missionIcon');
+    if (currentMission && mIcon) {
+        const data = ALL_MISSIONS[currentMission.type];
+        if (data?.icon) mIcon.textContent = data.icon;
+    }
+    if (currentMission && mText) {
+        mText.innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> ${currentMission.text}`;
+    }
+}
+
+function tryForceCoinPlacement() {
+    for (let i = 0; i < grid.length; i++) {
+        const t = grid[i];
+        if (!t || t.locked || t.type === TILE_TYPES.BLOCKED) continue;
+        if (t.hasCoin || t.hasStar || t.hasDiamond || t.hasRedDiamond || t.missionItem || t.collectibleItem || t.special) continue;
+        if (t.type === TILE_TYPES.START || t.type === TILE_TYPES.END) continue;
+        t.hasCoin = true;
+        return true;
+    }
+    return false;
+}
+
+function fallbackToCoinsMission() {
+    const fallbackTarget = Math.min(6, Math.max(3, Math.floor((COLS * ROWS) * 0.2)));
+    currentMission = {
+        type: 'coins',
+        target: fallbackTarget,
+        current: 0,
+        text: `💰 Recoger ${fallbackTarget} Monedas`
+    };
+    updateMissionUI();
+}
+
+function ensureMissionMatchesBoard() {
+    if (!currentMission) return;
+
+    let coinCount = 0;
+    let starCount = 0;
+    let houseCount = 0;
+    let redDiamondCount = 0;
+    let missionItemCount = 0;
+    let collectibleCount = 0;
+    let boostCount = 0;
+    let semaphoreCount = 0;
+
+    grid.forEach(t => {
+        if (!t) return;
+        if (t.hasCoin) coinCount++;
+        if (t.hasStar) starCount++;
+        if (t.hasHouse) houseCount++;
+        if (t.hasRedDiamond) redDiamondCount++;
+        if (t.missionItem) missionItemCount++;
+        if (t.collectibleItem) collectibleCount++;
+        if (t.special === 'boost') boostCount++;
+        if (t.special === 'semaphore') semaphoreCount++;
+    });
+
+    switch (currentMission.type) {
+        case 'coins':
+        case 'coin_hoarder': {
+            if (coinCount === 0 && tryForceCoinPlacement()) coinCount = 1;
+            if (coinCount === 0) {
+                fallbackToCoinsMission();
+                return;
+            }
+            currentMission.target = Math.min(currentMission.target, coinCount);
+            currentMission.text = currentMission.type === 'coin_hoarder'
+                ? `🪙 Recoger ${currentMission.target} Monedas`
+                : `💰 Recoger ${currentMission.target} Monedas`;
+            updateMissionUI();
+            break;
+        }
+        case 'collect_all_stars': {
+            if (starCount === 0) {
+                fallbackToCoinsMission();
+                return;
+            }
+            currentMission.target = starCount;
+            currentMission.text = `⭐ Recolecta ${starCount} estrellas`;
+            updateMissionUI();
+            break;
+        }
+        case 'treasure_seeker': {
+            if (level > 70) {
+                fallbackToCoinsMission();
+                return;
+            }
+            if (coinCount === 0 && tryForceCoinPlacement()) coinCount = 1;
+            if (coinCount === 0 || collectibleCount === 0) {
+                fallbackToCoinsMission();
+                return;
+            }
+            currentMission.coinsRequired = Math.min(currentMission.coinsRequired, coinCount);
+            currentMission.itemsRequired = Math.min(currentMission.itemsRequired, collectibleCount);
+            currentMission.text = `🗺️ Recolecta ${currentMission.coinsRequired} monedas Y ${currentMission.itemsRequired} objeto`;
+            updateMissionUI();
+            break;
+        }
+        case 'pickup': {
+            if (missionItemCount === 0) {
+                fallbackToCoinsMission();
+                return;
+            }
+            break;
+        }
+        case 'visit_house': {
+            if (houseCount === 0) {
+                placeHouseSpots();
+                grid.forEach(t => { if (t?.hasHouse) houseCount++; });
+            }
+            if (houseCount === 0) {
+                fallbackToCoinsMission();
+                return;
+            }
+            break;
+        }
+        case 'pass_semaphore': {
+            if (semaphoreCount === 0) {
+                fallbackToCoinsMission();
+                return;
+            }
+            break;
+        }
+        case 'red_diamond': {
+            if (redDiamondCount === 0) {
+                placeRedDiamond();
+                grid.forEach(t => { if (t?.hasRedDiamond) redDiamondCount++; });
+            }
+            if (redDiamondCount === 0) {
+                fallbackToCoinsMission();
+                return;
+            }
+            break;
+        }
+        case 'chain_boosts': {
+            if (boostCount === 0) {
+                fallbackToCoinsMission();
+                return;
+            }
+            currentMission.target = Math.min(currentMission.target, boostCount);
+            currentMission.text = `⚡ Pisa ${currentMission.target} aceleradores`;
+            updateMissionUI();
+            break;
+        }
+        default:
+            break;
     }
 }
 
