@@ -2507,8 +2507,8 @@ for (let i = 1; i <= 100; i++) {
     
     const levelData = {
         // Mapas mas grandes para mostrar mas calles
-        cols: 12, 
-        rows: 14, 
+        cols: 10, 
+        rows: 12, 
         
         // Tiempo ajustado
         time: 40 + i * 2 + (isHard ? 0 : 10), 
@@ -2647,6 +2647,7 @@ let missionBridgeCredits = 0; // Puentes gratis por misión para evitar bloqueos
 let missionPowerupCredits = 0; // Powerups gratis por misión para evitar bloqueos
 let missionTilesTouched = new Set(); // Tiles únicos rotados en el nivel
 let missionGuaranteedPath = []; // Camino garantizado para misiones
+let bridgeBlockerHintUntil = 0;
 
 // 10 NUEVAS MISIONES ADICIONALES
 const ALL_MISSIONS = {
@@ -4772,6 +4773,7 @@ function generateLevel(showLoading = true) {
     ensureSolvablePath();
     fillEmpty(config.deadEnds);
     missionGuaranteedPath = generateGuaranteedPath();
+    placeBridgeBlockerMaybe();
     placeHouseSpots();
 
     if (currentMission) {
@@ -4933,7 +4935,7 @@ function resize() {
     // LÍMITES INTELIGENTES:
     // Nunca bajar de 22px (muy pequeño pero visible) para niveles enormes (ej. 20x20)
     // Nunca subir de 60px (muy grande) para niveles iniciales
-    const MIN_TILE_SIZE = 28;
+    const MIN_TILE_SIZE = 32;
     const MAX_TILE_SIZE = 60;
     
     // Aplicar límites
@@ -4965,9 +4967,23 @@ function handleClick(e) {
     if (col >= 0 && col < COLS && row >= 0 && row < ROWS) {
         const tile = grid[row * COLS + col];
 
+        if (!bridgeModeActive && tile && tile.type === TILE_TYPES.BLOCKED && tile.special === 'bridge_block') {
+            if (Date.now() > bridgeBlockerHintUntil) {
+                bridgeBlockerHintUntil = Date.now() + 2500;
+                showGameModal({
+                    icon: '🌉',
+                    title: 'Bloqueo del Camino',
+                    message: 'Esta calle esta bloqueada. Puedes comprar un puente para cruzar.',
+                    type: 'info',
+                    buttons: [{ text: 'Entendido', primary: true }]
+                });
+            }
+            return;
+        }
+
         
         // Modo puente: convertir pieza en puente (transacción directa sin ventanas)
-        if (bridgeModeActive && tile && !tile.locked && tile.type !== TILE_TYPES.BLOCKED) {
+        if (bridgeModeActive && tile && !tile.locked && (tile.type !== TILE_TYPES.BLOCKED || tile.special === 'bridge_block')) {
             if (tile.type === TILE_TYPES.BRIDGE) { return; }
 
             const canAfford = (missionBridgeCredits > 0) || (bridgesOwned > 0) || (totalMoney >= BRIDGE_PRICE);
@@ -4986,6 +5002,7 @@ function handleClick(e) {
 
             tile.type = TILE_TYPES.BRIDGE;
             tile.isBridge = true;
+            if (tile.special === 'bridge_block') tile.special = null;
 
             saveGameData();
             playSound('money');
@@ -5418,16 +5435,82 @@ function placeHouseSpots() {
         if (buckets.every(b => b.length === 0)) break;
     }
 
+    const placedHouses = [];
     for (let i = 0; i < picks.length; i++) {
         const t = picks[i];
         const spriteIndex = takeHouseSpriteIndex();
         if (spriteIndex === null) break;
+        t.houseBackup = {
+            type: t.type,
+            rotation: t.rotation,
+            locked: t.locked,
+            special: t.special
+        };
         t.hasHouse = true;
         t.houseVisited = false;
         t.houseSpriteIndex = spriteIndex;
         t.special = 'house';
         t.type = TILE_TYPES.BLOCKED;
         t.locked = true;
+        placedHouses.push(t);
+    }
+
+    if (!canReachEnd()) {
+        for (let i = placedHouses.length - 1; i >= 0 && !canReachEnd(); i--) {
+            const t = placedHouses[i];
+            if (!t) continue;
+            const backup = t.houseBackup;
+            if (backup) {
+                t.type = backup.type;
+                t.rotation = backup.rotation;
+                t.locked = backup.locked;
+                t.special = backup.special;
+            } else {
+                t.type = TILE_TYPES.EMPTY;
+                t.rotation = 0;
+                t.locked = false;
+                t.special = null;
+            }
+            t.hasHouse = false;
+            t.houseVisited = false;
+            t.houseSpriteIndex = null;
+        }
+    }
+}
+
+function placeBridgeBlockerMaybe() {
+    if (level < 5) return;
+    if (levelRand(level, 777) > 0.18) return;
+    if (!missionGuaranteedPath || missionGuaranteedPath.length < 4) return;
+
+    const candidates = missionGuaranteedPath
+        .slice(1, -1)
+        .map(p => grid[p.row * COLS + p.col])
+        .filter(t => t && !t.locked && t.type !== TILE_TYPES.START && t.type !== TILE_TYPES.END &&
+            !t.hasCoin && !t.hasStar && !t.hasDiamond && !t.hasRedDiamond && !t.hasHouse &&
+            !t.missionItem && !t.collectibleItem && !t.special);
+
+    candidates.sort((a, b) => tileRand(a.col, a.row, 888) - tileRand(b.col, b.row, 888));
+
+    for (const t of candidates) {
+        const backup = {
+            type: t.type,
+            rotation: t.rotation,
+            locked: t.locked,
+            special: t.special
+        };
+        t.type = TILE_TYPES.BLOCKED;
+        t.locked = false;
+        t.special = 'bridge_block';
+
+        if (!canReachEnd()) {
+            return;
+        }
+
+        t.type = backup.type;
+        t.rotation = backup.rotation;
+        t.locked = backup.locked;
+        t.special = backup.special;
     }
 }
 
@@ -9125,6 +9208,10 @@ function drawTile(tile) {
                 icon = '🌉';
                 color = '#78350f'; // brown
                 break;
+            case 'bridge_block':
+                icon = '🌉';
+                color = '#b45309'; // amber
+                break;
             case 'road_work':
                 icon = '🚧';
                 color = '#f97316'; // orange
@@ -9302,23 +9389,14 @@ function drawTile(tile) {
 
     // DIBUJAR MONEDA (Si existe y no ha sido recolectada)
     if (tile.hasCoin) {
-        // Efecto de rotación en su eje (como moneda parada girando)
-        if (!window.coinSpinTime) window.coinSpinTime = 0;
-        window.coinSpinTime += 0.002; // Giro aún más lento
-        const spinScale = Math.max(0.15, Math.abs(Math.cos(window.coinSpinTime))); // Evitar escala casi cero
-        
         ctx.save();
         ctx.translate(cx, cy);
-        ctx.scale(spinScale, 1); // Solo escalar horizontalmente para simular giro
         
         // Sombra en el suelo (fija)
-        ctx.save();
-        ctx.scale(1/spinScale, 1); // Normalizar escala para sombra
         ctx.fillStyle = 'rgba(0,0,0,0.3)';
         ctx.beginPath();
         ctx.ellipse(0, 5, 5, 2, 0, 0, Math.PI*2);
         ctx.fill();
-        ctx.restore();
         
         // Borde moneda (más grande)
         ctx.fillStyle = '#d97706'; // Amber-600
@@ -9332,17 +9410,12 @@ function drawTile(tile) {
         ctx.arc(0, 0, 5, 0, Math.PI * 2);
         ctx.fill();
         
-        // Símbolo (más grande) - solo visible cuando está de frente
-        if (spinScale > 0.3) { // Solo mostrar símbolo cuando esté visible
-            ctx.fillStyle = '#92400e'; // Amber-800
-            ctx.font = 'bold 8px monospace';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.save();
-            ctx.scale(1/spinScale, 1); // Normalizar texto para que no se deforme
-            ctx.fillText('$', 0, 0.5);
-            ctx.restore();
-        }
+        // Símbolo fijo
+        ctx.fillStyle = '#92400e'; // Amber-800
+        ctx.font = 'bold 8px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('$', 0, 0.5);
         
         // Brillo (más grande)
         ctx.fillStyle = 'rgba(255,255,255,0.7)';
