@@ -2506,10 +2506,9 @@ for (let i = 1; i <= 100; i++) {
     const isHard = i > 60;
     
     const levelData = {
-        // Aumentar tamaño progresivamente PERO LÍMITE FIJO para evitar scroll excesivo
-        // TODOS LOS NIVELES TIENEN EL TAMAÑO DEL NIVEL 15 (8x9) POR SOLICITUD
-        cols: 8, 
-        rows: 9, 
+        // Mapas mas grandes para mostrar mas calles
+        cols: 12, 
+        rows: 14, 
         
         // Tiempo ajustado
         time: 40 + i * 2 + (isHard ? 0 : 10), 
@@ -5372,33 +5371,51 @@ function placeHouseSpots() {
     const pool = interior.filter(t => !pathKeys.has(`${t.col},${t.row}`));
     if (pool.length === 0) return;
 
-    const adjacentToPath = pool.filter(t => {
-        const neighbors = [
-            { c: t.col + 1, r: t.row },
-            { c: t.col - 1, r: t.row },
-            { c: t.col, r: t.row + 1 },
-            { c: t.col, r: t.row - 1 }
-        ];
-        return neighbors.some(n => pathKeys.has(`${n.c},${n.r}`));
-    });
-
     const targetCount = Math.min(10, pool.length, houseSpritePool.length);
     if (targetCount <= 0) return;
 
-    const ordered = pool.slice().sort((a, b) => {
-        const aVal = tileRand(a.col, a.row, 501);
-        const bVal = tileRand(b.col, b.row, 501);
-        return aVal - bVal;
+    const midCol = Math.floor(COLS / 2);
+    const midRow = Math.floor(ROWS / 2);
+    const buckets = [[], [], [], []];
+
+    pool.forEach(t => {
+        const left = t.col < midCol;
+        const top = t.row < midRow;
+        const idx = top ? (left ? 0 : 1) : (left ? 2 : 3);
+        buckets[idx].push(t);
+    });
+
+    buckets.forEach((bucket, idx) => {
+        bucket.sort((a, b) => tileRand(a.col, a.row, 600 + idx) - tileRand(b.col, b.row, 600 + idx));
     });
 
     const picks = [];
-    if (adjacentToPath.length > 0) {
-        adjacentToPath.sort((a, b) => tileRand(a.col, a.row, 777) - tileRand(b.col, b.row, 777));
-        picks.push(adjacentToPath[0]);
-    }
-
-    for (let i = 0; i < ordered.length && picks.length < targetCount; i++) {
-        if (!picks.includes(ordered[i])) picks.push(ordered[i]);
+    const occupied = new Set();
+    let safety = 0;
+    while (picks.length < targetCount && safety < 200) {
+        safety++;
+        for (let i = 0; i < buckets.length && picks.length < targetCount; i++) {
+            const bucket = buckets[i];
+            if (bucket.length === 0) continue;
+            const candidate = bucket.shift();
+            if (!candidate) continue;
+            const key = `${candidate.col},${candidate.row}`;
+            if (occupied.has(key)) continue;
+            const neighbors = [
+                `${candidate.col + 1},${candidate.row}`,
+                `${candidate.col - 1},${candidate.row}`,
+                `${candidate.col},${candidate.row + 1}`,
+                `${candidate.col},${candidate.row - 1}`,
+                `${candidate.col + 1},${candidate.row + 1}`,
+                `${candidate.col + 1},${candidate.row - 1}`,
+                `${candidate.col - 1},${candidate.row + 1}`,
+                `${candidate.col - 1},${candidate.row - 1}`
+            ];
+            if (neighbors.some(n => occupied.has(n))) continue;
+            picks.push(candidate);
+            occupied.add(key);
+        }
+        if (buckets.every(b => b.length === 0)) break;
     }
 
     for (let i = 0; i < picks.length; i++) {
@@ -9616,6 +9633,14 @@ function drawTile(tile) {
         ctx.fillStyle = tile.powered ? '#ffffff' : '#94a3b8';
         ctx.font = `bold ${TILE_SIZE * 0.14}px sans-serif`;
         ctx.fillText('CLIENTE', cx, cy + TILE_SIZE * 0.32);
+
+        // Mensaje ocasional para guiar la entrega
+        const hintPulse = Math.sin(performance.now() / 900);
+        if (hintPulse > 0.35) {
+            ctx.fillStyle = 'rgba(250, 204, 21, 0.95)';
+            ctx.font = `bold ${TILE_SIZE * 0.16}px sans-serif`;
+            ctx.fillText('ESPERANDO ENTREGA', cx, cy - TILE_SIZE * 0.46);
+        }
     }
     
     if (tile.isDeadEnd) {
