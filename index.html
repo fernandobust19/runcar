@@ -4775,6 +4775,8 @@ function generateLevel(showLoading = true) {
     fillEmpty(config.deadEnds);
     missionGuaranteedPath = generateGuaranteedPath();
     placeHouseSpots();
+    ensureSolvablePath();
+    missionGuaranteedPath = generateGuaranteedPath();
 
     if (currentMission) {
         const rotatableTilesCount = grid.filter(t => t && !t.locked && t.type !== TILE_TYPES.BLOCKED).length;
@@ -7283,12 +7285,10 @@ function actuallyStartCar() {
     let engineSrc = null;
     let useProcedural = false;
     
-    if (selectedVehicle === 'motoa') {
-        // MOTO PREMIUM: Usar generador procedural FLUIDO
+    if (selectedVehicle === 'motoa' || selectedVehicle === 'moto') {
+        // Motos: sonido procedural en tiempo real (sin archivo)
         useProcedural = true;
         startFluidMotoSound();
-    } else if (selectedVehicle === 'moto') {
-        engineSrc = 'motoa.mp3'; 
     } else if (selectedVehicle === 'trucka' || selectedVehicle === 'fulgoneta') {
         engineSrc = 'camionetaa.mp3';
     }
