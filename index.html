@@ -1100,6 +1100,10 @@ function startNeonIntro() {
                 <button onclick="toggleBridgeMode()" id="btnBridge" class="glass-btn w-10 h-10 rounded-lg relative" title="Puente ($75)"><span class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #a855f7);">🌉</span></button>
                 <button onclick="toggleSound()" class="glass-btn w-10 h-10 rounded-lg"><span id="soundIcon" class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #3b82f6);">🔊</span></button>
                 <button onclick="openShop()" class="glass-btn w-10 h-10 rounded-lg"><span class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #eab308);">🛍️</span></button>
+                <button onclick="openAlbum()" class="glass-btn w-10 h-10 rounded-lg relative" title="Album">
+                    <span class="glass-icon text-lg" style="filter: drop-shadow(0 0 5px #fbbf24);">🖼️</span>
+                    <span id="albumBadge" class="absolute -top-1 -right-1 text-[7px] bg-yellow-400 text-black px-1 rounded">0/20</span>
+                </button>
                 <button onclick="showMenu()" class="glass-btn w-10 h-10 rounded-lg"><span class="glass-icon text-lg">☰</span></button>
             </div>
             
@@ -1131,6 +1135,21 @@ function startNeonIntro() {
             <div class="game-modal-title" id="gameModalTitle">Título</div>
             <div class="game-modal-message" id="gameModalMessage">Mensaje</div>
             <div class="game-modal-buttons" id="gameModalButtons"></div>
+        </div>
+    </div>
+
+    <!-- ALBUM DE COLECCIONABLES -->
+    <div id="albumModal" class="hidden fixed inset-0 z-[120] bg-black/70 flex items-center justify-center p-4" onclick="closeAlbum()">
+        <div class="bg-slate-900/95 border border-slate-600 rounded-2xl w-full max-w-md p-4" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between mb-3">
+                <div>
+                    <h3 class="text-white font-bold text-lg">Album de Coleccion</h3>
+                    <p class="text-slate-400 text-[11px]">Progreso: <span id="albumCount">0</span>/20</p>
+                </div>
+                <button onclick="closeAlbum()" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold px-3 py-1 rounded-lg">Cerrar</button>
+            </div>
+            <div id="albumGrid" class="grid grid-cols-4 gap-2"></div>
+            <p class="text-slate-500 text-[10px] mt-3">Las casillas vacias se completaran con nuevas figuras.</p>
         </div>
     </div>
 
@@ -1700,6 +1719,59 @@ function showConfirmModal(options) {
             ]
         });
     });
+}
+
+function updateAlbumBadge() {
+    const badge = $('albumBadge');
+    if (badge) badge.textContent = `${albumCollected.size}/${COLLECTIBLE_ALBUM.length}`;
+    const count = $('albumCount');
+    if (count) count.textContent = `${albumCollected.size}`;
+}
+
+function renderAlbumGrid() {
+    const grid = $('albumGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    COLLECTIBLE_ALBUM.forEach((item, idx) => {
+        const cell = document.createElement('div');
+        cell.className = 'bg-slate-800/80 border border-slate-700 rounded-lg h-16 flex flex-col items-center justify-center overflow-hidden';
+
+        if (!item.img) {
+            const empty = document.createElement('div');
+            empty.className = 'text-[9px] text-slate-500';
+            empty.textContent = 'Vacio';
+            cell.appendChild(empty);
+        } else {
+            const collected = albumCollected.has(item.id);
+            const img = document.createElement('img');
+            img.src = item.img;
+            img.alt = item.name;
+            img.className = `w-full h-full object-contain ${collected ? '' : 'opacity-30 grayscale'}`;
+            cell.appendChild(img);
+        }
+
+        const label = document.createElement('div');
+        label.className = 'text-[8px] text-slate-500 mt-0.5';
+        label.textContent = `#${idx + 1}`;
+        cell.appendChild(label);
+
+        grid.appendChild(cell);
+    });
+}
+
+function openAlbum() {
+    const modal = $('albumModal');
+    if (!modal) return;
+    renderAlbumGrid();
+    updateAlbumBadge();
+    modal.classList.remove('hidden');
+}
+
+function closeAlbum() {
+    const modal = $('albumModal');
+    if (!modal) return;
+    modal.classList.add('hidden');
 }
 
 
@@ -2516,6 +2588,7 @@ grassImg.src = 'cesped.jpg';
 const pavementImg = new Image();
 pavementImg.src = 'pavimento.jpg';
 let gameState = 'START', animationId, countdownTimer, timeLeft, maxTime;
+let inputLocked = false;
 let engineSoundInterval, deliveryTimer; // Consolidar variables de timer
 let engineAudio = null; // Variable para audio continuo de motor
 let totalMoney = 0; // Dinero acumulado por propinas
@@ -2527,6 +2600,7 @@ let rotateTileHintDismissed = false; // Ocultar hint tras girar una ficha
 let rotateTileHintCooldownUntil = 0; // Pausa breve tras girar ficha
 let tutorialCompleted = false;
 let totalStars = 0; // Estrellas acumuladas para el cofre
+let albumCollected = new Set();
 let savedEndPosition = null; // Posición guardada de la casa para reintentos
 let currentLevelForEnd = 0; // Nivel actual para saber cuándo cambiar la casa
 let premiumMotoUnlocked = false; // Moto premium desbloqueada
@@ -2628,18 +2702,38 @@ const MISSION_ITEMS = [
     { id: 'coffee', icon: '☕', name: 'Taza de Cafe' }
 ];
 
-const EXTRA_COLLECTIBLES = [
-    { id: 'ring', icon: '💍', name: 'Anillo' },
-    { id: 'watch', icon: '⌚', name: 'Reloj' },
-    { id: 'headphones', icon: '🎧', name: 'Audifonos' },
-    { id: 'camera', icon: '📷', name: 'Camara' },
-    { id: 'flower', icon: '🌸', name: 'Flor' },
-    { id: 'gift', icon: '🎁', name: 'Regalo' },
-    { id: 'teddy', icon: '🧸', name: 'Oso de peluche' },
-    { id: 'magnet', icon: '🧲', name: 'Iman' },
-    { id: 'key', icon: '🗝️', name: 'Llave' },
-    { id: 'gem', icon: '🔮', name: 'Gema' }
+const COLLECTIBLE_ALBUM = [
+    { id: 'col01', name: 'Coleccion 1', img: 'COLECCION1.png' },
+    { id: 'col02', name: 'Coleccion 2', img: 'COLECCION2.png' },
+    { id: 'col03', name: 'Coleccion 3', img: 'COLECCION3.png' },
+    { id: 'col04', name: 'Coleccion 4', img: 'COLECCION4.png' },
+    { id: 'col05', name: 'Vacio', img: null },
+    { id: 'col06', name: 'Vacio', img: null },
+    { id: 'col07', name: 'Vacio', img: null },
+    { id: 'col08', name: 'Vacio', img: null },
+    { id: 'col09', name: 'Vacio', img: null },
+    { id: 'col10', name: 'Vacio', img: null },
+    { id: 'col11', name: 'Vacio', img: null },
+    { id: 'col12', name: 'Vacio', img: null },
+    { id: 'col13', name: 'Vacio', img: null },
+    { id: 'col14', name: 'Vacio', img: null },
+    { id: 'col15', name: 'Vacio', img: null },
+    { id: 'col16', name: 'Vacio', img: null },
+    { id: 'col17', name: 'Vacio', img: null },
+    { id: 'col18', name: 'Vacio', img: null },
+    { id: 'col19', name: 'Vacio', img: null },
+    { id: 'col20', name: 'Vacio', img: null }
 ];
+
+const COLLECTIBLE_SPAWN_POOL = COLLECTIBLE_ALBUM.filter(item => item.img);
+
+const collectibleImages = new Map();
+COLLECTIBLE_ALBUM.forEach(item => {
+    if (!item.img) return;
+    const img = new Image();
+    img.src = item.img;
+    collectibleImages.set(item.id, img);
+});
 
 class Tile {
     constructor(col, row, type, rotation = 0) {
@@ -2724,6 +2818,7 @@ function generateTutorialLevel() {
     COLS = config.cols; ROWS = config.rows;
 
     gameState = 'EDITING';
+    inputLocked = false;
     forceFreeDrive = false;
     bridgeModeActive = false;
     const ov = $('overlay');
@@ -2835,6 +2930,7 @@ function saveGameData() {
         selectedCompany: selectedCompany,
         selectedVehicle: selectedVehicle,
         selectedColor: selectedColor,
+        albumCollected: Array.from(albumCollected),
         lastPlayed: new Date().toISOString()
     };
     try {
@@ -2923,6 +3019,8 @@ function loadGameData(playerName) {
                 totalStars = 0;
             }
 
+            albumCollected = new Set(Array.isArray(gameData.albumCollected) ? gameData.albumCollected : []);
+
             // Cargar desbloqueos
             premiumMotoUnlocked = !!gameData.premiumMotoUnlocked;
             premiumTruckUnlocked = !!gameData.premiumTruckUnlocked;
@@ -2962,6 +3060,8 @@ function loadGameData(playerName) {
                 const vehicleBtn = document.getElementById('btn-' + selectedVehicle);
                 if (vehicleBtn) vehicleBtn.classList.add('selected');
             }
+
+            updateAlbumBadge();
 
             if (gameData.selectedColor) {
                 selectedColor = gameData.selectedColor;
@@ -3033,11 +3133,13 @@ function deletePlayer(playerName) {
                         $('driverName').value = '';
                         level = 1;
                         totalMoney = 0;
+                        albumCollected = new Set();
                         premiumMotoUnlocked = false;
                         premiumTruckUnlocked = false;
                         premiumCamionUnlocked = false;
                         bridgesOwned = 0;
                         $('moneyDisplay').textContent = '0';
+                        updateAlbumBadge();
                     }
                 }
                 
@@ -3088,6 +3190,7 @@ function resetPlayerProgress() {
             level = 1;
             totalMoney = 0;
             totalStars = 0;
+            albumCollected = new Set();
             premiumMotoUnlocked = false;
             premiumTruckUnlocked = false;
             premiumCamionUnlocked = false;
@@ -3105,6 +3208,7 @@ function resetPlayerProgress() {
             $('savedMoneyAmount').textContent = '0';
             updatePremiumMotoUI();
             updateShopUI();
+            updateAlbumBadge();
             
             showGameModal({
                 title: '✅ Progreso Reiniciado',
@@ -3137,6 +3241,7 @@ function checkPlayerChange() {
         driverName = newName;
         level = 1;
         totalMoney = 0;
+        albumCollected = new Set();
         premiumMotoUnlocked = false;
         premiumTruckUnlocked = false;
         bridgesOwned = 0;
@@ -3149,6 +3254,7 @@ function checkPlayerChange() {
         setTimeout(() => {
             $('welcomeBack').classList.add('hidden');
         }, 2000);
+        updateAlbumBadge();
         
         // Resetear selección de vehículo si era premium
         if (selectedVehicle === 'motoa' || selectedVehicle === 'trucka' || selectedVehicle === 'fulgoneta' || selectedVehicle === 'camion') {
@@ -3681,6 +3787,7 @@ function init() {
     updatePremiumMotoUI(); // Actualizar estado de moto premium al iniciar
     updateBridgeDisplay();
     updateMissionCreditsUI();
+    updateAlbumBadge();
     
     // --- NUEVO: Sonidos universales para todos los botones ---
     document.querySelectorAll('button').forEach(btn => {
@@ -4255,6 +4362,7 @@ function generateLevel(showLoading = true) {
 
     // Estado del juego y limpieza de overlay
     gameState = 'EDITING';
+    inputLocked = false;
     forceFreeDrive = false;
     bridgeModeActive = false;
     missionBridgeCredits = 0;
@@ -4789,7 +4897,7 @@ function resize() {
 
 function handleClick(e) {
     initAudio();
-    if (gameState !== 'EDITING') return;
+    if (gameState !== 'EDITING' || inputLocked) return;
     const rect = canvas.getBoundingClientRect();
     const clickX = e.clientX - rect.left, clickY = e.clientY - rect.top;
     
@@ -4906,7 +5014,7 @@ function isRotateHintHit(x, y) {
 }
 
 function rotateCar() {
-    if (!car || gameState !== 'EDITING') return;
+    if (!car || gameState !== 'EDITING' || inputLocked) return;
     const start = grid[car.row * COLS + car.col];
     if (!start) return;
     const conn = start.getConnections();
@@ -5461,6 +5569,7 @@ function placeCoins() {
 }
 
 function placeExtraCollectibles() {
+    if (level > 70) return;
     const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
     if (!startTile) return;
 
@@ -5476,18 +5585,35 @@ function placeExtraCollectibles() {
 
     if (candidates.length === 0) return;
 
-    candidates.sort(() => Math.random() - 0.5);
-
-    let placedCount = 0;
-    for (let i = 0; i < EXTRA_COLLECTIBLES.length && i < candidates.length; i++) {
-        const t = grid[candidates[i]];
-        t.collectibleItem = EXTRA_COLLECTIBLES[i];
-        placedCount++;
+    const maxSpawn = 2;
+    let appearChance = 0.2;
+    let twoChance = 0.15;
+    if (level <= 20) {
+        appearChance = 0.18;
+        twoChance = 0.1;
+    } else if (level <= 45) {
+        appearChance = 0.25;
+        twoChance = 0.18;
+    } else if (level <= 70) {
+        appearChance = 0.3;
+        twoChance = 0.22;
     }
 
-    if (currentMission?.type === 'treasure_seeker' && placedCount === 0) {
-        const fallbackTile = grid[candidates[0]];
-        fallbackTile.collectibleItem = EXTRA_COLLECTIBLES[0];
+    const appears = levelRand(level, 133) < appearChance;
+    let spawnCount = appears ? (levelRand(level, 311) < twoChance ? 2 : 1) : 0;
+    if (currentMission?.type === 'treasure_seeker') {
+        spawnCount = Math.max(1, spawnCount);
+    }
+    spawnCount = Math.min(spawnCount, maxSpawn, candidates.length);
+
+    if (spawnCount === 0) return;
+
+    candidates.sort(() => Math.random() - 0.5);
+    const items = [...COLLECTIBLE_SPAWN_POOL].sort(() => Math.random() - 0.5);
+
+    for (let i = 0; i < spawnCount; i++) {
+        const t = grid[candidates[i]];
+        t.collectibleItem = items[i % items.length];
     }
 }
 
@@ -6195,9 +6321,12 @@ function calculatePreviewPath() {
             plannedRouteMap.set(`${step.col},${step.row}`, step.dir);
         });
 
-        // Ajustar el índice animado: no menor al prefijo estable, ni mayor al total de segmentos
-        // Mantener el progreso alcanzado: no retroceder el índice animado
-        previewAnimIndexFloat = Math.max(previewAnimIndexFloat, previewStableSegments);
+        // Ajustar el índice animado para que la linea amarilla siga la ruta actual
+        if (gameState === 'EDITING') {
+            previewAnimIndexFloat = Math.max(0, previewPath.length - 1);
+        } else {
+            previewAnimIndexFloat = Math.max(previewAnimIndexFloat, previewStableSegments);
+        }
     }
 }
 
@@ -6471,6 +6600,7 @@ function resetCar() {
         dogSlowTimer: 0
     };
     gameState = 'EDITING';
+    inputLocked = false;
     forceFreeDrive = false;
 }
 
@@ -6742,6 +6872,7 @@ function showCurrentMission() {
 function startCar(forceStart = false) {
     initAudio();
     if (gameState !== 'EDITING') return;
+    inputLocked = true;
     forceFreeDrive = !!forceStart;
     
     // VALIDACIÓN RELAJADA: Permitir intentar entregar aunque la ruta esté incompleta
@@ -7201,11 +7332,15 @@ function gameLoop() {
             floatingTexts.push({
                 x: car.x,
                 y: car.y - 30,
-                text: `${cItem.icon} +$20`,
+                text: `+ $20`,
                 color: '#fbbf24',
                 life: 80,
                 vy: -1.2
             });
+            if (cItem?.id) {
+                albumCollected.add(cItem.id);
+                updateAlbumBadge();
+            }
             updateMissionProgress('item_collected', { item: cItem, source: 'collectible' });
         }
         
@@ -8157,6 +8292,7 @@ function showWinScreen() {
     if (currentMission && !isMissionComplete()) {
         // Misión no completada - mostrar mensaje de fallo
         gameState = 'EDITING';
+        inputLocked = false;
 
         totalMoney = Math.max(0, totalMoney - 50);
         if ($('moneyDisplay')) $('moneyDisplay').textContent = totalMoney;
@@ -9101,25 +9237,20 @@ function drawTile(tile) {
 
     // --- DIBUJAR OBJETO EXTRA ---
     if (tile.collectibleItem) {
-        if (!window.collectibleFloatTime) window.collectibleFloatTime = 0;
-        window.collectibleFloatTime += 0.06;
-        const floatY = Math.sin(window.collectibleFloatTime) * 2.5;
+        if (!window.collectibleSpinTime) window.collectibleSpinTime = 0;
+        window.collectibleSpinTime += 0.03;
+        const spinScale = Math.max(0.35, Math.abs(Math.cos(window.collectibleSpinTime)));
 
         ctx.save();
-        ctx.translate(cx, cy + floatY);
+        ctx.translate(cx, cy);
+        ctx.scale(spinScale, 1);
 
-        ctx.fillStyle = 'rgba(0,0,0,0.35)';
-        ctx.beginPath();
-        ctx.ellipse(0, 8 - floatY, 7, 3, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.font = `${TILE_SIZE * 0.6}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.shadowColor = 'rgba(0,0,0,0.4)';
-        ctx.shadowBlur = 3;
-        ctx.fillText(tile.collectibleItem.icon, 0, -2);
-        ctx.shadowBlur = 0;
+        const img = collectibleImages.get(tile.collectibleItem.id);
+        if (img && img.complete && img.naturalWidth > 0) {
+            const size = TILE_SIZE * 0.52;
+            ctx.imageSmoothingEnabled = true;
+            ctx.drawImage(img, -size / 2, -size / 2, size, size);
+        }
 
         ctx.restore();
     }
