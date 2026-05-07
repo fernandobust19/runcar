@@ -2628,6 +2628,19 @@ const MISSION_ITEMS = [
     { id: 'coffee', icon: '☕', name: 'Taza de Cafe' }
 ];
 
+const EXTRA_COLLECTIBLES = [
+    { id: 'ring', icon: '💍', name: 'Anillo' },
+    { id: 'watch', icon: '⌚', name: 'Reloj' },
+    { id: 'headphones', icon: '🎧', name: 'Audifonos' },
+    { id: 'camera', icon: '📷', name: 'Camara' },
+    { id: 'flower', icon: '🌸', name: 'Flor' },
+    { id: 'gift', icon: '🎁', name: 'Regalo' },
+    { id: 'teddy', icon: '🧸', name: 'Oso de peluche' },
+    { id: 'magnet', icon: '🧲', name: 'Iman' },
+    { id: 'key', icon: '🗝️', name: 'Llave' },
+    { id: 'gem', icon: '🔮', name: 'Gema' }
+];
+
 class Tile {
     constructor(col, row, type, rotation = 0) {
         this.col = col; this.row = row; this.type = type;
@@ -2642,6 +2655,7 @@ class Tile {
         this.hasHouse = false; // Casa decorativa en el tablero
         this.houseVisited = false; // Para misiones de visitar casa
         this.missionItem = null; // { type: 'pizza', icon: '🍕', name: 'Pizza' }
+        this.collectibleItem = null; // { id, icon, name } extras
         this.semaphoreVisited = false; // Para misiones de semaforo
     }
     getConnections() {
@@ -4062,9 +4076,9 @@ function updateMissionProgress(event, data = {}) {
 
         case 'treasure_seeker':
             if (event === 'coin_collected') {
-                currentMission.coinsCollected++;
+                currentMission.coinsCollected = (currentMission.coinsCollected || 0) + 1;
             } else if (event === 'item_collected') {
-                currentMission.itemsCollected++;
+                currentMission.itemsCollected = (currentMission.itemsCollected || 0) + 1;
             }
             if (mText) {
                 mText.innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> 🗺️ ${currentMission.coinsCollected}/${currentMission.coinsRequired} monedas, ${currentMission.itemsCollected}/${currentMission.itemsRequired} objeto`;
@@ -4647,14 +4661,17 @@ function generateLevel(showLoading = true) {
         }
     }
     placeCoins();
+    placeExtraCollectibles();
     
     // Colocar diamantes cada 4 niveles
     if (level % 4 === 0) {
         placeDiamonds();
     }
 
-    // Colocar diamante rojo en cada nivel (lejos del inicio)
-    placeRedDiamond();
+    // Colocar diamante rojo de vez en cuando (lejos del inicio)
+    if (levelRand(level, 91) < 0.35) {
+        placeRedDiamond();
+    }
     
     // --- POST-PROCESAMIENTO MISIONES ---
     // Si es 'all_coins', contamos cuantas monedas se generaron realmente
@@ -4688,7 +4705,7 @@ function generateLevel(showLoading = true) {
              const candidates = possible.filter(idx => {
                  const t = grid[idx];
                  // No poner en especiales o bloqueados
-                 return t && !t.locked && !t.hasCoin && !t.hasStar && !t.special;
+                 return t && !t.locked && !t.hasCoin && !t.hasStar && !t.collectibleItem && !t.special;
              });
              
              if (candidates.length > 0) {
@@ -4701,7 +4718,7 @@ function generateLevel(showLoading = true) {
                  while(attempts < 50) {
                      const idx = Math.floor(Math.random() * grid.length);
                      const t = grid[idx];
-                     if (t && !t.locked && t.type !== TILE_TYPES.BLOCKED && !t.hasCoin && !t.special) {
+                     if (t && !t.locked && t.type !== TILE_TYPES.BLOCKED && !t.hasCoin && !t.collectibleItem && !t.special) {
                          t.missionItem = currentMission.item;
                          break;
                      }
@@ -5128,7 +5145,7 @@ function placeStart() {
 
 function placeDiamonds() {
     const candidates = grid.filter(t => 
-        t && !t.locked && !t.hasCoin && !t.hasStar && !t.hasDiamond && !t.special &&
+        t && !t.locked && !t.hasCoin && !t.hasStar && !t.hasDiamond && !t.collectibleItem && !t.special &&
         t.type !== TILE_TYPES.START && t.type !== TILE_TYPES.END && t.type !== TILE_TYPES.BLOCKED
     );
     
@@ -5149,7 +5166,7 @@ function placeRedDiamond() {
         .map(idx => grid[idx])
         .filter(t =>
             t && !t.locked && t.type !== TILE_TYPES.BLOCKED && !t.special && !t.hasCoin &&
-            !t.hasStar && !t.hasDiamond && !t.hasRedDiamond && !t.missionItem &&
+            !t.hasStar && !t.hasDiamond && !t.hasRedDiamond && !t.missionItem && !t.collectibleItem &&
             t.type !== TILE_TYPES.START && t.type !== TILE_TYPES.END
         );
 
@@ -5180,7 +5197,7 @@ function placeHouseSpots() {
         .map(idx => grid[idx])
         .filter(t =>
             t && !t.locked && t.type !== TILE_TYPES.BLOCKED && !t.special && !t.hasHouse &&
-            !t.hasCoin && !t.hasStar && !t.hasDiamond && !t.hasRedDiamond && !t.missionItem &&
+            !t.hasCoin && !t.hasStar && !t.hasDiamond && !t.hasRedDiamond && !t.missionItem && !t.collectibleItem &&
             t.type !== TILE_TYPES.START && t.type !== TILE_TYPES.END &&
             t.col > 0 && t.col < COLS - 1 && t.row > 0 && t.row < ROWS - 1
         );
@@ -5385,7 +5402,7 @@ function placeCoins() {
         const t = grid[idx];
         const dist = Math.abs(t.col - startTile.col) + Math.abs(t.row - startTile.row);
         // Evitar cercanía exagerada al inicio
-        return t && !t.hasCoin && !t.hasStar && !t.special && dist > 1; 
+        return t && !t.hasCoin && !t.hasStar && !t.collectibleItem && !t.special && dist > 1; 
     });
     
     // Barajar
@@ -5412,7 +5429,7 @@ function placeCoins() {
         // Recalcular candidatos disponibles (sin monedas)
         const starCandidates = possibleTiles.filter(idx => {
             const t = grid[idx];
-            return t && !t.hasCoin && !t.hasStar && !t.special;
+            return t && !t.hasCoin && !t.hasStar && !t.collectibleItem && !t.special;
         });
         
         starCandidates.sort(() => Math.random() - 0.5);
@@ -5440,6 +5457,37 @@ function placeCoins() {
                 $('missionText').innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> ${currentMission.text}`;
             }
         }
+    }
+}
+
+function placeExtraCollectibles() {
+    const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
+    if (!startTile) return;
+
+    const possibleTiles = getReachableTiles(startTile.col, startTile.row);
+    const candidates = possibleTiles.filter(idx => {
+        const t = grid[idx];
+        const dist = Math.abs(t.col - startTile.col) + Math.abs(t.row - startTile.row);
+        return t && !t.locked && t.type !== TILE_TYPES.BLOCKED && !t.special &&
+            !t.hasCoin && !t.hasStar && !t.hasDiamond && !t.hasRedDiamond &&
+            !t.missionItem && !t.collectibleItem &&
+            t.type !== TILE_TYPES.START && t.type !== TILE_TYPES.END && dist > 1;
+    });
+
+    if (candidates.length === 0) return;
+
+    candidates.sort(() => Math.random() - 0.5);
+
+    let placedCount = 0;
+    for (let i = 0; i < EXTRA_COLLECTIBLES.length && i < candidates.length; i++) {
+        const t = grid[candidates[i]];
+        t.collectibleItem = EXTRA_COLLECTIBLES[i];
+        placedCount++;
+    }
+
+    if (currentMission?.type === 'treasure_seeker' && placedCount === 0) {
+        const fallbackTile = grid[candidates[0]];
+        fallbackTile.collectibleItem = EXTRA_COLLECTIBLES[0];
     }
 }
 
@@ -7140,6 +7188,25 @@ function gameLoop() {
              
              // --- ACTUALIZAR MISIONES DE PICKUP ---
              updateMissionProgress('item_collected', { item: mItem });
+        }
+
+        // --- RECOLECTAR OBJETO EXTRA ---
+        if (tile?.collectibleItem) {
+            const cItem = tile.collectibleItem;
+            tile.collectibleItem = null;
+            totalMoney += 20;
+            if ($('moneyDisplay')) $('moneyDisplay').textContent = totalMoney;
+            saveGameData();
+            playSound('money');
+            floatingTexts.push({
+                x: car.x,
+                y: car.y - 30,
+                text: `${cItem.icon} +$20`,
+                color: '#fbbf24',
+                life: 80,
+                vy: -1.2
+            });
+            updateMissionProgress('item_collected', { item: cItem, source: 'collectible' });
         }
         
         // RECOLECTAR ESTRELLA (Nivel 30+)
@@ -9029,6 +9096,31 @@ function drawTile(tile) {
         ctx.fillStyle = '#fbbf24'; // Dorado
         ctx.fillText('RECOGER', 0, -16);
         
+        ctx.restore();
+    }
+
+    // --- DIBUJAR OBJETO EXTRA ---
+    if (tile.collectibleItem) {
+        if (!window.collectibleFloatTime) window.collectibleFloatTime = 0;
+        window.collectibleFloatTime += 0.06;
+        const floatY = Math.sin(window.collectibleFloatTime) * 2.5;
+
+        ctx.save();
+        ctx.translate(cx, cy + floatY);
+
+        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        ctx.beginPath();
+        ctx.ellipse(0, 8 - floatY, 7, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.font = `${TILE_SIZE * 0.6}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = 'rgba(0,0,0,0.4)';
+        ctx.shadowBlur = 3;
+        ctx.fillText(tile.collectibleItem.icon, 0, -2);
+        ctx.shadowBlur = 0;
+
         ctx.restore();
     }
     
