@@ -2607,6 +2607,7 @@ let previewPath = []; // Ruta calculada
 let plannedRoute = []; // Ruta planificada con direcciones para que el carro la siga
 let plannedRouteMap = new Map(); // Acceso rapido a la ruta planificada
 let forceFreeDrive = false; // Permite avanzar sin ruta al agotarse el tiempo
+let carHighlightUntil = 0;
 
 function showBombBlast() {
     const blast = $('bombBlast');
@@ -2950,6 +2951,7 @@ function generateTutorialLevel() {
     car.x = car.col * TILE_SIZE + TILE_SIZE / 2;
     car.y = car.row * TILE_SIZE + TILE_SIZE / 2;
     car.angle = 0;
+    carHighlightUntil = Date.now() + 4500;
 
 
     checkConnections();
@@ -4893,6 +4895,7 @@ function generateLevel(showLoading = true) {
 
     // Carro y conexiones
     resetCar();
+    carHighlightUntil = Date.now() + 4500;
     checkConnections();
 
     // Ajuste visual y dibujado
@@ -8923,6 +8926,18 @@ function draw() {
     }
     
     if (car) {
+        if (gameState === 'EDITING' && Date.now() < carHighlightUntil) {
+            const pulse = 0.5 + Math.abs(Math.sin(Date.now() / 240));
+            ctx.save();
+            ctx.strokeStyle = `rgba(56, 189, 248, ${0.65 + 0.3 * pulse})`;
+            ctx.lineWidth = 4 + 2 * pulse;
+            ctx.shadowColor = 'rgba(56, 189, 248, 0.7)';
+            ctx.shadowBlur = 14;
+            ctx.beginPath();
+            ctx.arc(car.x, car.y, TILE_SIZE * (0.55 + 0.08 * pulse), 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
         if (gameState === 'EDITING') {
             drawRotateHints();
         }
@@ -9112,7 +9127,7 @@ function drawTile(tile) {
     const conn = tile.getConnections ? tile.getConnections() : tile.type.base;
     
     ctx.save();
-    ctx.fillStyle = '#1a3a1a'; // Verde oscuro como césped/terreno
+    ctx.fillStyle = '#0b0b0f'; // Fondo oscuro
     ctx.fillRect(x + 1, y + 1, TILE_SIZE - 2, TILE_SIZE - 2);
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
     ctx.lineWidth = 1;
@@ -9619,6 +9634,17 @@ function drawTile(tile) {
     
     // Meta - bandera MÁS GRANDE Y VISIBLE
     if (tile.isEnd) {
+        const endPulse = 0.5 + Math.abs(Math.sin(performance.now() / 260));
+        ctx.save();
+        ctx.strokeStyle = `rgba(34, 197, 94, ${0.55 + 0.3 * endPulse})`;
+        ctx.lineWidth = 3 + 2 * endPulse;
+        ctx.shadowColor = 'rgba(34, 197, 94, 0.7)';
+        ctx.shadowBlur = 16;
+        ctx.beginPath();
+        ctx.arc(cx, cy, TILE_SIZE * (0.58 + 0.08 * endPulse), 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+
         // Fondo circular brillante pulsante
         const glowColor = tile.powered ? 'rgba(34, 197, 94, 0.5)' : 'rgba(100, 116, 139, 0.3)';
         ctx.fillStyle = glowColor;
@@ -9655,10 +9681,16 @@ function drawTile(tile) {
 
         // Mensaje ocasional para guiar la entrega
         const hintPulse = Math.sin(performance.now() / 900);
-        if (hintPulse > 0.35) {
-            ctx.fillStyle = 'rgba(250, 204, 21, 0.95)';
-            ctx.font = `bold ${TILE_SIZE * 0.16}px sans-serif`;
-            ctx.fillText('ESPERANDO ENTREGA', cx, cy - TILE_SIZE * 0.46);
+        if (hintPulse > 0.15) {
+            const msg = 'ESPERANDO ENTREGA';
+            ctx.font = `900 ${TILE_SIZE * 0.2}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.9)';
+            ctx.lineWidth = 4;
+            ctx.strokeText(msg, cx, cy - TILE_SIZE * 0.5);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(msg, cx, cy - TILE_SIZE * 0.5);
         }
     }
     
