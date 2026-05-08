@@ -3820,19 +3820,6 @@ function stopTutorial() {
     if(oldTemp) oldTemp.remove();
 }
 
-function endTutorial() {
-    stopTutorial();
-    if(synth) synth.cancel();
-
-    tutorialCompleted = true;
-    saveGameData();
-    
-    // Si no estamos ya jugando (por el autostart del último paso), regenerar nivel
-    if (gameState !== 'RUNNING' && gameState !== 'CRASHED' && gameState !== 'WON') {
-        generateLevel(false);
-    }
-}
-
 function init() {
     resize();
     loadGameData(); // Cargar datos guardados al iniciar
@@ -3881,6 +3868,7 @@ let savedLevelForRetry = null;
 // --- SISTEMA DE DIAMANTES Y ROMPECABEZAS ---
 let diamondsCollected = parseInt(localStorage.getItem('diamondsCollected') || '0');
 let puzzleActive = false;
+let puzzlePrevState = null;
 let puzzlePieces = [];
 let draggedPiece = null;
 let mouseOffset = { x: 0, y: 0 };
@@ -4212,16 +4200,6 @@ function updateMissionProgress(event, data = {}) {
             }
             break;
 
-        case 'bridge_master':
-            if (event === 'bridge_built') {
-                currentMission.current++;
-                if (mText) {
-                    mText.innerHTML = `<span class="text-red-400 font-bold">OBLIGATORIO:</span> 🔨 Puentes ${currentMission.current}/${currentMission.target}`;
-                }
-                if (currentMission.current >= currentMission.target) completed = true;
-            }
-            break;
-
         case 'speed_demon':
             if (event === 'level_completed') {
                 const elapsed = data.timeElapsed || 0;
@@ -4320,25 +4298,6 @@ function updateMissionProgress(event, data = {}) {
                 }
             }
             break;
-            
-        // Validar otras misiones al completar nivel
-        case 'no_damage':
-            if (event === 'level_completed') {
-                completed = !currentMission.damaged;
-            }
-            break;
-            
-        case 'minimal_tiles':
-            if (event === 'level_completed') {
-                completed = currentMission.tilesUsed <= currentMission.maxTiles;
-            }
-            break;
-            
-        case 'perfect_route':
-            if (event === 'level_completed') {
-                completed = currentMission.tilesUsed <= currentMission.maxTiles;
-            }
-            break;
     }
 
     if (completed) {
@@ -4383,6 +4342,7 @@ function showMissionSuccess() {
 
 // Función para crear animación de éxito
 function createSuccessAnimation() {
+    const missionContainer = $('missionContainer');
     // Efecto de confeti o celebración
     for (let i = 0; i < 10; i++) {
         setTimeout(() => {
@@ -4776,7 +4736,9 @@ function generateLevel(showLoading = true) {
     missionGuaranteedPath = generateGuaranteedPath();
     placeHouseSpots();
     ensureSolvablePath();
+    forceReachablePath();
     missionGuaranteedPath = generateGuaranteedPath();
+    pruneHouseBlockers(missionGuaranteedPath);
 
     if (currentMission) {
         const rotatableTilesCount = grid.filter(t => t && !t.locked && t.type !== TILE_TYPES.BLOCKED).length;
@@ -5467,6 +5429,43 @@ function placeHouseSpots() {
     }
 }
 
+function pruneHouseBlockers(path) {
+    if (!path || path.length === 0) return;
+    const pathKeys = new Set(path.map(p => `${p.col},${p.row}`));
+
+    const restoreHouseTile = (t) => {
+        const backup = t.houseBackup;
+        if (backup) {
+            t.type = backup.type;
+            t.rotation = backup.rotation;
+            t.locked = backup.locked;
+            t.special = backup.special;
+        } else {
+            t.type = TILE_TYPES.EMPTY;
+            t.rotation = 0;
+            t.locked = false;
+            t.special = null;
+        }
+        t.hasHouse = false;
+        t.houseVisited = false;
+        t.houseSpriteIndex = null;
+    };
+
+    grid.forEach(t => {
+        if (t && t.hasHouse && pathKeys.has(`${t.col},${t.row}`)) {
+            restoreHouseTile(t);
+        }
+    });
+
+    if (!canReachEnd()) {
+        const remaining = grid.filter(t => t && t.hasHouse);
+        for (const t of remaining) {
+            restoreHouseTile(t);
+            if (canReachEnd()) break;
+        }
+    }
+}
+
 
 function placeEnd() {
     const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
@@ -5934,6 +5933,46 @@ function canReachEnd() {
     return false;
 }
 
+function forceReachablePath() {
+    const startTile = grid.find(t => t && t.type === TILE_TYPES.START);
+    const endTile = grid.find(t => t && t.type === TILE_TYPES.END);
+    if (!startTile || !endTile) return;
+    if (canReachEnd()) return;
+
+    let col = startTile.col;
+    let row = startTile.row;
+
+    const carve = (c, r) => {
+        const idx = r * COLS + c;
+        const tile = grid[idx];
+        if (!tile || tile.type === TILE_TYPES.BLOCKED) {
+            const fresh = new Tile(c, r, TILE_TYPES.STRAIGHT);
+            fresh.rotation = 0;
+            grid[idx] = fresh;
+            return;
+        }
+
+        if (tile.type === TILE_TYPES.BLOCKED) {
+            tile.type = TILE_TYPES.STRAIGHT;
+        }
+        if (tile.type !== TILE_TYPES.START && tile.type !== TILE_TYPES.END) {
+            tile.locked = false;
+            tile.special = null;
+            tile.isDeadEnd = false;
+        }
+    };
+
+    while (col !== endTile.col) {
+        col += col < endTile.col ? 1 : -1;
+        carve(col, row);
+    }
+
+    while (row !== endTile.row) {
+        row += row < endTile.row ? 1 : -1;
+        carve(col, row);
+    }
+}
+
 function fillEmpty(deadEndCount) {
     const empty = [];
     for (let i = 0; i < COLS * ROWS; i++) if (!grid[i]) empty.push(i);
@@ -6383,9 +6422,6 @@ function calculatePreviewPath() {
     plannedRouteMap = new Map();
     if (!car) return;
     
-    // --- NUEVO: VALIDACIÓN ESTRICTA DE DIRECCIÓN INICIAL ---
-    // Si la moto no apunta hacia donde puede salir, no hay línea amarilla.
-    
     // Convertir ángulo de carro a dirección DIR (N, E, S, W)
     let angle = car.angle; 
     while (angle > Math.PI) angle -= Math.PI * 2;
@@ -6398,80 +6434,68 @@ function calculatePreviewPath() {
     else if (Math.abs(angle - Math.PI) < 0.1 || Math.abs(angle + Math.PI) < 0.1) currentFacingDir = DIR.W;
     else if (Math.abs(angle + Math.PI/2) < 0.1) currentFacingDir = DIR.N;
     
-    // Si no detectamos dirección válida (ej. rotando), no mostramos nada
-    if (currentFacingDir === null) return;
-    
     // VALIDACIÓN PRIMER PASO FÍSICO
-    // La casilla actual debe tener salida ("connection") en esa direcciónFacing
     const startTile = grid[car.row * COLS + car.col];
     if (!startTile) return;
     
-    // Obtenemos conexiones LÓGICAS de la celda actual (dónde hay asfalto)
     const startConn = startTile.getConnections();
-    
-    // REGLA DE ORO: Si mi vehículo apunta hacia una pared (no hay conexión en la celda actual),
-    // la línea amarilla NO DEBE APARECER.
-    // Excepción: Puentes y Cruces siempre permiten salida (asumimos, aunque idealmente se valida también)
-    const isStartFree = startTile.type === TILE_TYPES.CROSS || startTile.type === TILE_TYPES.BRIDGE || startTile.isBridge;
-    
-    if (!isStartFree && !(startConn & currentFacingDir)) {
-        // El coche apunta a una pared o borde de la carretera actual.
-        // No hay ruta de preview.
-        return; 
-    }
-    
-    // VALIDAR ENTRADA VECINO
-    // Además, la celda adyacente debe aceptar esa entrada.
-    const delta = DIR_DELTA[currentFacingDir];
-    const nCol = car.col + delta.dc;
-    const nRow = car.row + delta.dr;
-    
-    if (nCol < 0 || nCol >= COLS || nRow < 0 || nRow >= ROWS) return; // Fuera del mapa
-    
-    const nextTile = grid[nRow * COLS + nCol];
-    if (!nextTile || nextTile.type === TILE_TYPES.BLOCKED) return; // Pared o vacío
-    
-    const nextIsPermissive = nextTile.type === TILE_TYPES.CROSS || nextTile.type === TILE_TYPES.BRIDGE || nextTile.isBridge;
-    const nextConn = nextTile.getConnections();
-    const entryNeed = OPPOSITE[currentFacingDir];
-    
-    // Si el vecino es un tubo normal, debe tener conexión hacia mí
-    if (!nextIsPermissive && !(nextConn & entryNeed)) return;
-    
-    // --- FIN VALIDACIÓN INICIAL ---
-    // Si pasamos aquí, el primer paso es válido y alineado con la moto.
-    // Ahora ejecutamos el buscador, pero FORZANDO el primer movimiento.
-
+    const isStartFree = startTile.type === TILE_TYPES.CROSS || startTile.type === TILE_TYPES.BRIDGE || startTile.isBridge || startTile.type === TILE_TYPES.START;
     const endTile = grid.find(t => t && t.isEnd);
-    
     const queue = [];
-    
-    // Pre-calculamos el primer paso ya validado
+
     const startX = car.col * TILE_SIZE + TILE_SIZE / 2;
     const startY = car.row * TILE_SIZE + TILE_SIZE / 2;
-    const nextX = nCol * TILE_SIZE + TILE_SIZE / 2;
-    const nextY = nRow * TILE_SIZE + TILE_SIZE / 2;
-    
-    // Iniciamos la cola no en la posición actual, sino YA habiendo dado el primer "paso virtual"
-    // en la dirección de la moto. Esto fuerza a que la ruta siga esa línea.
-    queue.push({ 
-        col: nCol, 
-        row: nRow, 
-        lastDir: currentFacingDir, 
-        pathPoints: [
-            { x: startX, y: startY, isEnd: false },
-            { x: nextX, y: nextY, isEnd: false }
-        ],
-        route: [{ col: car.col, row: car.row, dir: currentFacingDir }] 
+
+    const candidateDirs = [DIR.N, DIR.E, DIR.S, DIR.W].filter(dir => {
+        if (!isStartFree && !(startConn & dir)) return false;
+        const delta = DIR_DELTA[dir];
+        const nCol = car.col + delta.dc;
+        const nRow = car.row + delta.dr;
+        if (nCol < 0 || nCol >= COLS || nRow < 0 || nRow >= ROWS) return false;
+        const nextTile = grid[nRow * COLS + nCol];
+        if (!nextTile || nextTile.type === TILE_TYPES.BLOCKED) return false;
+        const nextIsPermissive = nextTile.type === TILE_TYPES.CROSS || nextTile.type === TILE_TYPES.BRIDGE || nextTile.isBridge;
+        const nextConn = nextTile.getConnections();
+        const entryNeed = OPPOSITE[dir];
+        return nextIsPermissive || (nextConn & entryNeed);
     });
-    
+
+    if (candidateDirs.length === 0) return;
+
+    if (currentFacingDir && candidateDirs.includes(currentFacingDir)) {
+        const rest = candidateDirs.filter(d => d !== currentFacingDir);
+        candidateDirs.length = 0;
+        candidateDirs.push(currentFacingDir, ...rest);
+    }
+
+    candidateDirs.forEach(dir => {
+        const delta = DIR_DELTA[dir];
+        const nCol = car.col + delta.dc;
+        const nRow = car.row + delta.dr;
+        const nextX = nCol * TILE_SIZE + TILE_SIZE / 2;
+        const nextY = nRow * TILE_SIZE + TILE_SIZE / 2;
+        queue.push({ 
+            col: nCol, 
+            row: nRow, 
+            lastDir: dir, 
+            pathPoints: [
+                { x: startX, y: startY, isEnd: false },
+                { x: nextX, y: nextY, isEnd: false }
+            ],
+            route: [{ col: car.col, row: car.row, dir: dir }] 
+        });
+    });
+
     let bestPathToDisplay = null;
     let minDistToGoal = Infinity;
     let maxPathLength = 0;
     
     const visited = new Set();
-    visited.add(`${car.col},${car.row}`);
-    visited.add(`${nCol},${nRow}`);
+    visited.add(`${car.col},${car.row},start`);
+    candidateDirs.forEach(dir => {
+        const delta = DIR_DELTA[dir];
+        visited.add(`${car.col + delta.dc},${car.row + delta.dr},${dir}`);
+    });
     
     const maxIterations = ROWS * COLS * 2; // Límite más realista
     let iterations = 0;
@@ -6544,7 +6568,8 @@ function calculatePreviewPath() {
                 const nr = curr.row + delta.dr;
                 const neighborKey = `${nc},${nr}`;
                 
-                if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS && !visited.has(neighborKey)) {
+                 const visitKey = `${nc},${nr},${outDir}`;
+                 if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS && !visited.has(visitKey)) {
                      const next = grid[nr * COLS + nc];
                      
                      // El vecino debe existir y no ser bloqueado
@@ -6561,7 +6586,7 @@ function calculatePreviewPath() {
                         
                         // Validar entrada en vecino ESTRICTAMENTE para T-Junctions y rectas/curvas
                          if (isPermissiveEntry || (nextConn & entryNeed)) {
-                             visited.add(neighborKey);
+                             visited.add(visitKey);
                              
                              const newPathPoints = [...curr.pathPoints, { 
                                  x: nc * TILE_SIZE + TILE_SIZE / 2, 
@@ -6589,6 +6614,14 @@ function calculatePreviewPath() {
     if (bestPathToDisplay) {
         previewPath = bestPathToDisplay.pathPoints;
         const newRoute = bestPathToDisplay.route || [];
+
+        if (gameState === 'EDITING' && newRoute.length > 0) {
+            const firstDir = newRoute[0].dir;
+            if (car.dir !== firstDir) {
+                car.dir = firstDir;
+                car.angle = firstDir === DIR.N ? -Math.PI/2 : firstDir === DIR.E ? 0 : firstDir === DIR.S ? Math.PI/2 : Math.PI;
+            }
+        }
 
         // Calcular prefijo común con la ruta previa para no reiniciar desde el inicio
         let common = 0;
@@ -7286,9 +7319,7 @@ function actuallyStartCar() {
     let useProcedural = false;
     
     if (selectedVehicle === 'motoa' || selectedVehicle === 'moto') {
-        // Motos: sonido procedural en tiempo real (sin archivo)
-        useProcedural = true;
-        startFluidMotoSound();
+        engineSrc = 'motoa.mp3';
     } else if (selectedVehicle === 'trucka' || selectedVehicle === 'fulgoneta') {
         engineSrc = 'camionetaa.mp3';
     }
@@ -8203,10 +8234,12 @@ function startPuzzleGame() {
     if (puzzleActive) return;
     
     puzzleActive = true;
+    puzzlePrevState = gameState;
     gameState = 'PUZZLE';
     
     // Pausar el juego principal
     cancelAnimationFrame(animationId);
+    cancelAnimationFrame(editRenderId);
     clearInterval(countdownTimer);
     
     // Crear overlay del rompecabezas
@@ -8316,6 +8349,7 @@ function initializePuzzle() {
     canvas.addEventListener('mouseup', onPuzzleMouseUp);
     
     // Timer del rompecabezas
+    if (window.puzzleTimer) clearInterval(window.puzzleTimer);
     let timeLeft = 60;
     const timer = setInterval(() => {
         timeLeft--;
@@ -8327,6 +8361,8 @@ function initializePuzzle() {
             skipPuzzle();
         }
     }, 1000);
+
+    window.puzzleTimer = timer;
 }
 
 function onPuzzleMouseDown(e) {
@@ -8502,7 +8538,7 @@ function checkPuzzleComplete() {
 
 function completePuzzle() {
     puzzleActive = false;
-    puzzleComplete = true;
+    if (window.puzzleTimer) clearInterval(window.puzzleTimer);
     
     // Reward
     totalMoney += 100;
@@ -8525,6 +8561,7 @@ function completePuzzle() {
 }
 
 function skipPuzzle() {
+    if (window.puzzleTimer) clearInterval(window.puzzleTimer);
     if (totalMoney >= 10) {
         totalMoney -= 10;
         $('moneyDisplay').textContent = totalMoney;
@@ -8549,26 +8586,20 @@ function skipPuzzle() {
 
 function closePuzzle() {
     puzzleActive = false;
-    puzzleComplete = false; // Reset para próxima vez
-    gameState = 'PLAYING';
+    if (window.puzzleTimer) clearInterval(window.puzzleTimer);
     
     const overlay = $('overlay');
     overlay.classList.add('hidden');
     overlay.innerHTML = '';
-    
-    // Asegurar que el juego esté en el estado correcto
-    if (!currentLevel || currentLevel <= 0) {
-        currentLevel = 1; // Fallback al nivel 1 si hay problema
-    }
-    
-    // Actualizar interfaz para asegurar coherencia
-    updateLevelDisplay();
-    updateStats();
-    
-    // Reanudar el juego con verificación de estado
-    if (gameState === 'PLAYING') {
-        console.log('Reanudando juego después del rompecabezas');
+
+    gameState = puzzlePrevState || 'EDITING';
+    puzzlePrevState = null;
+
+    // Reanudar segun el estado anterior
+    if (gameState === 'RUNNING') {
         gameLoop();
+    } else if (gameState === 'EDITING') {
+        startEditRender();
     }
 }
 
@@ -8892,29 +8923,8 @@ function draw() {
     // Actualizar UI del velocímetro
     updateSpeedometer();
 
-    // Optimizar patrón de fondo
-    if (!window.grassPattern) {
-        if (grassImg.complete && grassImg.naturalWidth > 0) {
-            window.grassPattern = ctx.createPattern(grassImg, 'repeat');
-        } else {
-            window.grassPattern = '#166534';
-        }
-    }
-    if (!window.bgCache || window.bgCache.w !== canvas.width || window.bgCache.h !== canvas.height) {
-        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        gradient.addColorStop(0, '#12311a');
-        gradient.addColorStop(0.5, '#0f2a1a');
-        gradient.addColorStop(1, '#0b1f16');
-        window.bgCache = { gradient, w: canvas.width, h: canvas.height };
-    }
-
-    ctx.fillStyle = window.bgCache.gradient;
+    ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.save();
-    ctx.globalAlpha = 0.45;
-    ctx.fillStyle = window.grassPattern;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.restore();
     
     // Dibujar solo tiles visibles
     for (let i = 0; i < grid.length; i++) {
@@ -10243,7 +10253,7 @@ function drawCar() {
 
     // Función auxiliar para dibujar imagenes manteniendo proporción (Contain)
     const drawImageCentered = (img, maxSize) => {
-        if (!img.complete || img.naturalWidth === 0) return;
+        if (!img.complete || img.naturalWidth === 0) return false;
         
         const ratio = img.naturalWidth / img.naturalHeight;
         let finalW = maxSize;
@@ -10259,6 +10269,7 @@ function drawCar() {
         
         // Dibujar centrado
         ctx.drawImage(img, -finalW / 2, -finalH / 2, finalW, finalH);
+        return true;
     };
 
     // Función auxiliar para dibujar ruedas de perfil detalladas
@@ -10281,39 +10292,46 @@ function drawCar() {
         }
     };
 
+    const drawFallbackVehicle = () => {
+        drawSideWheel(-12, 8, 5.5);
+        drawSideWheel(12, 8, 5.5);
+        ctx.fillStyle = mainColor;
+        ctx.fillRect(-18, -6, 36, 12);
+    };
+
     if (selectedVehicle === 'motoa') {
         // MOTO PREMIUM (LEGACY): GIF animado
         ctx.scale(1, 1); 
-        drawImageCentered(vImgMoto, 55);
+        if (!drawImageCentered(vImgMoto, 55)) drawFallbackVehicle();
 
     } else if (selectedVehicle === 'moto') {
         // --- MOTO BÁSICA - AHORA USA LA IMAGEN motoa.gif ---
         ctx.scale(1, 1);
-        drawImageCentered(vImgMoto, 55); 
+        if (!drawImageCentered(vImgMoto, 55)) drawFallbackVehicle();
 
     } else if (selectedVehicle === 'car') {
         // --- MOTO BÁSICA (REEMPLAZA AL AUTO) ---
         ctx.scale(1, 1);
-        drawImageCentered(vImgMotoBasica, 55);
+        if (!drawImageCentered(vImgMotoBasica, 55)) drawFallbackVehicle();
 
     } else if (selectedVehicle === 'trucka') {
         // CAMIONETA PREMIUM
         // Centrada y proporcional. Usamos un area un poco mas grande porque suelen ser largas
-        drawImageCentered(vImgTruck, 65);
+        if (!drawImageCentered(vImgTruck, 65)) drawFallbackVehicle();
         
     } else if (selectedVehicle === 'fulgoneta') {
         // FURGONETA (IMAGEN)
         // Tamaño de carros por defecto
-        drawImageCentered(vImgFulgoneta, 55);
+        if (!drawImageCentered(vImgFulgoneta, 55)) drawFallbackVehicle();
 
     } else if (selectedVehicle === 'moto1') {
-        drawImageCentered(vImgMoto1, 55);
+        if (!drawImageCentered(vImgMoto1, 55)) drawFallbackVehicle();
     } else if (selectedVehicle === 'uber') {
-        drawImageCentered(vImgUber, 55);
+        if (!drawImageCentered(vImgUber, 55)) drawFallbackVehicle();
     } else if (selectedVehicle === 'indriver') {
-        drawImageCentered(vImgIndriver, 55);
+        if (!drawImageCentered(vImgIndriver, 55)) drawFallbackVehicle();
     } else if (selectedVehicle === 'servi') {
-        drawImageCentered(vImgServi, 60);
+        if (!drawImageCentered(vImgServi, 60)) drawFallbackVehicle();
     } else if (selectedVehicle === 'truck') {
         // --- CAMIÓN DE REPARTO (VISTA PERFIL) ---
         // Se debe ver el lado largo de la caja
@@ -10381,7 +10399,7 @@ function drawCar() {
         // Escalado significativo (1.5x) para que se vea mucho más grande que los demás
         const scaleBig = 1.5;
         ctx.scale(scaleBig, scaleBig);
-        drawImageCentered(vImgCamion, 75); // DrawImageCentered ya respeta el aspect ratio
+        if (!drawImageCentered(vImgCamion, 75)) drawFallbackVehicle();
         
     } else if (selectedVehicle === 'motoa') {
 
@@ -10451,248 +10469,6 @@ function startEditRender() {
         editRenderId = requestAnimationFrame(loop);
     };
     editRenderId = requestAnimationFrame(loop);
-}
-
-// --- MINI-JUEGO DE ROMPECABEZAS ---
-function startPuzzleGame() {
-    if (puzzleActive) return;
-    
-    puzzleActive = true;
-    gameState = 'PUZZLE';
-    
-    // Pausar el juego principal
-    cancelAnimationFrame(animationId);
-    clearInterval(countdownTimer);
-    
-    // Crear overlay del rompecabezas
-    const overlay = $('overlay');
-    overlay.classList.remove('hidden');
-    overlay.innerHTML = `
-        <div class="flex flex-col items-center justify-center h-full bg-black/90 p-4">
-            <h2 class="text-3xl font-bold text-yellow-400 mb-4">💎 MINI-JUEGO DIAMANTE 💎</h2>
-            <p class="text-lg text-white mb-6">¡Arma el rompecabezas para continuar!</p>
-            
-            <div class="relative">
-                <canvas id="puzzleCanvas" width="400" height="400" 
-                    class="border-4 border-yellow-400 rounded-lg cursor-pointer"></canvas>
-                <div class="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded">
-                    <span id="puzzleTimer">60</span>s
-                </div>
-            </div>
-            
-            <div class="mt-4 flex gap-4">
-                <button onclick="shufflePuzzle()" 
-                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-bold">
-                    🔄 Mezclar
-                </button>
-                <button onclick="skipPuzzle()" 
-                    class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-bold">
-                    ⏭️ Saltar (-10 monedas)
-                </button>
-            </div>
-        </div>
-    `;
-    
-    initializePuzzle();
-}
-
-function initializePuzzle() {
-    const canvas = $('puzzleCanvas');
-    const ctx = canvas.getContext('2d');
-    
-    // Crear piezas del rompecabezas 3x3
-    puzzlePieces = [];
-    const pieceSize = 133; // 400/3 aprox
-    
-    // Crear las 9 piezas con colores
-    for (let row = 0; row < 3; row++) {
-        for (let col = 0; col < 3; col++) {
-            puzzlePieces.push({
-                id: row * 3 + col,
-                correctX: col * pieceSize,
-                correctY: row * pieceSize,
-                currentX: Math.random() * (400 - pieceSize),
-                currentY: Math.random() * (400 - pieceSize),
-                color: `hsl(${(row * 3 + col) * 40}, 70%, 60%)`,
-                dragging: false
-            });
-        }
-    }
-    
-    shufflePuzzle();
-    drawPuzzle();
-    
-    // Event listeners para arrastrar piezas
-    canvas.addEventListener('mousedown', onPuzzleMouseDown);
-    canvas.addEventListener('mousemove', onPuzzleMouseMove);
-    canvas.addEventListener('mouseup', onPuzzleMouseUp);
-    
-    // Timer del rompecabezas
-    let timeLeft = 60;
-    const timer = setInterval(() => {
-        timeLeft--;
-        const timerEl = $('puzzleTimer');
-        if (timerEl) timerEl.textContent = timeLeft;
-        
-        if (timeLeft <= 0) {
-            clearInterval(timer);
-            skipPuzzle();
-        }
-    }, 1000);
-    
-    window.puzzleTimer = timer;
-}
-
-function onPuzzleMouseDown(e) {
-    const rect = e.target.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-    
-    // Encontrar pieza bajo el cursor
-    for (let i = puzzlePieces.length - 1; i >= 0; i--) {
-        const piece = puzzlePieces[i];
-        if (mouseX >= piece.currentX && mouseX <= piece.currentX + 133 &&
-            mouseY >= piece.currentY && mouseY <= piece.currentY + 133) {
-            draggedPiece = piece;
-            mouseOffset.x = mouseX - piece.currentX;
-            mouseOffset.y = mouseY - piece.currentY;
-            piece.dragging = true;
-            break;
-        }
-    }
-}
-
-function onPuzzleMouseMove(e) {
-    if (!draggedPiece) return;
-    
-    const rect = e.target.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-    
-    draggedPiece.currentX = Math.max(0, Math.min(400 - 133, mouseX - mouseOffset.x));
-    draggedPiece.currentY = Math.max(0, Math.min(400 - 133, mouseY - mouseOffset.y));
-    
-    drawPuzzle();
-}
-
-function onPuzzleMouseUp() {
-    if (draggedPiece) {
-        draggedPiece.dragging = false;
-        
-        // Verificar si está cerca de la posición correcta (snap)
-        const snapDistance = 30;
-        if (Math.abs(draggedPiece.currentX - draggedPiece.correctX) < snapDistance &&
-            Math.abs(draggedPiece.currentY - draggedPiece.correctY) < snapDistance) {
-            draggedPiece.currentX = draggedPiece.correctX;
-            draggedPiece.currentY = draggedPiece.correctY;
-        }
-        
-        draggedPiece = null;
-        drawPuzzle();
-        checkPuzzleComplete();
-    }
-}
-
-function drawPuzzle() {
-    const canvas = $('puzzleCanvas');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    
-    ctx.clearRect(0, 0, 400, 400);
-    
-    // Dibujar guías
-    ctx.strokeStyle = '#444';
-    ctx.lineWidth = 1;
-    for (let i = 1; i < 3; i++) {
-        ctx.beginPath();
-        ctx.moveTo(i * 133, 0);
-        ctx.lineTo(i * 133, 400);
-        ctx.moveTo(0, i * 133);
-        ctx.lineTo(400, i * 133);
-        ctx.stroke();
-    }
-    
-    // Dibujar piezas
-    puzzlePieces.forEach(piece => {
-        ctx.fillStyle = piece.color;
-        ctx.fillRect(piece.currentX, piece.currentY, 133, 133);
-        ctx.strokeStyle = piece.dragging ? '#fff' : '#333';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(piece.currentX, piece.currentY, 133, 133);
-        
-        // Número de la pieza
-        ctx.fillStyle = '#fff';
-        ctx.font = '30px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(piece.id + 1, piece.currentX + 66, piece.currentY + 70);
-    });
-}
-
-function shufflePuzzle() {
-    puzzlePieces.forEach(piece => {
-        piece.currentX = Math.random() * (400 - 133);
-        piece.currentY = Math.random() * (400 - 133);
-    });
-    if ($('puzzleCanvas')) drawPuzzle();
-}
-
-function checkPuzzleComplete() {
-    const isComplete = puzzlePieces.every(piece => 
-        piece.currentX === piece.correctX && piece.currentY === piece.correctY
-    );
-    
-    if (isComplete) {
-        completePuzzle();
-    }
-}
-
-function completePuzzle() {
-    puzzleActive = false;
-    if (window.puzzleTimer) clearInterval(window.puzzleTimer);
-    
-    // Reward
-    totalMoney += 100;
-    $('moneyDisplay').textContent = totalMoney;
-    saveGameData();
-    
-    // Mensaje de éxito
-    const overlay = $('overlay');
-    overlay.innerHTML = `
-        <div class="flex flex-col items-center justify-center h-full bg-black/90">
-            <div class="text-6xl mb-4">🎉</div>
-            <h2 class="text-3xl font-bold text-green-400 mb-4">¡ROMPECABEZAS COMPLETADO!</h2>
-            <p class="text-xl text-white mb-6">+$100 de recompensa</p>
-            <button onclick="closePuzzle()" 
-                class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold text-xl">
-                ✅ Continuar
-            </button>
-        </div>
-    `;
-}
-
-function skipPuzzle() {
-    if (window.puzzleTimer) clearInterval(window.puzzleTimer);
-    
-    if (totalMoney >= 10) {
-        totalMoney -= 10;
-        $('moneyDisplay').textContent = totalMoney;
-        saveGameData();
-    }
-    
-    const overlay = $('overlay');
-    overlay.innerHTML = `
-        <div class="flex flex-col items-center justify-center h-full bg-black/90">
-            <div class="text-6xl mb-4">⏭️</div>
-            <h2 class="text-3xl font-bold text-yellow-400 mb-4">Rompecabezas Saltado</h2>
-            <p class="text-xl text-white mb-6">${totalMoney >= 0 ? '-$10' : 'Sin dinero suficiente'}</p>
-            <button onclick="closePuzzle()" 
-                class="bg-yellow-600 hover:bg-yellow-700 text-white px-6 py-3 rounded-lg font-bold text-xl">
-                ➡️ Continuar
-            </button>
-        </div>
-    `;
-    
-    puzzleActive = false;
 }
 
 // Al cargar NO iniciar intro directamente, esperar interacción en Splash
