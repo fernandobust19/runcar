@@ -2234,6 +2234,15 @@ function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || win
 // --- SISTEMA DE AUDIO PROCEDURAL (Moto Premium) ---
 let proceduralSoundNode = null;
 
+function vibrateBad(pattern) {
+    if (!navigator || typeof navigator.vibrate !== 'function') return;
+    try {
+        navigator.vibrate(pattern || [0, 40, 60, 40]);
+    } catch (_) {
+        // Ignorar errores de vibracion en navegadores sin soporte
+    }
+}
+
 function startFluidMotoSound() {
     if (!soundEnabled) return;
     initAudio();
@@ -7520,6 +7529,7 @@ function gameLoop() {
                 if (timeLeft <= 0) { timeExpired(); return; }
                 updateMissionProgress('damage_taken');
                 playSound('bomb');
+                vibrateBad([0, 30, 40, 30]);
                 canvas.classList.add('shake');
                 setTimeout(() => canvas.classList.remove('shake'), 400);
                 showBombBlast();
@@ -8009,6 +8019,7 @@ function crash(msg, title = "¡PEDIDO CANCELADO!") {
     }
     
     cleanupTimers(); // Usar función optimizada
+    vibrateBad();
     playSound('crash');
     
     const overlay = $('overlay');
