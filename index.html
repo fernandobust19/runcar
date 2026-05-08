@@ -2588,6 +2588,12 @@ const PREVIEW_SPEED_SEGMENTS_PER_SEC = 15; // Velocidad de crecimiento en segmen
 let prevPlannedRoute = []; // Última ruta planificada para mantener prefijo estable
 let previewStableSegments = 0; // Número de segmentos confirmados que no deben reiniciarse
 let lastEditedTile = null; // Ultima ficha movida en modo edicion
+let skyDecorReady = false;
+let skyDecorW = 0;
+let skyDecorH = 0;
+let lastSkyTime = 0;
+let skyBirds = [];
+let skyClouds = [];
 const DIR = { N: 1, E: 2, S: 4, W: 8 };
 const DIR_DELTA = { 1: {dc:0,dr:-1}, 2: {dc:1,dr:0}, 4: {dc:0,dr:1}, 8: {dc:-1,dr:0} };
 const OPPOSITE = { 1: 4, 2: 8, 4: 1, 8: 2 };
@@ -9004,17 +9010,177 @@ function repairTile() {
     });
 }
 
+function getRoadTheme(lvl) {
+    const base = {
+        name: 'asphalt',
+        tileBase: '#0b0b0f',
+        tileBorder: 'rgba(148, 163, 184, 0.35)',
+        tileShadow: 'rgba(0, 0, 0, 0.5)',
+        curbColor: 'rgba(203, 213, 225, 0.35)',
+        edgeLine: 'rgba(226, 232, 240, 0.6)',
+        edgeShadow: 'rgba(15, 23, 42, 0.45)',
+        roadTint: 'rgba(60, 60, 66, 0.9)',
+        roadDarken: 'rgba(0, 0, 0, 0.25)',
+        cobble: false,
+        cobbleLight: '#b0b7c3',
+        cobbleDark: '#7b8392'
+    };
+
+    if (lvl % 13 === 0) {
+        return {
+            ...base,
+            name: 'cobble',
+            tileBorder: 'rgba(226, 232, 240, 0.45)',
+            edgeLine: 'rgba(248, 250, 252, 0.7)',
+            roadTint: 'rgba(92, 98, 112, 0.88)',
+            roadDarken: 'rgba(0, 0, 0, 0.18)',
+            cobble: true,
+            cobbleLight: '#c1c8d4',
+            cobbleDark: '#8a93a3'
+        };
+    }
+
+    if (lvl % 11 === 0) {
+        return {
+            ...base,
+            name: 'gold',
+            tileBorder: 'rgba(255, 215, 120, 0.55)',
+            edgeLine: 'rgba(255, 214, 130, 0.75)',
+            curbColor: 'rgba(242, 200, 120, 0.35)',
+            roadTint: 'rgba(74, 60, 36, 0.9)',
+            roadDarken: 'rgba(0, 0, 0, 0.2)'
+        };
+    }
+
+    if (lvl % 9 === 0) {
+        return {
+            ...base,
+            name: 'silver',
+            tileBorder: 'rgba(200, 220, 235, 0.55)',
+            edgeLine: 'rgba(200, 220, 235, 0.7)',
+            curbColor: 'rgba(200, 210, 220, 0.35)',
+            roadTint: 'rgba(66, 74, 86, 0.92)',
+            roadDarken: 'rgba(0, 0, 0, 0.2)'
+        };
+    }
+
+    return base;
+}
+
+function initSkyDecor() {
+    skyDecorReady = true;
+    skyDecorW = canvas.width;
+    skyDecorH = canvas.height;
+    skyBirds = [];
+    skyClouds = [];
+
+    const birdCount = 3;
+    for (let i = 0; i < birdCount; i++) {
+        skyBirds.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height * 0.45,
+            speed: 12 + Math.random() * 18,
+            scale: 0.6 + Math.random() * 0.6,
+            phase: Math.random() * Math.PI * 2
+        });
+    }
+
+    const cloudCount = 2;
+    for (let i = 0; i < cloudCount; i++) {
+        const size = 50 + Math.random() * 80;
+        skyClouds.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height * 0.35,
+            speed: 4 + Math.random() * 6,
+            alpha: 0.18 + Math.random() * 0.12,
+            w: size,
+            h: size * (0.35 + Math.random() * 0.2)
+        });
+    }
+}
+
+function ensureSkyDecor() {
+    if (!skyDecorReady || skyDecorW !== canvas.width || skyDecorH !== canvas.height) {
+        initSkyDecor();
+    }
+}
+
+function updateSkyDecor(deltaSec) {
+    skyBirds.forEach(bird => {
+        bird.x += bird.speed * deltaSec;
+        bird.phase += deltaSec * 6;
+        if (bird.x > canvas.width + 40) {
+            bird.x = -40;
+            bird.y = Math.random() * canvas.height * 0.45;
+            bird.speed = 12 + Math.random() * 18;
+            bird.scale = 0.6 + Math.random() * 0.6;
+        }
+    });
+
+    skyClouds.forEach(cloud => {
+        cloud.x -= cloud.speed * deltaSec;
+        if (cloud.x < -cloud.w - 30) {
+            cloud.x = canvas.width + 30;
+            cloud.y = Math.random() * canvas.height * 0.35;
+            cloud.speed = 4 + Math.random() * 6;
+            cloud.alpha = 0.18 + Math.random() * 0.12;
+        }
+    });
+}
+
+function drawSkyDecor() {
+    if (!skyDecorReady) return;
+
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(248, 250, 252, 0.65)';
+
+    skyBirds.forEach(bird => {
+        const wing = 6 * bird.scale;
+        const flap = Math.sin(bird.phase) * 2 * bird.scale;
+        ctx.lineWidth = 1.4 * bird.scale;
+        ctx.beginPath();
+        ctx.moveTo(bird.x - wing, bird.y + flap);
+        ctx.lineTo(bird.x, bird.y - flap);
+        ctx.lineTo(bird.x + wing, bird.y + flap);
+        ctx.stroke();
+    });
+
+    ctx.restore();
+
+    skyClouds.forEach(cloud => {
+        ctx.save();
+        ctx.globalAlpha = cloud.alpha;
+        ctx.fillStyle = '#e2e8f0';
+        ctx.beginPath();
+        ctx.ellipse(cloud.x, cloud.y, cloud.w * 0.35, cloud.h * 0.6, 0, 0, Math.PI * 2);
+        ctx.ellipse(cloud.x + cloud.w * 0.2, cloud.y - cloud.h * 0.15, cloud.w * 0.28, cloud.h * 0.55, 0, 0, Math.PI * 2);
+        ctx.ellipse(cloud.x - cloud.w * 0.22, cloud.y - cloud.h * 0.12, cloud.w * 0.26, cloud.h * 0.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    });
+}
+
 function draw() {
     // Actualizar UI del velocímetro
     updateSpeedometer();
 
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ensureSkyDecor();
+    const now = performance.now();
+    if (!lastSkyTime) lastSkyTime = now;
+    const deltaSec = Math.min((now - lastSkyTime) / 1000, 0.05);
+    lastSkyTime = now;
+    updateSkyDecor(deltaSec);
     
     // Dibujar solo tiles visibles
     for (let i = 0; i < grid.length; i++) {
         if (grid[i]) drawTile(grid[i]);
     }
+
+    drawSkyDecor();
     
     if (gameState === 'EDITING' && previewPath.length > 1) {
         drawPreviewPath();
@@ -9220,13 +9386,18 @@ function drawTile(tile) {
     const rw = TILE_SIZE * 0.45;
     const h = rw / 2;
     const conn = tile.getConnections ? tile.getConnections() : tile.type.base;
+    const theme = getRoadTheme(level);
     
     ctx.save();
-    ctx.fillStyle = '#0b0b0f'; // Fondo oscuro
+    ctx.fillStyle = theme.tileBase; // Fondo oscuro
     ctx.fillRect(x + 1, y + 1, TILE_SIZE - 2, TILE_SIZE - 2);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
-    ctx.lineWidth = 1;
+    ctx.save();
+    ctx.strokeStyle = theme.tileBorder;
+    ctx.lineWidth = 1.2;
+    ctx.shadowColor = theme.tileShadow;
+    ctx.shadowBlur = 6;
     ctx.strokeRect(x + 0.5, y + 0.5, TILE_SIZE - 1, TILE_SIZE - 1);
+    ctx.restore();
 
     if (tile.special === 'house') {
         const img = typeof tile.houseSpriteIndex === 'number' ? houseSprites[tile.houseSpriteIndex] : null;
@@ -9342,14 +9513,13 @@ function drawTile(tile) {
         ctx.translate(cx, cy);
         ctx.rotate(tile.rotation * Math.PI / 2);
         
-        // PATRÓN DE ASFALTO: Si la imagen cargó, usarla. Si no, gris.
+        // PATRON DE ASFALTO: Si la imagen cargo, usarla. Si no, usar el tema.
         let fillStyle = null;
-        if (pavementImg.complete && pavementImg.naturalWidth > 0) {
+        if (pavementImg.complete && pavementImg.naturalWidth > 0 && !theme.cobble) {
             const pattern = ctx.createPattern(pavementImg, 'repeat');
             fillStyle = pattern;
         } else {
-            fillStyle = tile.isDeadEnd ? (tile.powered ? '#65a30d' : '#3a3a3a') : 
-                    tile.type === TILE_TYPES.START ? '#10b981' : '#5a5a5a';
+            fillStyle = theme.roadTint;
         }
         
         ctx.fillStyle = fillStyle;
@@ -9366,7 +9536,7 @@ function drawTile(tile) {
         if (conn & DIR.S) sidewalkPath.rect(-sw / 2, -sh, sw, s/2 + sh);
         if (conn & DIR.E) sidewalkPath.rect(-sh, -sh, s/2 + sh, sw);
         if (conn & DIR.W) sidewalkPath.rect(-s/2, -sh, s/2 + sh, sw);
-        ctx.fillStyle = 'rgba(203, 213, 225, 0.4)';
+        ctx.fillStyle = theme.curbColor;
         ctx.fill(sidewalkPath);
 
         // 2. Dibuja la forma base de la carretera con la textura de pavimento.
@@ -9379,15 +9549,35 @@ function drawTile(tile) {
         ctx.fillStyle = fillStyle;
         ctx.fill(roadPath);
 
-        // 3. Oscurece la textura de la calle como solicitó el usuario.
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; // Negro al 25% de opacidad.
+        if (theme.cobble) {
+            ctx.save();
+            ctx.clip(roadPath);
+            const stone = Math.max(4, TILE_SIZE * 0.12);
+            for (let yy = -s / 2; yy <= s / 2; yy += stone * 1.2) {
+                for (let xx = -s / 2; xx <= s / 2; xx += stone * 1.2) {
+                    const seed = Math.floor((xx + 50) * 7 + (yy + 50) * 13);
+                    const jitter = (tileRand(tile.col, tile.row, seed) - 0.5) * stone * 0.4;
+                    const r = stone * 0.45;
+                    ctx.fillStyle = ((seed % 2) === 0) ? theme.cobbleLight : theme.cobbleDark;
+                    ctx.beginPath();
+                    ctx.ellipse(xx + jitter, yy + jitter, r, r * 0.75, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            ctx.restore();
+        }
+
+        // 3. Oscurece la textura de la calle para dar volumen.
+        ctx.fillStyle = theme.roadDarken;
         ctx.fill(roadPath);
 
         // 3. Dibuja las aceras (veredas) INTERNAS de cada pieza
         // Usamos líneas grises claras para delimitar el asfalto, 
         // pero SIN cerrar las conexiones (entradas/salidas).
-        ctx.strokeStyle = '#cccccc'; 
+        ctx.strokeStyle = theme.edgeLine; 
         ctx.lineWidth = 3;
+        ctx.shadowColor = theme.edgeShadow;
+        ctx.shadowBlur = 4;
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
         ctx.beginPath();
@@ -9424,6 +9614,7 @@ function drawTile(tile) {
         if (!hasW) { ctx.moveTo(-h, -h); ctx.lineTo(-h, h); } // Tapa Izq (corregido)
         
         ctx.stroke();
+        ctx.shadowBlur = 0;
         
         /* 
         Ya no necesitamos dibujar bordes especiales en los límites del mapa 
