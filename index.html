@@ -2237,7 +2237,25 @@ let proceduralSoundNode = null;
 function vibrateBad(pattern) {
     if (!navigator || typeof navigator.vibrate !== 'function') return;
     try {
-        navigator.vibrate(pattern || [0, 40, 60, 40]);
+        navigator.vibrate(pattern || [0, 120, 90, 120, 90, 120]);
+    } catch (_) {
+        // Ignorar errores de vibracion en navegadores sin soporte
+    }
+}
+
+function vibrateAlert() {
+    if (!navigator || typeof navigator.vibrate !== 'function') return;
+    try {
+        navigator.vibrate([0, 20, 30, 20]);
+    } catch (_) {
+        // Ignorar errores de vibracion en navegadores sin soporte
+    }
+}
+
+function vibrateWin() {
+    if (!navigator || typeof navigator.vibrate !== 'function') return;
+    try {
+        navigator.vibrate([0, 40, 30, 40, 30, 40]);
     } catch (_) {
         // Ignorar errores de vibracion en navegadores sin soporte
     }
@@ -6438,12 +6456,14 @@ function calculatePreviewPath() {
     while (angle > Math.PI) angle -= Math.PI * 2;
     while (angle <= -Math.PI) angle += Math.PI * 2;
     
-    let currentFacingDir = null;
-    // Tolerancia pequeña para detectar la dirección
-    if (Math.abs(angle) < 0.1) currentFacingDir = DIR.E;
-    else if (Math.abs(angle - Math.PI/2) < 0.1) currentFacingDir = DIR.S;
-    else if (Math.abs(angle - Math.PI) < 0.1 || Math.abs(angle + Math.PI) < 0.1) currentFacingDir = DIR.W;
-    else if (Math.abs(angle + Math.PI/2) < 0.1) currentFacingDir = DIR.N;
+    let currentFacingDir = car.dir || null;
+    if (!currentFacingDir) {
+        // Tolerancia pequeña para detectar la dirección
+        if (Math.abs(angle) < 0.1) currentFacingDir = DIR.E;
+        else if (Math.abs(angle - Math.PI/2) < 0.1) currentFacingDir = DIR.S;
+        else if (Math.abs(angle - Math.PI) < 0.1 || Math.abs(angle + Math.PI) < 0.1) currentFacingDir = DIR.W;
+        else if (Math.abs(angle + Math.PI/2) < 0.1) currentFacingDir = DIR.N;
+    }
     
     // VALIDACIÓN PRIMER PASO FÍSICO
     const startTile = grid[car.row * COLS + car.col];
@@ -6457,7 +6477,8 @@ function calculatePreviewPath() {
     const startX = car.col * TILE_SIZE + TILE_SIZE / 2;
     const startY = car.row * TILE_SIZE + TILE_SIZE / 2;
 
-    const candidateDirs = [DIR.N, DIR.E, DIR.S, DIR.W].filter(dir => {
+    const candidateDirs = [currentFacingDir].filter(dir => {
+        if (!dir) return false;
         if (!isStartFree && !(startConn & dir)) return false;
         const delta = DIR_DELTA[dir];
         const nCol = car.col + delta.dc;
@@ -6472,12 +6493,6 @@ function calculatePreviewPath() {
     });
 
     if (candidateDirs.length === 0) return;
-
-    if (currentFacingDir && candidateDirs.includes(currentFacingDir)) {
-        const rest = candidateDirs.filter(d => d !== currentFacingDir);
-        candidateDirs.length = 0;
-        candidateDirs.push(currentFacingDir, ...rest);
-    }
 
     candidateDirs.forEach(dir => {
         const delta = DIR_DELTA[dir];
@@ -7452,6 +7467,7 @@ function gameLoop() {
                 tile.semaphoreState = 'red';
                 draw(); // Mostrar rojo con semáforo grande
                 playSound('semaphore');
+                vibrateAlert();
                 
                 // PASO 2: Después de ver el rojo, cambiar a amarillo
                 const t1 = setTimeout(() => {
@@ -7459,6 +7475,7 @@ function gameLoop() {
                         tile.semaphoreState = 'yellow';
                         draw(); // Mostrar amarillo con semáforo grande
                         playSound('semaphore');
+                        vibrateAlert();
                     }
                     
                     // PASO 3: Después de ver el amarillo, cambiar a verde  
@@ -7468,6 +7485,7 @@ function gameLoop() {
                                 car.waiting = false; // Salir INMEDIATAMENTE cuando cambie a verde
                                 draw(); // Mostrar verde con semáforo grande
                                 playSound('semaphore');
+                                vibrateAlert();
                             }
                             
                             // PASO 4: Mantener el semáforo en verde por un tiempo antes de limpiar
@@ -7529,7 +7547,7 @@ function gameLoop() {
                 if (timeLeft <= 0) { timeExpired(); return; }
                 updateMissionProgress('damage_taken');
                 playSound('bomb');
-                vibrateBad([0, 30, 40, 30]);
+                vibrateBad([0, 80, 60, 80]);
                 canvas.classList.add('shake');
                 setTimeout(() => canvas.classList.remove('shake'), 400);
                 showBombBlast();
@@ -8685,6 +8703,7 @@ function showVictoryOverlay(deliveryTime) {
     
     // Reproducir sonido de entrega exitosa
     if(typeof playSound === 'function') playSound('delivery');
+    vibrateWin();
 
     // Pago fijo
     let deliveryPayment = 50;
@@ -8794,6 +8813,7 @@ function showVictoryOverlay(deliveryTime) {
             moto.classList.add('moto-passing');
             // Sonido de moto pasando
             if(typeof playSound === 'function') playSound('moto_pass');
+            vibrateWin();
         }
 
         // 2. Esperar un momento (cuando la moto tapa la pantalla ~400ms) para hacer el cambio
