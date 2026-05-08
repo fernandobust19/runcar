@@ -2556,6 +2556,7 @@ let floatingTexts = []; // Variable global para textos flotantes
 let editRenderId = null; // Loop de render en modo edición
 let previewAnimIndexFloat = 0; // Índice flotante para crecimiento progresivo de la línea amarilla
 let lastEditFrameTime = 0; // Timestamp para delta
+let lastGameFrameTime = 0; // Timestamp para delta en RUNNING
 const PREVIEW_SPEED_SEGMENTS_PER_SEC = 15; // Velocidad de crecimiento en segmentos por segundo (más veloz)
 let prevPlannedRoute = []; // Última ruta planificada para mantener prefijo estable
 let previewStableSegments = 0; // Número de segmentos confirmados que no deben reiniciarse
@@ -7236,6 +7237,7 @@ function actuallyStartCar() {
     // Asegurar que el ángulo visual coincida con la dirección lógica inicial
     car.angle = car.dir === DIR.N ? -Math.PI/2 : car.dir === DIR.E ? 0 : car.dir === DIR.S ? Math.PI/2 : Math.PI;
     
+    lastGameFrameTime = 0;
     gameState = 'RUNNING';
     // Detener render de edición si estuviera activo
     if (editRenderId) { cancelAnimationFrame(editRenderId); editRenderId = null; }
@@ -7378,7 +7380,13 @@ function pickFallbackExit(exits, preferredDir) {
 }
 
 function gameLoop() {
-    if (gameState !== 'RUNNING') return;
+    if (gameState !== 'RUNNING') { lastGameFrameTime = 0; return; }
+
+    const now = performance.now();
+    if (!lastGameFrameTime) lastGameFrameTime = now;
+    const deltaSec = Math.min((now - lastGameFrameTime) / 1000, 0.05);
+    lastGameFrameTime = now;
+    const frameScale = deltaSec * 60;
     
     if (car.waiting) {
         const tile = grid[car.row * COLS + car.col];
@@ -7399,7 +7407,7 @@ function gameLoop() {
     const dist = Math.sqrt(dx * dx + dy * dy);
     
     // AUMENTADO EL RADIO DE DETECCIÓN para evitar que el coche se salte la verificación (Tunneling)
-    const hitRadius = Math.max(5, car.speed * 1.5);
+    const hitRadius = Math.max(5, car.speed * 1.5 * frameScale);
 
     if (dist < hitRadius) {
         car.x = cx; car.y = cy;
@@ -7958,12 +7966,13 @@ function gameLoop() {
     }
     
     const d = DIR_DELTA[car.dir];
-    car.x += d.dc * car.speed; car.y += d.dr * car.speed;
+    car.x += d.dc * car.speed * frameScale; 
+    car.y += d.dr * car.speed * frameScale;
 
-    if (car.skidTimer > 0) car.skidTimer--;
-    if (car.skidTimer === 0) car.skidAngleOffset = 0;
-    if (car.dogFollowTimer > 0) car.dogFollowTimer--;
-    if (car.dogSlowTimer > 0) car.dogSlowTimer--;
+    if (car.skidTimer > 0) car.skidTimer = Math.max(0, car.skidTimer - frameScale);
+    if (car.skidTimer <= 0) car.skidAngleOffset = 0;
+    if (car.dogFollowTimer > 0) car.dogFollowTimer = Math.max(0, car.dogFollowTimer - frameScale);
+    if (car.dogSlowTimer > 0) car.dogSlowTimer = Math.max(0, car.dogSlowTimer - frameScale);
     
     // Actualizar Estela (Trail)
     if (car.trail) {
