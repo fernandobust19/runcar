@@ -2587,6 +2587,7 @@ let lastGameFrameTime = 0; // Timestamp para delta en RUNNING
 const PREVIEW_SPEED_SEGMENTS_PER_SEC = 15; // Velocidad de crecimiento en segmentos por segundo (más veloz)
 let prevPlannedRoute = []; // Última ruta planificada para mantener prefijo estable
 let previewStableSegments = 0; // Número de segmentos confirmados que no deben reiniciarse
+let lastEditedTile = null; // Ultima ficha movida en modo edicion
 const DIR = { N: 1, E: 2, S: 4, W: 8 };
 const DIR_DELTA = { 1: {dc:0,dr:-1}, 2: {dc:1,dr:0}, 4: {dc:0,dr:1}, 8: {dc:-1,dr:0} };
 const OPPOSITE = { 1: 4, 2: 8, 4: 1, 8: 2 };
@@ -4983,6 +4984,7 @@ function handleClick(e) {
 
             tile.type = TILE_TYPES.BRIDGE;
             tile.isBridge = true;
+            lastEditedTile = { col, row };
 
             saveGameData();
             playSound('money');
@@ -5011,6 +5013,7 @@ function handleClick(e) {
         } else if (!bridgeModeActive && tile && !tile.locked && tile.type !== TILE_TYPES.BLOCKED) {
             // Modo normal: rotar pieza
             tile.rotation = (tile.rotation + 1) % 4;
+            lastEditedTile = { col, row };
             rotateTileHintCooldownUntil = Date.now() + 700;
             playSound('rotate');
             checkConnections();
@@ -6472,6 +6475,9 @@ function calculatePreviewPath() {
     const startConn = startTile.getConnections();
     const isStartFree = startTile.type === TILE_TYPES.CROSS || startTile.type === TILE_TYPES.BRIDGE || startTile.isBridge || startTile.type === TILE_TYPES.START;
     const endTile = grid.find(t => t && t.isEnd);
+    const targetTile = (lastEditedTile && lastEditedTile.col !== undefined) ?
+        grid[lastEditedTile.row * COLS + lastEditedTile.col] : null;
+    const useTarget = !!(targetTile && targetTile.type !== TILE_TYPES.BLOCKED);
     const queue = [];
 
     const startX = car.col * TILE_SIZE + TILE_SIZE / 2;
@@ -6492,7 +6498,22 @@ function calculatePreviewPath() {
         return nextIsPermissive || (nextConn & entryNeed);
     });
 
-    if (candidateDirs.length === 0) return;
+    if (candidateDirs.length === 0) {
+        if (currentFacingDir) {
+            const delta = DIR_DELTA[currentFacingDir];
+            const rawX = startX + delta.dc * TILE_SIZE;
+            const rawY = startY + delta.dr * TILE_SIZE;
+            const endX = Math.max(0, Math.min(canvas.width, rawX));
+            const endY = Math.max(0, Math.min(canvas.height, rawY));
+            previewPath = [
+                { x: startX, y: startY, isEnd: false },
+                { x: endX, y: endY, isEnd: false }
+            ];
+            previewStableSegments = 0;
+            previewAnimIndexFloat = Math.max(0, previewPath.length - 1);
+        }
+        return;
+    }
 
     candidateDirs.forEach(dir => {
         const delta = DIR_DELTA[dir];
@@ -6515,6 +6536,10 @@ function calculatePreviewPath() {
     let bestPathToDisplay = null;
     let minDistToGoal = Infinity;
     let maxPathLength = 0;
+    let bestByLength = null;
+    let maxLengthOverall = 0;
+    let foundTarget = false;
+    let foundEnd = false;
     
     const visited = new Set();
     visited.add(`${car.col},${car.row},start`);
@@ -6530,9 +6555,10 @@ function calculatePreviewPath() {
         iterations++;
         // Ordenar cola: Preferir nodos más cerca de la meta y caminos más largos
         queue.sort((a, b) => {
-            if (!endTile) return b.pathPoints.length - a.pathPoints.length;
-            const distA = Math.abs(a.col - endTile.col) + Math.abs(a.row - endTile.row);
-            const distB = Math.abs(b.col - endTile.col) + Math.abs(b.row - endTile.row);
+            const target = useTarget ? targetTile : endTile;
+            if (!target) return b.pathPoints.length - a.pathPoints.length;
+            const distA = Math.abs(a.col - target.col) + Math.abs(a.row - target.row);
+            const distB = Math.abs(b.col - target.col) + Math.abs(b.row - target.row);
             if (distA !== distB) return distA - distB; // Menor distancia primero
             return b.pathPoints.length - a.pathPoints.length; // Si igual distancia, camino más largo
         });
@@ -6542,7 +6568,15 @@ function calculatePreviewPath() {
         
         // Evaluar si este camino es el "mejor" hasta ahora para mostrar
         let isBetter = false;
-        if (endTile) {
+        if (useTarget && targetTile) {
+            const dist = Math.abs(curr.col - targetTile.col) + Math.abs(curr.row - targetTile.row);
+            if (dist < minDistToGoal) {
+                minDistToGoal = dist;
+                isBetter = true;
+            } else if (dist === minDistToGoal && curr.pathPoints.length > maxPathLength) {
+                isBetter = true;
+            }
+        } else if (endTile) {
             const dist = Math.abs(curr.col - endTile.col) + Math.abs(curr.row - endTile.row);
             if (dist < minDistToGoal) {
                 minDistToGoal = dist;
@@ -6554,6 +6588,11 @@ function calculatePreviewPath() {
              if (curr.pathPoints.length > maxPathLength) isBetter = true;
         }
         
+        if (curr.pathPoints.length > maxLengthOverall) {
+            maxLengthOverall = curr.pathPoints.length;
+            bestByLength = curr;
+        }
+
         if (isBetter) {
             bestPathToDisplay = curr;
             maxPathLength = curr.pathPoints.length;
@@ -6562,10 +6601,17 @@ function calculatePreviewPath() {
         const tile = grid[curr.row * COLS + curr.col];
         if (!tile) continue;
         
+        if (useTarget && targetTile && curr.col === targetTile.col && curr.row === targetTile.row) {
+            bestPathToDisplay = curr;
+            foundTarget = true;
+            break; // Encontramos camino a la ultima ficha movida
+        }
+
         if (tile.isEnd) {
             curr.pathPoints[curr.pathPoints.length - 1].isEnd = true;
             bestPathToDisplay = curr;
-            break; // Encontramos camino a la meta, detener.
+            foundEnd = true;
+            if (!useTarget) break; // Encontramos camino a la meta, detener.
         }
         
         const conn = tile.getConnections();
@@ -6635,6 +6681,12 @@ function calculatePreviewPath() {
                 }
             }
         });
+    }
+
+    if (!foundTarget && useTarget && bestByLength) {
+        bestPathToDisplay = bestByLength;
+    } else if (!foundEnd && !useTarget && bestByLength) {
+        bestPathToDisplay = bestByLength;
     }
 
     if (bestPathToDisplay) {
