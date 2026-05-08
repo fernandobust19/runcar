@@ -6611,7 +6611,7 @@ function calculatePreviewPath() {
             curr.pathPoints[curr.pathPoints.length - 1].isEnd = true;
             bestPathToDisplay = curr;
             foundEnd = true;
-            if (!useTarget) break; // Encontramos camino a la meta, detener.
+            break; // Encontramos camino a la meta, detener siempre
         }
         
         const conn = tile.getConnections();
