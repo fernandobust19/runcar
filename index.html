@@ -4920,7 +4920,8 @@ function resize() {
 
 function handleClick(e) {
     initAudio();
-    if (gameState !== 'EDITING' || inputLocked) return;
+    if (gameState !== 'EDITING' && gameState !== 'RUNNING') return;
+    if (gameState === 'EDITING' && inputLocked) return;
     const rect = canvas.getBoundingClientRect();
     const clickX = e.clientX - rect.left, clickY = e.clientY - rect.top;
     
@@ -6615,14 +6616,6 @@ function calculatePreviewPath() {
     if (bestPathToDisplay) {
         previewPath = bestPathToDisplay.pathPoints;
         const newRoute = bestPathToDisplay.route || [];
-
-        if (gameState === 'EDITING' && newRoute.length > 0) {
-            const firstDir = newRoute[0].dir;
-            if (car.dir !== firstDir) {
-                car.dir = firstDir;
-                car.angle = firstDir === DIR.N ? -Math.PI/2 : firstDir === DIR.E ? 0 : firstDir === DIR.S ? Math.PI/2 : Math.PI;
-            }
-        }
 
         // Calcular prefijo común con la ruta previa para no reiniciar desde el inicio
         let common = 0;
